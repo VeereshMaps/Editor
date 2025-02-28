@@ -66,7 +66,7 @@ const AssetsLib = () => {
 
       <Grid container justifyContent="flex-end">
         <Button
-          onClick={() => navigate("/users/add-assets")}
+          onClick={() => navigate("/add-assets")}
           variant="contained"
           color="primary"
           sx={{ maxWidth: "150px", width: "auto", marginBottom: 2 }}
