@@ -8,10 +8,14 @@ import ThemeCustomization from "themes";
 import ScrollTop from "components/ScrollTop";
 import { fetchUserById } from "redux/Slices/userSlice";
 import { setAuthState } from "redux/Slices/authSlice"; // Import action to update state
+import useAuthCheck from "./api/hooks/useAuthCheck"; // Import the hook
 
 export default function App() {
   const dispatch = useDispatch();
   const userDetails = useSelector((state) => state.auth);
+
+  // Call the auth check hook at the beginning of the component
+  useAuthCheck();
 
   // Memoized function to fetch user details
   const fetchUserDetailsById = useCallback((userData) => {
@@ -43,8 +47,7 @@ export default function App() {
             }
         }
     }
-}, [userDetails]); // Include dispatch in dependencies
-
+  }, [userDetails]); // Include dispatch in dependencies
 
   return (
     <ThemeCustomization>

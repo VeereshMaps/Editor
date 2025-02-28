@@ -4,12 +4,12 @@ import axiosInstance from "../../api/axiosInstance";
 // Async thunk to fetch projects based on user role
 export const getEditions = createAsyncThunk(
   "edition/fetchEditions",
-  async ({rejectWithValue }) => {
+  async (_,{rejectWithValue }) => {
     try {
      const response = await axiosInstance.get("/api/editions/");
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data || "Failed to fetch projects");
+      return rejectWithValue(error.response?.data || "Failed to fetch editions");
     }
   }
 );

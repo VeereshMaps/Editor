@@ -6,7 +6,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import { getRoleBasedOrAllUsers } from 'redux/Slices/roleBasedOrAllUserSlice';
 
 const ViewBookDetails = (props) => {
-    console.log("---===",props);
     const dispatch = useDispatch();
     const roleBasedOrAllUsers = useSelector((state) => state.roleBasedOrAllUsers);
   const [formData, setFormData] = useState({
@@ -65,7 +64,6 @@ const ViewBookDetails = (props) => {
 
 useEffect(() => {
     if (props.bookDetails?.projects) {
-        console.log("props.bookDetails?.projects",props.bookDetails?.projects)
         const authorData = roleBasedOrAllUsers?.data?.find(user => user._id === props.bookDetails?.projects?.author?._id);
       const proofReaderData = roleBasedOrAllUsers?.data?.find(user => user._id === props.bookDetails?.projects?.proofReader?._id);
       const projectManagerData = roleBasedOrAllUsers?.data?.find(user => user._id === props.bookDetails?.projects?.projectManager?._id);

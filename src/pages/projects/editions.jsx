@@ -57,6 +57,7 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
         illustrations: "",
         textcolor: "",
         description: "",
+        status: "",
         createdBy: loginDetails?.user?._id,
         projectID: bookDetails.projects._id
     });
@@ -103,6 +104,7 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
             illustrations: "",
             textcolor: "",
             description: "",
+            status: "WIP",
             createdBy: loginDetails?.user?._id,
             projectID: bookDetails.projects._id
         });
@@ -121,9 +123,22 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
         setEditData(null); // Clear edit mode
     };
 
+    const handleMoveToGold = async (edition) => {
+        try {
+            const updatedEdition = { ...edition, status: "Gold" };
+    
+            await dispatch(updateEdition({ id: edition._id, updatedData: updatedEdition }));
+    
+            getEditionsFunc(); // Refresh the list after successful update
+        } catch (error) {
+            console.error("Error updating edition status to Gold:", error);
+        }
+    };
+    
+
     const handleSubmit = async () => {
         let newErrors = {};
-
+        
         if (!editionData.title) newErrors.title = "Edition Name is required";
         if (!editionData.seriesTitle) newErrors.seriesTitle = "Series Title is required";
         if (!editionData.publicationDate) {
@@ -150,7 +165,9 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
         if (editionData.illustrations === "") newErrors.illustrations = "Illustrations field is required";
         if (!editionData.textcolor) newErrors.textcolor = "Text Color is required";
         if (!editionData.description) newErrors.description = "Description is required";
-
+        if (!editionData.status) newErrors.status = "Status is required";
+        console.log("newErrors",newErrors);
+        
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
             return;
@@ -241,6 +258,11 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
                                 <Button variant="outlined" color="primary" size="small" onClick={() => navigate("/projects/editions", { state: { editionDetails: edition, projectDetails: editionByProjectIdDetails } })}>
                                     View
                                 </Button>
+                                {(!edition.status || edition.status === "WIP") && formattedUserRole.includes(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase()) && (loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === superAccess || loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === elevatedAccess) && (
+                                <Button variant="outlined" color="primary" size="small"  onClick={() => handleMoveToGold(edition)}>
+                                    Move to GOLD
+                                </Button>
+                                )}
                             </Stack>
                         </Card>
                     </Grid>
@@ -338,6 +360,15 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
                             <MenuItem value="Colored">Colored</MenuItem>
                         </Select>
                         {errors.textcolor && <FormHelperText>{errors.textcolor}</FormHelperText>}
+                    </FormControl>
+
+                    <FormControl fullWidth sx={{ mb: 2 }}>
+                        <InputLabel>Status</InputLabel>
+                        <Select name="status" value={editionData.status} onChange={handleInputChange}>
+                            <MenuItem value="WIP">WIP</MenuItem>
+                            <MenuItem value="Gold">Gold</MenuItem>
+                        </Select>
+                        {errors.status && <FormHelperText>{errors.status}</FormHelperText>}
                     </FormControl>
 
                     <TextField fullWidth label="Description" variant="outlined" name="description" multiline rows={3} value={editionData.description} onChange={handleInputChange} error={!!errors.description} helperText={errors.description} sx={{ mb: 2 }} />
