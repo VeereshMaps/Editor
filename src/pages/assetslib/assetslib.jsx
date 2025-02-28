@@ -1,52 +1,45 @@
-import React, { useEffect, useState } from 'react';
-import Gallery from 'react-photo-gallery';
-import Carousel, { Modal, ModalGateway } from 'react-images';
-import { TextField, Pagination, Box } from '@mui/material';
+import React, { useEffect, useState } from "react";
+import Gallery from "react-photo-gallery";
+import Carousel, { Modal, ModalGateway } from "react-images";
+import {
+  TextField,
+  Pagination,
+  Box,
+  Button,
+  Grid,
+  CircularProgress,
+} from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchAssets } from "../../redux/Slices/assetsSlice";
 
-// Sample image URLs
-const imageUrls = [
-  'https://picsum.photos/600/400?random=1',
-  'https://picsum.photos/800/600?random=2',
-  'https://picsum.photos/400/400?random=3',
-  'https://picsum.photos/600/800?random=4',
-  'https://picsum.photos/1200/800?random=5',
-  'https://picsum.photos/600/400?random=14',
-  'https://picsum.photos/800/600?random=21',
-  'https://picsum.photos/400/400?random=32',
-  'https://picsum.photos/600/800?random=42',
-  'https://picsum.photos/1200/800?random=55',
-];
-
-const GalleryPage = () => {
-  const [photos, setPhotos] = useState([]);
+const AssetsLib = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { photos, totalPages, loading, error } = useSelector((state) => state.assets);
   const [currentImage, setCurrentImage] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [page, setPage] = useState(1);
-  const photosPerPage = 30;
+  const [searchTerm, setSearchTerm] = useState("");
 
-  // Function to dynamically fetch image dimensions
-  const fetchImageDimensions = async (url) => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => resolve({ src: url, width: img.width, height: img.height });
-      img.src = url;
-    });
-  };
+  const photosPerPage = 5; // Reduced for testing
 
-  // Load photos with dimensions
+  // Fetch images from API
   useEffect(() => {
-    const loadPhotos = async () => {
-      const loadedPhotos = await Promise.all(imageUrls.map(fetchImageDimensions));
-      setPhotos(loadedPhotos);
-    };
+    dispatch(fetchAssets({ page, limit: photosPerPage }));
+  }, [dispatch, page]);
 
-    loadPhotos();
-  }, []);
+  // Search Filter
+  const filteredPhotos = photos.filter((photo) =>
+    photo.src.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  // Paginate Photos
-  const totalPages = Math.ceil(photos.length / photosPerPage);
-  const startIndex = (page - 1) * photosPerPage;
-  const paginatedPhotos = photos.slice(startIndex, startIndex + photosPerPage);
+  // Create a mutable copy of the filtered photos
+  const mutablePhotos = filteredPhotos.map((photo) => ({
+    ...photo, // Spread the existing properties
+    width: photo.width, // Ensure width is copied
+    height: photo.height, // Ensure height is copied
+  }));
 
   // Lightbox Handlers
   const openLightbox = (event, { photo, index }) => {
@@ -66,27 +59,48 @@ const GalleryPage = () => {
         fullWidth
         label="Search Images"
         variant="outlined"
-        style={{ marginBottom: '20px' }}
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        style={{ marginBottom: "20px" }}
       />
 
+      <Grid container justifyContent="flex-end">
+        <Button
+          onClick={() => navigate("/users/add-assets")}
+          variant="contained"
+          color="primary"
+          sx={{ maxWidth: "150px", width: "auto", marginBottom: 2 }}
+        >
+          Add Asset
+        </Button>
+      </Grid>
+
       {/* Gallery Grid */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {paginatedPhotos.length > 0 ? (
-          <Gallery photos={paginatedPhotos} onClick={openLightbox} />
-        ) : (
-          <p className="text-center">Loading images...</p>
-        )}
-      </div>
+      {loading ? (
+        <Box display="flex" justifyContent="center" mt={4}>
+          <CircularProgress />
+        </Box>
+      ) : error ? (
+        <p className="text-center text-red-500">{error}</p>
+      ) : mutablePhotos.length > 0 ? (
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          <Gallery photos={mutablePhotos} onClick={openLightbox} />
+        </div>
+      ) : (
+        <p className="text-center">No images found.</p>
+      )}
 
       {/* Pagination Component */}
-      <Box display="flex" justifyContent="center" mt={4}>
-        <Pagination
-          count={totalPages}
-          page={page}
-          onChange={(event, value) => setPage(value)}
-          color="primary"
-        />
-      </Box>
+      {totalPages > 1 && (
+        <Box display="flex" justifyContent="center" mt={4} sx={{ minHeight: 50 }}>
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={(event, value) => setPage(value)}
+            color="primary"
+          />
+        </Box>
+      )}
 
       {/* Modal Gateway for Lightbox */}
       <ModalGateway>
@@ -94,7 +108,7 @@ const GalleryPage = () => {
           <Modal onClose={closeLightbox}>
             <Carousel
               currentIndex={currentImage}
-              views={photos.map((photo) => ({
+              views={mutablePhotos.map((photo) => ({
                 source: photo.src,
               }))}
             />
@@ -105,4 +119,4 @@ const GalleryPage = () => {
   );
 };
 
-export default GalleryPage;
+export default AssetsLib;

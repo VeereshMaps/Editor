@@ -20,6 +20,7 @@ import ViewGoldBook from 'pages/goldrepo/viewproject';
 import EditionDetails from 'pages/projects/editiondetails';
 import ProtectedRoute from 'components/ProtectedRoute';
 import DashboardLayout from 'layout/Dashboard';
+import AssetForm from "pages/assetslib/addassets"
 
 const Color = Loadable(lazy(() => import('pages/component-overview/color')));
 const Typography = Loadable(lazy(() => import('pages/component-overview/typography')));
@@ -84,6 +85,10 @@ const MainRoutes = {
     {
       path: 'assetslibrary',
       element: <AssetsLibrary />
+    },
+    {
+        path: 'add-assets',
+        element: <AssetForm />
     },
     {
       path: 'projects',

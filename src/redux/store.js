@@ -20,6 +20,8 @@ import editionUpdateReducer from './Slices/updateEditionSlice';
 import versionsByIdReducer from './Slices/versionByIdSlice';
 import commentsReducer from './Slices/commentSlice';
 import forgotPasswordReducer from './Slices/forgotPasswordSlice';
+import  createAsset  from './Slices/createAssetSlice';
+import AssetsReducer from'./Slices/assetsSlice';
 
   const rootReducer = combineReducers({
         auth: authReducer,
@@ -39,6 +41,8 @@ import forgotPasswordReducer from './Slices/forgotPasswordSlice';
         editionUpdate:editionUpdateReducer,
         versionsById:versionsByIdReducer,
         comments:commentsReducer,
+        createAsset: createAsset, 
+        assets: AssetsReducer,
 });
 
 // const persistedReducer = persistReducer(persistConfig, rootReducer);
