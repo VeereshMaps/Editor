@@ -1,0 +1,49 @@
+import { configureStore } from '@reduxjs/toolkit';
+import { combineReducers } from 'redux';
+import storage from 'redux-persist/lib/storage';
+import { persistStore, persistReducer } from 'redux-persist';
+
+import authReducer from './Slices/authSlice';
+import userIdReducer from './Slices/userSlice';
+import projectDetailsReducer from './Slices/projectSlice';
+import projectDetailsByIdReducer from './Slices/projectDetailsByIdSlice';
+import saveProjectDetailsByIdReducer from './Slices/saveProjectDetails';
+import roleBasedOrAllUsersReducer from './Slices/roleBasedOrAllUserSlice';
+import createProjectReducer from './Slices/createProjectSlice';
+import archiveProjectsReducer from './Slices/archiveProjectSlice';
+import deleteUserReducer from './Slices/deleteUserSlice';
+import createUserReducer from './Slices/createUserSlice';
+import editionsReducer from './Slices/editionSlice';
+import editionsByIdReducer from './Slices/editionByIdSlice';
+import editionsByProjectIdReducer from './Slices/editionByProjectIdSlice';
+import editionUpdateReducer from './Slices/updateEditionSlice';
+import versionsByIdReducer from './Slices/versionByIdSlice';
+import commentsReducer from './Slices/commentSlice';
+import forgotPasswordReducer from './Slices/forgotPasswordSlice';
+
+  const rootReducer = combineReducers({
+        auth: authReducer,
+        userDetailsById:userIdReducer,
+        forgotPassword:forgotPasswordReducer,
+        projects:projectDetailsReducer,
+        projectDetailsById:projectDetailsByIdReducer,
+        saveProjectDetailsById:saveProjectDetailsByIdReducer,
+        roleBasedOrAllUsers:roleBasedOrAllUsersReducer,
+        createProject:createProjectReducer,
+        archiveProjects:archiveProjectsReducer,
+        deleteUser:deleteUserReducer,
+        createUser:createUserReducer,
+        editions:editionsReducer,
+        editionsById:editionsByIdReducer,
+        editionsByProjectId:editionsByProjectIdReducer,
+        editionUpdate:editionUpdateReducer,
+        versionsById:versionsByIdReducer,
+        comments:commentsReducer,
+});
+
+// const persistedReducer = persistReducer(persistConfig, rootReducer);
+
+// Configure store
+export const store = configureStore({
+  reducer: rootReducer,
+});

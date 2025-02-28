@@ -1,0 +1,21 @@
+ # Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Editor & OS Files
+.DS_Store
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+
+# Build & Output
+dist/
+build/
+android/
+ios/
+
+# Logs
+logs/
+*.log
