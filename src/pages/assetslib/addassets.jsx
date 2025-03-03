@@ -3,11 +3,13 @@ import { TextField, Button, Box, Chip, InputAdornment, Paper, Grid } from "@mui/
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import { useDispatch, useSelector } from "react-redux";
 import { createAsset, resetState } from "../../redux/Slices/createAssetSlice";
+import { useNavigate } from "react-router";
 
 const AddAssets = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { loading, error, success } = useSelector((state) => state.createAsset);
-
+  const loginDetails = useSelector((state) => state.auth);
   const [name, setName] = useState("");
   const [keywords, setKeywords] = useState([]);
   const [keywordInput, setKeywordInput] = useState("");
@@ -37,6 +39,7 @@ const AddAssets = () => {
     formData.append("name", name);
     formData.append("licenceText", licenceText);
     formData.append("keywords", JSON.stringify(keywords));
+    formData.append("createdBy", loginDetails?.user?._id);
     if (image) formData.append("image", image);
 
     dispatch(createAsset(formData));
@@ -53,6 +56,7 @@ const AddAssets = () => {
       setImage(null);
       setPreview(null);
       dispatch(resetState()); // Reset Redux state after success
+      navigate(-1);
     }
   }, [success, dispatch]);
 

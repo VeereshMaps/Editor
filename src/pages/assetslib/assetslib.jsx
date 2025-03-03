@@ -17,11 +17,12 @@ const AssetsLib = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { photos, totalPages, loading, error } = useSelector((state) => state.assets);
+  const loginDetails = useSelector((state) => state.auth);
   const [currentImage, setCurrentImage] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-
+  const role = loginDetails?.user?.role;
   const photosPerPage = 5; // Reduced for testing
 
   // Fetch images from API
@@ -31,7 +32,7 @@ const AssetsLib = () => {
 
   // Search Filter
   const filteredPhotos = photos.filter((photo) =>
-    photo.src.toLowerCase().includes(searchTerm.toLowerCase())
+    photo?.src?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Create a mutable copy of the filtered photos
@@ -65,6 +66,7 @@ const AssetsLib = () => {
       />
 
       <Grid container justifyContent="flex-end">
+        {role === "Admin" &&
         <Button
           onClick={() => navigate("/add-assets")}
           variant="contained"
@@ -73,6 +75,7 @@ const AssetsLib = () => {
         >
           Add Asset
         </Button>
+        }
       </Grid>
 
       {/* Gallery Grid */}

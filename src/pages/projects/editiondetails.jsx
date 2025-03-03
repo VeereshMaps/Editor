@@ -45,6 +45,19 @@ const EditionDetails = () => {
         createdBy: loginDetails?.user?._id,
     });
 
+    const role = loginDetails?.user?.role;
+
+    const categoryRoleMap = {
+        editorial: "editor",
+        coverdesign: "designer",
+        TypeSetting: "proofReader",
+    };
+
+    const isAdminOrPM = role === "Admin" || role === "Project Manager";
+
+    const canShowButton =
+        isAdminOrPM ||
+        categoryRoleMap[selectedCategory] === role;
 
 
 
@@ -57,13 +70,13 @@ const EditionDetails = () => {
         setSubTab(newValue);
     };
 
-    useEffect(()=>{
-        console.log("---",submitAvailable)
-        if(!openModal){
+    useEffect(() => {
+        console.log("---", submitAvailable)
+        if (!openModal) {
             setSubmitAvailable(false);
         }
-            
-    },[openModal])
+
+    }, [openModal])
 
 
     useEffect(() => {
@@ -118,6 +131,8 @@ const EditionDetails = () => {
     }, [dispatch]);
 
     useEffect(() => {
+        console.log("selectedCategory", selectedCategory);
+
         setFormData((prev) => ({ ...prev, category: selectedCategory }));
     }, [selectedCategory]);
 
@@ -165,7 +180,7 @@ const EditionDetails = () => {
         // Handle creating a new version
         if (validateForm()) {
             setSubmitAvailable(true);
-            console.log("available",submitAvailable)
+            console.log("available", submitAvailable)
             try {
                 await dispatch(createVersion(formData));
                 await getVersionDetails(editionDetails);
@@ -247,9 +262,11 @@ const EditionDetails = () => {
                         <Typography variant="h5">{editionDetails?.title || 'NA'}</Typography>
                         <Typography variant="body2">{editionDetails?.publisher || 'NA'}</Typography>
                     </Box>
-                    <Button variant="contained" color="primary" onClick={handleCreateNewVersion}>
-                        Create {selectedCategory} Version
-                    </Button>
+                    {canShowButton && (
+                        <Button variant="contained" color="primary" onClick={handleCreateNewVersion}>
+                            Create {selectedCategory} Version
+                        </Button>
+                        )}
                 </CardContent>
             </Card>
 
@@ -261,7 +278,7 @@ const EditionDetails = () => {
                     ))}
                 </Tabs>
 
-                <Box sx={{ display: "flex", flex: 1, height:"100%" }}>
+                <Box sx={{ display: "flex", flex: 1, height: "100%" }}>
                     {/* Vertical Tabs for Versions */}
                     <Box sx={{ width: "auto", borderRight: 1, borderColor: "divider", p: 2 }}>
                         <Tabs
@@ -312,7 +329,7 @@ const EditionDetails = () => {
                                 src={tabData[selectedCategory][subTab].fileStorageUrl}
                                 width="100%"
                                 height="100%" // Matches parent height
-                                style={{ border: "none",minHeight: "500px" }}
+                                style={{ border: "none", minHeight: "500px" }}
                                 title={`Version ${subTab + 1} PDF`}
                                 onError={(e) => console.error("Failed to load PDF:", e)}
                             ></iframe>

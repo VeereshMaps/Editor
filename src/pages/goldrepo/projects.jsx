@@ -14,10 +14,29 @@ const GoldRepo = () => {
   const dispatch = useDispatch();
   const [selectedRow, setSelectedRow] = useState(null);
   const allGoldEditions = useSelector((state) => state.editions.projects.filter(project => project.status === "Gold").sort((a, b) => new Date(a.publicationDate) - new Date(b.publicationDate)));
+const loginDetails = useSelector((state) => state.auth);
 
   useEffect(()=>{
     getEditionFunc();
   },[]);
+  
+  useEffect(()=>{
+    console.log("loginDetails",loginDetails?.user?.role);
+    
+  },[loginDetails]);
+
+  const filteredGoldEditions = allGoldEditions.filter(item => {
+    const projectValues = Object.values(item.projectID || {});
+    const hasMatchingId = projectValues.some(value =>
+      value?.toString() === loginDetails.user._id.toString()
+    );
+  
+    return hasMatchingId;
+  });
+
+  console.log("filteredGoldEditions",filteredGoldEditions);
+  
+  
 
   useEffect(()=>{
     console.log("-----",allGoldEditions);
@@ -103,14 +122,20 @@ const GoldRepo = () => {
     navigate('/goldprojects/add', { state: { bookData: null } });
   };
 
-  const rows = allGoldEditions.map((item, index) => ({
-    id: index + 1,
-    title: item.projectID.title,
-    versionTitle: item.title,
-    publisher: item.publisher,
-    subject: item.subject,
-    publicationDate: moment(item.publicationDate).format("DD-MM-YYYY"),
+  const isAdminOrPM = 
+  loginDetails?.user?.role === "Admin" || loginDetails?.user?.role === "Project Manager";
+
+const dataSource = isAdminOrPM ? allGoldEditions : filteredGoldEditions;
+
+const rows = dataSource.map((item, index) => ({
+  id: index + 1,
+  title: item.projectID.title,
+  versionTitle: item.title,
+  publisher: item.publisher,
+  subject: item.subject,
+  publicationDate: moment(item.publicationDate).format("DD-MM-YYYY"),
 }));
+
 
   return (
     <Paper sx={{ padding: 2 }}>
