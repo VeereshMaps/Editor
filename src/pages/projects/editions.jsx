@@ -68,10 +68,10 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
         }
     }, [bookDetails]);
 
-    useEffect(() => {
-        console.log("asdasdsad", editionByProjectIdDetails.editions);
-
-    }, [editionByProjectIdDetails])
+    useEffect(()=>{
+        console.log("editionByProjectIdDetails",editionByProjectIdDetails);
+        
+    },[editionByProjectIdDetails])
 
     const getEditionsFunc = async () => {
         try {
@@ -166,7 +166,6 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
         if (!editionData.textcolor) newErrors.textcolor = "Text Color is required";
         if (!editionData.description) newErrors.description = "Description is required";
         if (!editionData.status) newErrors.status = "Status is required";
-        console.log("newErrors",newErrors);
         
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
@@ -175,7 +174,6 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
 
         setErrors({});
         try {
-            console.log("editionData", editionData, editData);
             if (editData) {
                 // If editing, call the update API
                 await dispatch(updateEdition({ id: editData._id, updatedData: editionData }));
@@ -231,7 +229,7 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
                 {/* Edition Cards */}
                 {editionByProjectIdDetails.editions.length > 0 ? editionByProjectIdDetails.editions.map((edition, index) => (
                     <Grid item xs={12} sm={4} key={index}>
-                        <Card sx={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                        <Card sx={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between",    position: "relative" }}>
                             <CardContent sx={{ padding: 2, flexGrow: 1 }}>
                                 <Typography variant="h6"><b>Title: {edition.title}</b></Typography>
                                 <Typography
@@ -258,7 +256,7 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
                                 <Button variant="outlined" color="primary" size="small" onClick={() => navigate("/projects/editions", { state: { editionDetails: edition, projectDetails: editionByProjectIdDetails } })}>
                                     View
                                 </Button>
-                                {(!edition.status || edition.status === "WIP") && formattedUserRole.includes(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase()) && (loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === superAccess || loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === elevatedAccess) && (
+                                {(!edition.status || edition.status === "WIP") && formattedUserRole.includes(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase()) && (loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === superAccess || loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === elevatedAccess) && (edition?.isCoverDesignedApproved && edition?.isTypesettingApproved) && (
                                 <Button variant="outlined" color="primary" size="small"  onClick={() => handleMoveToGold(edition)}>
                                     Move to GOLD
                                 </Button>

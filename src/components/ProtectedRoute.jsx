@@ -13,7 +13,6 @@ export default function ProtectedRoute() {
   if (status === "pending") {
     return <p>Loading...</p>;
   }
-console.log("isAuthenticated",isAuthenticated);
 
 //   // Redirect to login if not authenticated
   return isAuthenticated ? <DashboardLayout key={location.pathname} /> : <Navigate to="/login" replace />;

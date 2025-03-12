@@ -38,11 +38,6 @@ const ViewBookDetails = (props) => {
           initialize()
       }, []);
   
-      useEffect(() => {
-          console.log("roleBasedOrAllUsers",roleBasedOrAllUsers);
-          
-      }, [roleBasedOrAllUsers]);
-  
       const initialize = async () => {
           try {
               await dispatch(getRoleBasedOrAllUsers());
@@ -72,7 +67,6 @@ useEffect(() => {
       const teamLeadData = props.bookDetails.projects.teamLead?.map(tl =>
         roleBasedOrAllUsers?.data?.find(user => user._id === tl._id)
     ) || [];
-    console.log("teamLeadData",teamLeadData);
     
       setFormData(prevState => ({
         ...prevState,

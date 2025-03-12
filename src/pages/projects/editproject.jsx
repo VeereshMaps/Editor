@@ -7,8 +7,6 @@ import { useDispatch } from 'react-redux';
 import { saveProjectDetailsFunc } from 'redux/Slices/saveProjectDetails';
 
 const EditBook = ({ setShowEditForm, bookDetails }) => {
-  console.log("bookDetails",bookDetails);
-  
   const dispatch = useDispatch();
   const [formData, setFormData] = useState({
     title: "",
@@ -61,8 +59,6 @@ const EditBook = ({ setShowEditForm, bookDetails }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-  console.log("---",name);
-  
     setFormData((prevFormData) => ({
       ...prevFormData,
       [name]: name === "author"

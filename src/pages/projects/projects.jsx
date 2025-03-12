@@ -28,12 +28,6 @@ const BooksRepo = () => {
         }
     }, []);
 
-    
-    
-    useEffect(() => {
-        console.log("projectDetails", projectDetails);
-    }, [projectDetails]);
-
     const projectDataAPI = async (userData) => {
         try {
             await dispatch(getProjects(userData.role));

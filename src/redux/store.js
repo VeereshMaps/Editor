@@ -22,6 +22,9 @@ import commentsReducer from './Slices/commentSlice';
 import forgotPasswordReducer from './Slices/forgotPasswordSlice';
 import  createAsset  from './Slices/createAssetSlice';
 import AssetsReducer from'./Slices/assetsSlice';
+import goldProjectReducer from'./Slices/goldProjectSlice';
+import fileUploadReducer from'./Slices/uploadProjectInputFileSlice';
+import versionApproveReducer from'./Slices/versionApproveSlice';
 
   const rootReducer = combineReducers({
         auth: authReducer,
@@ -43,6 +46,9 @@ import AssetsReducer from'./Slices/assetsSlice';
         comments:commentsReducer,
         createAsset: createAsset, 
         assets: AssetsReducer,
+        goldProjects:goldProjectReducer,
+        projectInputFileUpload:fileUploadReducer,
+        versionApprove:versionApproveReducer,
 });
 
 // const persistedReducer = persistReducer(persistConfig, rootReducer);

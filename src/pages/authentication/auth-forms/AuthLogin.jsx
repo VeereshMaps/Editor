@@ -64,9 +64,7 @@ export default function AuthLogin({ isDemo = false }) {
         actions.setSubmitting(true);
         setLoginError(null);
         try {
-            const result = await dispatch(loginUser({ email: values.email, password: values.password }));
-            console.log("result",result);
-            
+            const result = await dispatch(loginUser({ email: values.email, password: values.password }));           
             if (result.error) {
                 setLoginError(result.payload.message);
                 actions.setErrors({ submit: result.payload.message });

@@ -36,8 +36,6 @@ export default function App() {
         fetchUserDetailsById(userDetails.user);
     } else {
         const storedUser = localStorage.getItem("user");
-        console.log("storedUser", storedUser);
-
         if (storedUser) {
             const parsedUser = JSON.parse(storedUser);
 

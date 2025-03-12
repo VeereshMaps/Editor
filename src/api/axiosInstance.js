@@ -30,8 +30,6 @@ axiosInstance.interceptors.response.use(
             console.log("Token expired. Logging out...");
                 // 🔥 Dynamically import store inside the interceptor
                 const { default: store } = await import("../redux/store");
-                console.log("Store loaded:", store);  // Debugging
-
                 // Dispatch Redux logout action to sync state
                 store.dispatch(logout());
 

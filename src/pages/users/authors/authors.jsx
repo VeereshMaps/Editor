@@ -20,10 +20,6 @@ export default function Authors() {
         initialize();
     }, []);
 
-    useEffect(() => {
-        console.log("roleBasedOrAllUsers", roleBasedOrAllUsers);
-    }, [roleBasedOrAllUsers]);
-
     const initialize = async () => {
         try {
             await dispatch(getRoleBasedOrAllUsers('author'));

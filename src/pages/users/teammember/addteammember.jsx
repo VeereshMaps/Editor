@@ -14,9 +14,6 @@ const AddTeamMember = ({ id, authorData, onSubmit }) => {
     const [showPassword, setShowPassword] = useState(false);
     const authorData1 = location.state?.authorData;
 
-    console.log("Received authorData1:", authorData1);
-
-
     // State for form fields
     const [author, setAuthor] = useState({
         firstName: authorData1?.firstName || '',
@@ -54,8 +51,6 @@ const AddTeamMember = ({ id, authorData, onSubmit }) => {
     // Handle input changes
     const handleChange = (e) => {
         const { name, value } = e.target;
-        console.log("---",name, value);
-        
         setAuthor((prev) => ({
             ...prev,
             [name]: value

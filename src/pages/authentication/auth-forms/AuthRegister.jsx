@@ -71,7 +71,7 @@ export default function AuthRegister() {
         role: "Project Manager",
       })).unwrap();
 
-      console.log("User registered successfully:", response);
+      console.log("User registered successfully:");
 
       navigate("/login"); // Redirect to login page after successful registration
     } catch (error) {

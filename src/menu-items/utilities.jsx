@@ -30,7 +30,7 @@ const utilities = {
   children: [
     {
       id: 'wip',
-      title: 'WIP',
+      title: 'Projects',
       type: 'item',
       url: '/projects',
       icon: CloudSyncOutlined

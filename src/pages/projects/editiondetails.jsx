@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Box, Tabs, Tab, Typography, Card, CardContent, Button, TextField, Paper, Stack, IconButton, List, ListItem, ListItemText, Divider, Modal } from "@mui/material";
 import { useDropzone } from "react-dropzone";
 import CommentOutlinedIcon from "@mui/icons-material/CommentOutlined";
@@ -11,13 +11,17 @@ import { clearVersionState, createVersion } from "redux/Slices/createVersionSlic
 import { getVersionsById } from "redux/Slices/versionByIdSlice";
 import { createComment, fetchCommentsByVersionId } from "redux/Slices/commentSlice";
 import moment from "moment-timezone";
+import { uploadProjectFile } from "redux/Slices/uploadProjectInputFileSlice";
+import { approveVersionById } from "redux/Slices/versionApproveSlice";
 
 const EditionDetails = () => {
     const dispatch = useDispatch();
     const location = useLocation();
     const { editionDetails } = location.state || {};
+    const fileInputRef = useRef(null);
     const [mainTab, setMainTab] = useState(0);
     const [subTab, setSubTab] = useState(0);
+    const [approvedCategories, setApprovedCategories] = useState({});
     const [chatOpen, setChatOpen] = useState(false);
     const [openModal, setOpenModal] = useState(false);
     const [chatMessage, setChatMessage] = useState("");
@@ -28,7 +32,7 @@ const EditionDetails = () => {
     const commentDetails = useSelector((state) => state.comments);
     const [tabData, setTabData] = useState({});
     const [formErrors, setFormErrors] = useState({});
-    const fixedTabs = ["editorial", "coverdesign", "TypeSetting"];
+    const fixedTabs = ["Inputs", "coverdesign", "TypeSetting"];
     const mainTabs = fixedTabs; // Ensure it’s always an array
     const selectedCategory = mainTabs[mainTab] || ""; // Avoid undefined index errors
     const pdfLinks = selectedCategory ? tabData[selectedCategory] : []; // Ensure it's always an array
@@ -71,20 +75,25 @@ const EditionDetails = () => {
     };
 
     useEffect(() => {
-        console.log("---", submitAvailable)
         if (!openModal) {
             setSubmitAvailable(false);
         }
-
     }, [openModal])
 
 
     useEffect(() => {
         getVersionDetails(editionDetails);
+        const filesArr = { Inputs: [] }
+        editionDetails?.projectID?.files.forEach(file => {
+            filesArr["Inputs"].push({ filePath: file }); // or { url: file }, whatever key you need
+        });
+        setTabData(prevData => ({ ...prevData, ...filesArr }));
     }, [editionDetails]);
 
     const getVersionDetails = async (ed) => {
         try {
+            console.log("ed?._id",ed?._id);
+            
             dispatch(getVersionsById(ed?._id))
         } catch (error) {
             console.log("Error while getting version details", error);
@@ -93,15 +102,26 @@ const EditionDetails = () => {
 
     useEffect(() => {
         if (versionDetails.status === "success") {
+            const approved = versionDetails?.versions?.reduce((acc, item) => {
+                const hasApprovedItem = item.isApproved;
+                if (hasApprovedItem) {
+                  acc[item.category] = true;
+                }
+                return acc;
+              }, {});
+              
+              setApprovedCategories(approved);
+              
+            
             const categorizedData = { editorial: [], coverdesign: [], TypeSetting: [] };
-
-            versionDetails.versions.forEach(version => {
+              console.log("+++++++",versionDetails.versions)
+            versionDetails?.versions?.forEach(version => {
                 if (categorizedData[version.category]) {
                     categorizedData[version.category].push({ ...version });
                 }
             });
 
-            setTabData(categorizedData); // Reset state with clean data
+            setTabData(prevData => ({ ...prevData, ...categorizedData }));
         }
     }, [versionDetails]);
 
@@ -109,8 +129,6 @@ const EditionDetails = () => {
 
     useEffect(() => {
         if (commentDetails.status === "success") {
-            console.log("commentDetails.comments", commentDetails.comments);
-
             const formattedChatHistory = commentDetails.comments.map((comment) => ({
                 username: `${comment.userId.firstName} ${comment.userId.lastName}`,
                 message: comment.message,
@@ -131,8 +149,6 @@ const EditionDetails = () => {
     }, [dispatch]);
 
     useEffect(() => {
-        console.log("selectedCategory", selectedCategory);
-
         setFormData((prev) => ({ ...prev, category: selectedCategory }));
     }, [selectedCategory]);
 
@@ -180,7 +196,6 @@ const EditionDetails = () => {
         // Handle creating a new version
         if (validateForm()) {
             setSubmitAvailable(true);
-            console.log("available", submitAvailable)
             try {
                 await dispatch(createVersion(formData));
                 await getVersionDetails(editionDetails);
@@ -247,6 +262,33 @@ const EditionDetails = () => {
         }
     };
 
+    const handleFileInputs = async () => {
+        fileInputRef.current.click(); // Programmatically open file dialog
+    }
+
+    const handleApprove = async(version) => {
+        if(version){
+            try {
+                await dispatch(approveVersionById(version?._id));
+                alert('Version approved successfully!');
+            } catch (error) {
+                console.log("error in approving version",error);
+            }
+        }
+    }
+
+    const handleInputFileChange = async (event) => {
+        const file = event.target.files[0]; // Single file selected
+        if (file) {
+            try {
+                await dispatch(uploadProjectFile({ projectId: editionDetails?.projectID?._id, file: file }));
+            } catch (error) {
+                console.log("Failed to upload to inputs", error);
+            }
+            // You can now upload the file using API or store in state
+        }
+    };
+
     const formatChatTimestamp = (timestamp) => {
         return moment(timestamp)
             // .tz("Asia/Kolkata") // Change to your preferred timezone
@@ -262,11 +304,24 @@ const EditionDetails = () => {
                         <Typography variant="h5">{editionDetails?.title || 'NA'}</Typography>
                         <Typography variant="body2">{editionDetails?.publisher || 'NA'}</Typography>
                     </Box>
-                    {canShowButton && (
+                    {canShowButton && selectedCategory != "Inputs" ? (
                         <Button variant="contained" color="primary" onClick={handleCreateNewVersion}>
                             Create {selectedCategory} Version
                         </Button>
-                        )}
+                    ) : (
+                        <>
+                            <Button variant="contained" color="primary" onClick={handleFileInputs}>
+                                Upload File
+                            </Button>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                style={{ display: 'none' }} // Hide the input
+                                onChange={handleInputFileChange}
+                                accept=".pdf,.doc,.docx,.txt" // Optional: file types you want to allow
+                            />
+                        </>
+                    )}
                 </CardContent>
             </Card>
 
@@ -288,56 +343,82 @@ const EditionDetails = () => {
                             onChange={handleSubTabChange}
                             sx={{ borderRight: 1, borderColor: "divider", alignItems: "flex-start" }}
                         >
-                            {Object.entries(tabData).length > 0 && tabData[selectedCategory].map((item, index) => (
-                                <Tab
-                                    key={index}
-                                    label={
-                                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
-                                            <Typography sx={{ flexGrow: 1 }}>{item.versionName}</Typography>
-                                            <IconButton
-                                                sx={{
-                                                    ml: 1,
-                                                    backgroundColor: "#e6f4ff",
-                                                    borderRadius: "8px",
-                                                    "&:hover": { backgroundColor: "#b3e5fc" },
-                                                    padding: "6px"
-                                                }}
-                                                size="small"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (index === subTab) {
-                                                        console.log("Comment Clicked:", item, index, subTab);
-                                                        handleCommentClick(item.versionName);
-                                                    }
-                                                }}
+                            {selectedCategory != "Inputs" ?
+                                Object.entries(tabData).length > 0 && tabData[selectedCategory]?.map((item, index) => (
+                                    <Tab
+                                        key={index}
+                                        label={
+                                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+                                                <Typography sx={{ flexGrow: 1 }}>{item.versionName}</Typography>
+                                                <IconButton
+                                                    sx={{
+                                                        ml: 1,
+                                                        backgroundColor: "#e6f4ff",
+                                                        borderRadius: "8px",
+                                                        "&:hover": { backgroundColor: "#b3e5fc" },
+                                                        padding: "6px"
+                                                    }}
+                                                    size="small"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (index === subTab) {
+                                                            handleCommentClick(item.versionName);
+                                                        }
+                                                    }}
 
-                                            >
-                                                <CommentBankOutlined style={{ color: "orange" }} fontSize="small" />
-                                            </IconButton>
-                                        </Box>
-                                    }
-                                    sx={{ textAlign: "left", justifyContent: "flex-start" }}
-                                />
-                            ))}
+                                                >
+                                                    <CommentBankOutlined style={{ color: "orange" }} fontSize="small" />
+                                                </IconButton>
+                                            </Box>
+                                        }
+                                        sx={{ textAlign: "left", justifyContent: "flex-start" }}
+                                    />
+                                )) : Object.entries(tabData).length > 0 && tabData[selectedCategory].map((item, index) => (
+                                    <Tab
+                                        key={index}
+                                        label={
+                                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+                                                <Typography sx={{ flexGrow: 1 }}>{index}</Typography>
+                                            </Box>
+                                        }
+                                    />
+                                ))}
                         </Tabs>
                     </Box>
                     {/* PDF Viewer */}
                     {/* PDF Viewer */}
-                    <Box sx={{ flex: 1, p: 1, display: "flex", alignItems: "center", justifyContent: "center", minHeight: "500px" }}>
-                        {tabData[selectedCategory]?.[subTab]?.fileStorageUrl ? (
+                    <Box sx={{ flex: 1, p: 1, display: "flex", alignItems: "center", justifyContent: "center",    flexDirection: "column", minHeight: "500px" }}>
+                        {tabData[selectedCategory]?.[subTab] && selectedCategory !== "Inputs" && canShowButton && (!approvedCategories?.TypeSetting || !approvedCategories?.coverdesign) && !approvedCategories?.[selectedCategory] && (
+                            <Button
+                                variant="contained"
+                                color="success"
+                                size="small"
+                                sx={{ alignSelf: "flex-end", mb: 1 }} // Align right and add margin-bottom
+                            onClick={() => handleApprove(tabData[selectedCategory][subTab])} // You can define this function
+                            >
+                                Approve
+                            </Button>
+                        )}
+
+                        {tabData[selectedCategory]?.[subTab] ? (
                             <iframe
-                                src={tabData[selectedCategory][subTab].fileStorageUrl}
+                                src={
+                                    selectedCategory === "Inputs"
+                                        ? `${import.meta.env.VITE_API_URL}/${tabData[selectedCategory][subTab].filePath}`
+                                        : tabData[selectedCategory][subTab].fileStorageUrl
+                                }
                                 width="100%"
-                                height="100%" // Matches parent height
+                                height="100%"
                                 style={{ border: "none", minHeight: "500px" }}
-                                title={`Version ${subTab + 1} PDF`}
-                                onError={(e) => console.error("Failed to load PDF:", e)}
+                                title={`File ${subTab + 1}`}
+                                onError={(e) => console.error("Failed to load file:", e)}
                             ></iframe>
                         ) : (
                             <Typography variant="h6" color="textSecondary">
                                 No data found
                             </Typography>
                         )}
+
                     </Box>
 
                 </Box>

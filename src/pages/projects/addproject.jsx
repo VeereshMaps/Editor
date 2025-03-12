@@ -31,7 +31,6 @@ const AddProjectForm = ({ id, Data, onSubmit }) => {
     const [proofReader, setProofReader] = useState([]);
     const [editor, setEditor] = useState([]);
     const [coverDesigner, setCoverDesigner] = useState([]);
-    console.log("bookData", bookData)
     // State for form fields
     const [project, setProject] = useState({
         title: bookData?.title || '',
@@ -198,7 +197,6 @@ const AddProjectForm = ({ id, Data, onSubmit }) => {
     // Handle form submit
     const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log("project", project)
         const extractedData = {
             title: project.title,
             author: project.author?._id || null,
@@ -229,8 +227,6 @@ const AddProjectForm = ({ id, Data, onSubmit }) => {
             console.log("updating error", error);
         }
     };
-
-    console.log("===", bookData, teamleads, project)
 
     return (
         <Paper sx={{ padding: 3 }}>
@@ -418,11 +414,8 @@ const AddProjectForm = ({ id, Data, onSubmit }) => {
                                 value={project.teamLead?.map(tl => tl._id) || []} // Ensure it does not break if empty
                                 onChange={(e) => {
                                     const selectedIds = e.target.value; // Array of selected IDs
-                                    console.log("Selected IDs:", selectedIds);
-
                                     // Map selected IDs to full objects
                                     const selectedTeamLeads = teamleads.filter(tl => selectedIds.includes(tl._id));
-
                                     // Ensure state is updated properly
                                     handleChange({ target: { name: "teamLead", value: selectedIds } });
                                 }}

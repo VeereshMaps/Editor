@@ -8,24 +8,20 @@ import { Add, AddCircleOutline, DeleteOutline, DeleteOutlineSharp } from '@mui/i
 import { useDispatch, useSelector } from 'react-redux';
 import { getEditions } from '../../redux/Slices/editionSlice';
 import moment from 'moment-timezone';
+import { getGoldProjects } from 'redux/Slices/goldProjectSlice';
 
 const GoldRepo = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [selectedRow, setSelectedRow] = useState(null);
-  const allGoldEditions = useSelector((state) => state.editions.projects.filter(project => project.status === "Gold").sort((a, b) => new Date(a.publicationDate) - new Date(b.publicationDate)));
-const loginDetails = useSelector((state) => state.auth);
+  const allGoldProjects = useSelector((state) => state.goldProjects);
+  const loginDetails = useSelector((state) => state.auth);
 
   useEffect(()=>{
     getEditionFunc();
   },[]);
-  
-  useEffect(()=>{
-    console.log("loginDetails",loginDetails?.user?.role);
-    
-  },[loginDetails]);
 
-  const filteredGoldEditions = allGoldEditions.filter(item => {
+  const filteredGoldEditions = allGoldProjects.projects.filter(item => {
     const projectValues = Object.values(item.projectID || {});
     const hasMatchingId = projectValues.some(value =>
       value?.toString() === loginDetails.user._id.toString()
@@ -34,17 +30,9 @@ const loginDetails = useSelector((state) => state.auth);
     return hasMatchingId;
   });
 
-  console.log("filteredGoldEditions",filteredGoldEditions);
-  
-  
-
-  useEffect(()=>{
-    console.log("-----",allGoldEditions);
-  },[allGoldEditions])
-
   const getEditionFunc = async() => {
     try {
-        await dispatch(getEditions());
+        await dispatch(getGoldProjects());
     } catch (error) {
         console.log('getting editions error',error);
     }
@@ -80,60 +68,59 @@ const loginDetails = useSelector((state) => state.auth);
     //     <Chip size='small' variant='outlined' label={params.value} color={getStatusColor(params.value)} />
     //   ),
     // },
-    // {
-    //   field: 'actions',
-    //   headerName: 'Actions',
-    //   width: 150,
-    //   sortable: false,
-    //   renderCell: (params) => {
-    //     const handleEdit = () => {
-    //       setSelectedRow(params.row);
-    //       navigate('/goldprojects/edit', { state: { bookData: params.row } });
-    //     };
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      width: 150,
+      sortable: false,
+      renderCell: (params) => {
+        // const handleEdit = () => {
+        //   setSelectedRow(params.row);
+        //   navigate('/goldprojects/edit', { state: { bookData: params.row } });
+        // };
 
-    //     const handleDelete = () => {
-    //       alert(`Deleting book project: ${params.row.bookTitle}`);
-    //     };
-    //     const handleview = () => {
-    //       setSelectedRow(params.row);
-    //       navigate('/goldprojects/view', { state: { bookData: params.row } });
-    //     };
+        // const handleDelete = () => {
+        //   alert(`Deleting book project: ${params.row.bookTitle}`);
+        // };
+        const handleview = () => {
+          setSelectedRow(params.row);
+          navigate('/goldprojects/view', { state: { bookData: params.row } });
+        };
 
-    //     return (
-    //       <>
-    //         <IconButton onClick={handleEdit} color="primary">
-    //           <EditOutlined />
-    //         </IconButton>
-    //         <IconButton onClick={handleview} color="warning">
-    //           <EyeOutlined  />
-    //         </IconButton>
-    //         <IconButton onClick={handleDelete} color="error">
-    //           <DeleteOutlineSharp/>
-
-    //         </IconButton>
+        return (
+          <>
+            {/* <IconButton onClick={handleEdit} color="primary">
+              <EditOutlined />
+            </IconButton> */}
+            <IconButton onClick={handleview} color="warning">
+              <EyeOutlined  />
+            </IconButton>
+            {/* <IconButton onClick={handleDelete} color="error">
+              <DeleteOutlineSharp/>
+            </IconButton> */}
            
-    //       </>
-    //     );
-    //   },
-    // },
+          </>
+        );
+      },
+    },
   ];
 
   const handleAddBook = () => {
     navigate('/goldprojects/add', { state: { bookData: null } });
   };
 
-  const isAdminOrPM = 
-  loginDetails?.user?.role === "Admin" || loginDetails?.user?.role === "Project Manager";
+  const isAdminOrPM = loginDetails?.user?.role === "Admin" || loginDetails?.user?.role === "Project Manager";
+  const dataSource = isAdminOrPM ? allGoldProjects : filteredGoldEditions;
 
-const dataSource = isAdminOrPM ? allGoldEditions : filteredGoldEditions;
 
-const rows = dataSource.map((item, index) => ({
+const rows = dataSource?.projects?.map((item, index) => ({
   id: index + 1,
-  title: item.projectID.title,
+  title: item.project.title,
   versionTitle: item.title,
   publisher: item.publisher,
   subject: item.subject,
   publicationDate: moment(item.publicationDate).format("DD-MM-YYYY"),
+  versions:item.versions,
 }));
 
 

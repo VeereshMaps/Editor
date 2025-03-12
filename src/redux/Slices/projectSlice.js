@@ -8,7 +8,6 @@ export const getProjects = createAsyncThunk(
     try {
       const userId = getState().auth.user?._id; // Get user ID from Redux state
       let response;
-      console.log("userRole",userRole);
       if (userRole === "Admin") {
         // Super Admin fetches all projects
         response = await axiosInstance.get("/api/projects/");
