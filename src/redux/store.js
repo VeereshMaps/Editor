@@ -25,6 +25,7 @@ import AssetsReducer from'./Slices/assetsSlice';
 import goldProjectReducer from'./Slices/goldProjectSlice';
 import fileUploadReducer from'./Slices/uploadProjectInputFileSlice';
 import versionApproveReducer from'./Slices/versionApproveSlice';
+import updateVersionReducer from'./Slices/updateVersionSlice';
 
   const rootReducer = combineReducers({
         auth: authReducer,
@@ -49,6 +50,7 @@ import versionApproveReducer from'./Slices/versionApproveSlice';
         goldProjects:goldProjectReducer,
         projectInputFileUpload:fileUploadReducer,
         versionApprove:versionApproveReducer,
+        updateVersion:updateVersionReducer,
 });
 
 // const persistedReducer = persistReducer(persistConfig, rootReducer);

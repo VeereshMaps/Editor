@@ -1,101 +1,233 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Tabs, Tab, Paper, Grid, TextField, FormControl, InputLabel, Select, MenuItem, Button, Card, CardContent, Typography, Divider, CardActionArea, Stack } from '@mui/material';
-import MainCard from 'components/MainCard';
-import { AddBox } from '@mui/icons-material';
-import { useLocation } from 'react-router';
-import { useDispatch } from 'react-redux';
+import { Box, Tabs, Tab, Typography, Modal, Paper, Button, Card, CardContent } from '@mui/material';
+import { useLocation, useNavigate } from 'react-router';
+import { useDropzone } from 'react-dropzone';
+import { useDispatch, useSelector } from 'react-redux';
+import { updateVersionById } from 'redux/Slices/updateVersionSlice';
+import { getGoldProjectById, getGoldProjects } from 'redux/Slices/goldProjectSlice';
+import { getEditionsById } from 'redux/Slices/editionByIdSlice';
 
 const ViewGoldBook = () => {
     const location = useLocation();
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const goldProjectsData = location.state?.bookData;
-    const [mainTab, setMainTab] = useState(0); // Since only one main tab "Records"
-    const [subTab, setSubTab] = useState(0); // Index of selected category
-
-    const [categories, setCategories] = useState([]); // Unique categories from versions
-    const [groupedData, setGroupedData] = useState({}); // Versions grouped by category
+    const [mainTab, setMainTab] = useState(0);
+    const [categories, setCategories] = useState([]);
+    const [groupedData, setGroupedData] = useState({});
+    const [openModal, setOpenModal] = useState(false);
+    const [formData, setFormData] = useState({ file: null, projectID: null });
+    const loginDetails = useSelector((state) => state.auth);
+    const goldProjectsById = useSelector((state) => state.goldProjects);
+    const editionsById = useSelector((state) => state.editionsById);
+    const role = loginDetails?.user?.role;
+    const isAdminOrPM = role === "Admin" || role === "Project Manager";
 
     useEffect(() => {
-        // Extract unique categories and group versions by category
-        if (goldProjectsData?.versions) {
-            const groups = goldProjectsData.versions.reduce((acc, version) => {
+        if (goldProjectsData?.versionId) {
+            dispatch(getGoldProjects());
+            dispatch(getGoldProjectById(goldProjectsData.versionId));
+        }
+    }, [dispatch, goldProjectsData?.versionId]);
+
+
+    useEffect(() => {
+        const versions = goldProjectsById?.selectedProject?.versions || [];
+        if (versions.length > 0) {
+            const groups = versions.reduce((acc, version) => {
                 if (!acc[version.category]) acc[version.category] = [];
                 acc[version.category].push(version);
                 return acc;
             }, {});
-
             setGroupedData(groups);
-            setCategories(Object.keys(groups)); // e.g., ["coverdesign", "TypeSetting"]
+            setCategories(Object.keys(groups));
         }
-    }, [goldProjectsData]);
+    }, [goldProjectsById?.selectedProject?.versions?.length]);
+    
 
-    // Handle Sub Tab Change
-    const handleSubTabChange = (event, newValue) => {
-        setSubTab(newValue);
+
+    const handleMainTabChange = (event, newValue) => {
+        setMainTab(newValue);
+    };
+
+    const handleOpenModal = () => setOpenModal(true);
+    const handleCloseModal = () => {
+        setOpenModal(false);
+        setFormData({ file: null,projectID: null }); // Clear file on cancel/close
+    };
+
+    const handleFileRemove = () => {
+        setFormData({ file: null });
+    };
+
+    const matchedVersion = goldProjectsById?.selectedProject?.versions?.find(
+        (item) => item.category === categories[mainTab]
+    );
+    const fetchEditionDetails = async (editionId, dispatch) => {
+        if (!editionId) return;
+    
+        try {
+            await dispatch(getEditionsById(editionId));
+        } catch (error) {
+            console.error("Error fetching edition details:", error);
+        }
+    };
+    
+    // Use inside useEffect
+    useEffect(() => {
+        fetchEditionDetails(matchedVersion?.editionId, dispatch);
+    }, [matchedVersion?.editionId]);
+    
+    const handleSubmit = async () => {
+        if (!formData.file || !matchedVersion) return;
+
+        try {
+            await dispatch(updateVersionById({ versionId: matchedVersion._id, formData })).unwrap();
+            handleCloseModal();
+            setTimeout(() => {
+                navigate('/goldprojects');
+            }, 100);
+
+            //.then(()=>{
+            //     dispatch(getGoldProjectById(matchedVersion._id));
+            // });
+
+        } catch (error) {
+            console.error("Updating Version Error", error);
+        }
+
+
     };
 
 
+    const { getRootProps, getInputProps } = useDropzone({
+        accept: categories[mainTab] === "coverdesign"  ? { 'image/*': [] } : { 'application/pdf': [] },
+        onDrop: (acceptedFiles) => {
+            if (acceptedFiles.length > 0 && matchedVersion) {
+                setFormData({
+                    projectID: matchedVersion._id,
+                    file: acceptedFiles[0]
+                });
+            }
+        },
+        multiple: false
+    });
 
-  return (
-    <Box sx={{ display: "flex", flexDirection: "column", flex: 1 }}>
-            {/* Main Tabs (Only Records for now) */}
-            <Tabs
-                value={mainTab}
-                onChange={(e, v) => setMainTab(v)}
-                sx={{ borderBottom: 1, borderColor: "divider" }}
-            >
-                <Tab label="Records" />
-            </Tabs>
 
-            <Box sx={{ display: "flex", flex: 1, height: "100%" }}>
-                {/* Vertical Category Tabs */}
-                <Box sx={{ minWidth: 200, borderRight: 1, borderColor: "divider", p: 2 }}>
-                    <Tabs
-                        orientation="vertical"
-                        variant="scrollable"
-                        value={subTab}
-                        onChange={handleSubTabChange}
-                        sx={{ alignItems: "flex-start" }}
+    return (
+        <Box sx={{ display: "flex", flexDirection: "column", flex: 1 }}>
+            <Card sx={{ p: 2, width: "100%", minHeight: "80px" }}>
+                <CardContent sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Box>
+                        <Typography variant="h6">Edition Details</Typography>
+                        <Typography variant="h5">Title: {editionsById?.editions?.title}</Typography>
+                        <Typography variant="body2">Publisher: {editionsById?.editions?.publisher}</Typography>
+                    </Box>
+                    {/* Update Button */}
+                    {categories.length > 0 && isAdminOrPM && (
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={handleOpenModal}
+                            sx={{ ml: 2, whiteSpace: "nowrap" }}
                     >
-                        {categories.map((cat, index) => (
-                            <Tab
-                                key={index}
-                                label={<Typography sx={{ textTransform: "capitalize" }}>{cat}</Typography>}
-                                sx={{ alignItems: "flex-start", justifyContent: "flex-start", textAlign: "left" }}
-                            />
-                        ))}
-                    </Tabs>
-                </Box>
-
-                {/* File Viewer */}
-                <Box
-                    sx={{
-                        flex: 1,
-                        p: 1,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        minHeight: "500px",
-                    }}
-                >   
-                    {categories.length > 0 && groupedData[categories[subTab]]?.[0]?.fileStorageUrl ? (
-                        <iframe
-                            src={groupedData[categories[subTab]][0].fileStorageUrl}
-                            width="100%"
-                            height="100%"
-                            style={{ border: "none", minHeight: "500px" }}
-                            title={`File - ${categories[subTab]}`}
-                            onError={(e) => console.error("Failed to load file:", e)}
-                        ></iframe>
-                    ) : (
-                        <Typography variant="h6" color="textSecondary">
-                            No data found
-                        </Typography>
+                            Update {categories[mainTab]}
+                        </Button>
                     )}
-                </Box>
+                </CardContent>
+            </Card>
+            {/* Tabs and Button in the same line */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Tabs
+                    value={mainTab}
+                    onChange={handleMainTabChange}
+                    sx={{ borderBottom: 1, borderColor: "divider", flexGrow: 1 }}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                >
+                    {categories.map((cat, index) => (
+                        <Tab
+                            key={index}
+                            label={<Typography sx={{ textTransform: "capitalize" }}>{cat}</Typography>}
+                        />
+                    ))}
+                </Tabs>
+
+
             </Box>
+
+            {/* File Viewer */}
+            <Box
+                sx={{
+                    flex: 1,
+                    p: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minHeight: "500px",
+                }}
+            >
+                {categories.length > 0 && groupedData[categories[mainTab]]?.[0]?.fileStorageUrl ? (
+                    <iframe
+                        src={groupedData[categories[mainTab]]?.[0]?.fileStorageUrl}
+                        width="100%"
+                        height="100%"
+                        style={{ border: "none", minHeight: "500px" }}
+                        title={`File - ${categories[mainTab]}`}
+                        onError={(e) => console.error("Failed to load file:", e)}
+                        aria-label={`Viewing file for ${categories[mainTab]}`}
+                    />
+
+                ) : (
+                    <Typography variant="h6" color="textSecondary">
+                        No data found
+                    </Typography>
+                )}
+            </Box>
+
+            {/* Modal for Upload */}
+            <Modal open={openModal} onClose={handleCloseModal} sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Paper sx={{ width: "100%", maxWidth: 500, p: 3, borderRadius: "10px" }}>
+                    <Typography variant="h6" gutterBottom>Upload File for {categories[mainTab]}</Typography>
+
+                    {/* Drag and Drop */}
+                    <Box
+                        {...getRootProps()}
+                        sx={{
+                            p: 2,
+                            border: "2px dashed #ccc",
+                            textAlign: "center",
+                            cursor: "pointer",
+                            mb: 2,
+                            borderRadius: '8px'
+                        }}
+                    >
+                        <input {...getInputProps()} />
+                        {formData.file ? (
+                            <Typography variant="body1">
+                                Uploaded: {formData.file.name}{" "}
+                                <Button color="error" size="small" onClick={handleFileRemove} sx={{ ml: 1 }}>
+                                    Remove
+                                </Button>
+                            </Typography>
+                        ) : (
+                            <Typography variant="body1">Drag & Drop or Click to Upload file</Typography>
+                        )}
+                    </Box>
+
+                    {/* Buttons */}
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+                        <Button variant="contained" color="primary" onClick={handleSubmit} disabled={!formData.file}>
+                            Submit
+                        </Button>
+                        <Button variant="outlined" color="secondary" onClick={handleCloseModal}>
+                            Cancel
+                        </Button>
+                    </Box>
+                </Paper>
+            </Modal>
         </Box>
-  );
+    );
 };
 
 export default ViewGoldBook;

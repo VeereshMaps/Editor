@@ -18,7 +18,7 @@ export const getEditionsById = createAsyncThunk(
 const editionByIdSlice = createSlice({
   name: "editionsById",
   initialState: {
-    projects: [],
+    editions: [],
     loading: false,
     error: null,
   },
@@ -31,7 +31,7 @@ const editionByIdSlice = createSlice({
       })
       .addCase(getEditionsById.fulfilled, (state, action) => {
         state.loading = false;
-        state.projects = action.payload;
+        state.editions = action.payload;
       })
       .addCase(getEditionsById.rejected, (state, action) => {
         state.loading = false;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Gallery from "react-photo-gallery";
 import Carousel, { Modal, ModalGateway } from "react-images";
 import {
@@ -9,9 +9,12 @@ import {
   Grid,
   CircularProgress,
 } from "@mui/material";
+import DownloadIcon from "@mui/icons-material/Download";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchAssets } from "../../redux/Slices/assetsSlice";
+import { downloadAssetsById } from "redux/Slices/downloadAssetSlice";
+import { debounce } from "lodash";
 
 const AssetsLib = () => {
   const dispatch = useDispatch();
@@ -23,24 +26,27 @@ const AssetsLib = () => {
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const role = loginDetails?.user?.role;
-  const photosPerPage = 5; // Reduced for testing
+  const photosPerPage = 20;
 
-  // Fetch images from API
-  useEffect(() => {
-    dispatch(fetchAssets({ page, limit: photosPerPage }));
-  }, [dispatch, page]);
-
-  // Search Filter
-  const filteredPhotos = photos.filter((photo) =>
-    photo?.src?.toLowerCase().includes(searchTerm.toLowerCase())
+  // Debounce API call to prevent excessive requests
+  const delayedSearch = useCallback(
+    debounce((query, page) => {
+      dispatch(fetchAssets({ search: query, page, limit: photosPerPage }));
+    }, 500), // 500ms delay
+    [dispatch]
   );
 
-  // Create a mutable copy of the filtered photos
-  const mutablePhotos = filteredPhotos.map((photo) => ({
-    ...photo, // Spread the existing properties
-    width: photo.width, // Ensure width is copied
-    height: photo.height, // Ensure height is copied
-  }));
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setPage(1);
+    delayedSearch(e.target.value, 1);
+  };
+
+  // Fetch images when page changes
+  useEffect(() => {
+    dispatch(fetchAssets({ search: searchTerm, page, limit: photosPerPage }));
+  }, [dispatch, page]);
 
   // Lightbox Handlers
   const openLightbox = (event, { photo, index }) => {
@@ -61,21 +67,21 @@ const AssetsLib = () => {
         label="Search Images"
         variant="outlined"
         value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
+        onChange={handleSearchChange}
         style={{ marginBottom: "20px" }}
       />
 
       <Grid container justifyContent="flex-end">
-        {role === "Admin" &&
-        <Button
-          onClick={() => navigate("/add-assets")}
-          variant="contained"
-          color="primary"
-          sx={{ maxWidth: "150px", width: "auto", marginBottom: 2 }}
-        >
-          Add Asset
-        </Button>
-        }
+        {role === "Admin" && (
+          <Button
+            onClick={() => navigate("/add-assets")}
+            variant="contained"
+            color="primary"
+            sx={{ maxWidth: "150px", width: "auto", marginBottom: 2 }}
+          >
+            Add Asset
+          </Button>
+        )}
       </Grid>
 
       {/* Gallery Grid */}
@@ -85,9 +91,9 @@ const AssetsLib = () => {
         </Box>
       ) : error ? (
         <p className="text-center text-red-500">{error}</p>
-      ) : mutablePhotos.length > 0 ? (
+      ) : photos.length > 0 ? (
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          <Gallery photos={mutablePhotos} onClick={openLightbox} />
+          <Gallery photos={photos.map(photo => ({ ...photo }))} margin={10} onClick={openLightbox} renderImage={(props) => <CustomImage {...props} />} />
         </div>
       ) : (
         <p className="text-center">No images found.</p>
@@ -111,13 +117,67 @@ const AssetsLib = () => {
           <Modal onClose={closeLightbox}>
             <Carousel
               currentIndex={currentImage}
-              views={mutablePhotos.map((photo) => ({
+              views={photos.map((photo) => ({
                 source: photo.src,
               }))}
             />
           </Modal>
         )}
       </ModalGateway>
+    </div>
+  );
+};
+
+const CustomImage = ({ photo, onClick, index }) => {
+  const dispatch = useDispatch();
+  
+  const handleDownload = () => {
+    dispatch(downloadAssetsById(photo.id))
+      .unwrap()
+      .then((response) => {
+        const s3Url = response.imageUrl;
+
+        const link = document.createElement("a");
+        link.href = s3Url;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      })
+      .catch((error) => {
+        console.log("Error downloading image", error);
+      });
+  };
+
+  return (
+    <div style={{ position: "relative", display: "inline-block", marginRight:5, marginLeft:5 }}>
+      <img
+        src={photo.src}
+        alt={photo.alt}
+        width={photo.width}
+        height={photo.height}
+        onClick={(event) => onClick(event, { photo, index })}
+        style={{ cursor: "pointer", borderRadius: "5px" }}
+      />
+      {/* Download Button */}
+      <Button
+        variant="contained"
+        size="small"
+        sx={{
+          position: "absolute",
+          bottom: 10,
+          right: 10,
+          backgroundColor: "rgba(0, 0, 0, 0.6)",
+          color: "#fff",
+          minWidth: "unset",
+          padding: "5px",
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleDownload(photo.alt);
+        }}
+      >
+        <DownloadIcon />
+      </Button>
     </div>
   );
 };

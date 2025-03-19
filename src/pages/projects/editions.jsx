@@ -68,11 +68,6 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
         }
     }, [bookDetails]);
 
-    useEffect(()=>{
-        console.log("editionByProjectIdDetails",editionByProjectIdDetails);
-        
-    },[editionByProjectIdDetails])
-
     const getEditionsFunc = async () => {
         try {
             await dispatch(getEditionsByProjectId(bookDetails.projects._id));
@@ -253,7 +248,10 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
                                         Edit
                                     </Button>
                                 }
-                                <Button variant="outlined" color="primary" size="small" onClick={() => navigate("/projects/editions", { state: { editionDetails: edition, projectDetails: editionByProjectIdDetails } })}>
+                                {/* <Button variant="outlined" color="primary" size="small" onClick={() => navigate("/projects/editions", { state: { editionDetails: edition, projectDetails: editionByProjectIdDetails } })}>
+                                    View
+                                </Button> */}
+                                <Button variant="outlined" color="primary" size="small" onClick={() => navigate(`/projects/editions/${edition._id}/${edition.projectID._id}`)}>
                                     View
                                 </Button>
                                 {(!edition.status || edition.status === "WIP") && formattedUserRole.includes(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase()) && (loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === superAccess || loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === elevatedAccess) && (edition?.isCoverDesignedApproved && edition?.isTypesettingApproved) && (

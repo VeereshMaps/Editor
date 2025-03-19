@@ -6,32 +6,38 @@ import { Rnd } from "react-rnd"; // Import react-rnd
 import { CommentOutlined } from "@ant-design/icons";
 import { CommentBankOutlined } from "@mui/icons-material";
 import { useDispatch, useSelector } from "react-redux";
-import { useLocation } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import { clearVersionState, createVersion } from "redux/Slices/createVersionSlice";
 import { getVersionsById } from "redux/Slices/versionByIdSlice";
 import { createComment, fetchCommentsByVersionId } from "redux/Slices/commentSlice";
 import moment from "moment-timezone";
 import { uploadProjectFile } from "redux/Slices/uploadProjectInputFileSlice";
 import { approveVersionById } from "redux/Slices/versionApproveSlice";
+import { getProjectDetailsById } from "redux/Slices/projectDetailsByIdSlice";
+import { getEditionsById } from "redux/Slices/editionByIdSlice";
 
 const EditionDetails = () => {
     const dispatch = useDispatch();
-    const location = useLocation();
-    const { editionDetails } = location.state || {};
+    const { editionId, projectId } = useParams();
     const fileInputRef = useRef(null);
     const [mainTab, setMainTab] = useState(0);
     const [subTab, setSubTab] = useState(0);
     const [approvedCategories, setApprovedCategories] = useState({});
     const [chatOpen, setChatOpen] = useState(false);
     const [openModal, setOpenModal] = useState(false);
+    const [inputFiles, setInputFiles] = useState([]);
+    const [openInputModal, setOpenInputModal] = useState(false);
     const [chatMessage, setChatMessage] = useState("");
     const [chatname, setChatname] = useState();
     const [submitAvailable, setSubmitAvailable] = useState(true);
     const loginDetails = useSelector((state) => state.auth);
     const versionDetails = useSelector((state) => state.versionsById);
     const commentDetails = useSelector((state) => state.comments);
+    const editionDetailsById = useSelector((state) => state.editionsById);
+    const projectDetailsById = useSelector((state) => state.projectDetailsById);
     const [tabData, setTabData] = useState({});
     const [formErrors, setFormErrors] = useState({});
+    const [subTabArray, setSubTabArray] = useState([]);
     const fixedTabs = ["Inputs", "coverdesign", "TypeSetting"];
     const mainTabs = fixedTabs; // Ensure it’s always an array
     const selectedCategory = mainTabs[mainTab] || ""; // Avoid undefined index errors
@@ -40,12 +46,12 @@ const EditionDetails = () => {
 
 
     const [formData, setFormData] = useState({
-        projectID: editionDetails?.projectID?._id,
+        projectID: projectId,
         versionName: "",
         category: selectedCategory,
         remarks: "",
         file: null,
-        editionId: editionDetails?._id,
+        editionId: editionId,
         createdBy: loginDetails?.user?._id,
     });
 
@@ -63,8 +69,21 @@ const EditionDetails = () => {
         isAdminOrPM ||
         categoryRoleMap[selectedCategory] === role;
 
+        useEffect(() => {
+            if (tabData[selectedCategory]) {
+              setSubTabArray(Object.keys(tabData[selectedCategory]));
+            } else {
+              setSubTabArray([]);
+            }
+          }, [tabData, selectedCategory]);
+          
 
-
+    useEffect(() => {
+        getProjectDetails(projectId);
+        getVersionDetails(editionId);
+        dispatch(getEditionsById(editionId));
+    }, [editionId, projectId]);
+    
     const handleMainTabChange = (_, newValue) => {
         setMainTab(newValue);
         setSubTab(0); // Reset version tab when switching main tabs
@@ -82,19 +101,16 @@ const EditionDetails = () => {
 
 
     useEffect(() => {
-        getVersionDetails(editionDetails);
         const filesArr = { Inputs: [] }
-        editionDetails?.projectID?.files.forEach(file => {
+        projectDetailsById && projectDetailsById?.projects?.files?.forEach(file => {
             filesArr["Inputs"].push({ filePath: file }); // or { url: file }, whatever key you need
         });
         setTabData(prevData => ({ ...prevData, ...filesArr }));
-    }, [editionDetails]);
+    }, [projectDetailsById]);
 
-    const getVersionDetails = async (ed) => {
+    const getVersionDetails = async (id) => {
         try {
-            console.log("ed?._id",ed?._id);
-            
-            dispatch(getVersionsById(ed?._id))
+            dispatch(getVersionsById(id))
         } catch (error) {
             console.log("Error while getting version details", error);
         }
@@ -105,16 +121,15 @@ const EditionDetails = () => {
             const approved = versionDetails?.versions?.reduce((acc, item) => {
                 const hasApprovedItem = item.isApproved;
                 if (hasApprovedItem) {
-                  acc[item.category] = true;
+                    acc[item.category] = true;
                 }
                 return acc;
-              }, {});
-              
-              setApprovedCategories(approved);
-              
-            
+            }, {});
+
+            setApprovedCategories(approved);
+
+
             const categorizedData = { editorial: [], coverdesign: [], TypeSetting: [] };
-              console.log("+++++++",versionDetails.versions)
             versionDetails?.versions?.forEach(version => {
                 if (categorizedData[version.category]) {
                     categorizedData[version.category].push({ ...version });
@@ -170,6 +185,15 @@ const EditionDetails = () => {
         setOpenModal(false)
         // Handle creating a new version
     };
+    const handleFileInputs = async () => {
+        setOpenInputModal(true);
+        // fileInputRef.current.click(); // Programmatically open file dialog
+    }
+    const handleInputCloseModal = () => {
+        setOpenInputModal(false)
+        // Handle creating a new version
+    };
+
     const validateForm = () => {
         let errors = {};
 
@@ -198,7 +222,7 @@ const EditionDetails = () => {
             setSubmitAvailable(true);
             try {
                 await dispatch(createVersion(formData));
-                await getVersionDetails(editionDetails);
+                await getVersionDetails(editionId);
                 setOpenModal(false);
             } catch (error) {
                 setSubmitAvailable(false);
@@ -226,6 +250,27 @@ const EditionDetails = () => {
         accept: "application/pdf",
         multiple: false
     });
+
+    const onDropMultiple = (acceptedFiles) => {
+        // const filteredFiles = acceptedFiles.filter(file => file.type === "application/pdf");
+        // if (filteredFiles.length !== acceptedFiles.length) {
+        //     alert("Only PDF files are allowed!");
+        //     return;
+        // }
+        setInputFiles((prevFiles) => [...prevFiles, ...acceptedFiles]); // Store multiple files
+    };
+
+    const { getRootProps: getRootPropsMultiple, getInputProps: getInputPropsMultiple } = useDropzone({
+        onDrop: onDropMultiple,
+        accept: "",
+        multiple: true, // Allow multiple files
+    });
+
+
+    const handleRemoveFile = (index) => {
+        setInputFiles(inputFiles.filter((_, i) => i !== index));
+    };
+
 
     const handleCommentClick = async (index) => {
         setChatname(index)
@@ -262,30 +307,42 @@ const EditionDetails = () => {
         }
     };
 
-    const handleFileInputs = async () => {
-        fileInputRef.current.click(); // Programmatically open file dialog
-    }
-
-    const handleApprove = async(version) => {
-        if(version){
+    const handleApprove = (version) => {
+        if (version) {
             try {
-                await dispatch(approveVersionById(version?._id));
-                alert('Version approved successfully!');
+                dispatch(approveVersionById(version?._id)).then(() => {
+                    alert('Version approved successfully!');
+                    getVersionDetails(editionId);
+                });
+
             } catch (error) {
-                console.log("error in approving version",error);
+                console.log("error in approving version", error);
             }
         }
     }
 
+    const getProjectDetails = async (id) => {
+        try {
+            await dispatch(getProjectDetailsById(id))
+        } catch (error) {
+            console.log("project details by id error", error);
+        }
+    }
+
     const handleInputFileChange = async (event) => {
-        const file = event.target.files[0]; // Single file selected
-        if (file) {
+        if (inputFiles) {
             try {
-                await dispatch(uploadProjectFile({ projectId: editionDetails?.projectID?._id, file: file }));
+                await dispatch(uploadProjectFile({ projectId: projectId, file: inputFiles })).then(() => {
+                    handleInputCloseModal();
+                    setTimeout(() => {
+                        alert("Successfully uploaded");
+                    }, 100);
+                    getProjectDetails(projectId);
+                    dispatch(getEditionsById(editionId));
+                });
             } catch (error) {
                 console.log("Failed to upload to inputs", error);
             }
-            // You can now upload the file using API or store in state
         }
     };
 
@@ -295,31 +352,34 @@ const EditionDetails = () => {
             .format("DD MMM YYYY, hh:mm A"); // Example: 05 Feb 2025, 05:38 PM
     };
 
+    const lastIndex = subTabArray.length - 1;
+
+
     return (
         <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100px" }}>
             <Card sx={{ p: 2, width: "100%", minHeight: "80px" }}>
                 <CardContent sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <Box>
                         <Typography variant="h6">Edition Details</Typography>
-                        <Typography variant="h5">{editionDetails?.title || 'NA'}</Typography>
-                        <Typography variant="body2">{editionDetails?.publisher || 'NA'}</Typography>
+                        <Typography variant="h5">{editionDetailsById && editionDetailsById?.editions?.title || 'NA'}</Typography>
+                        <Typography variant="body2">{editionDetailsById && editionDetailsById?.editions?.publisher || 'NA'}</Typography>
                     </Box>
                     {canShowButton && selectedCategory != "Inputs" ? (
                         <Button variant="contained" color="primary" onClick={handleCreateNewVersion}>
-                            Create {selectedCategory} Version
+                            Create {selectedCategory} Rounds
                         </Button>
                     ) : (
                         <>
                             <Button variant="contained" color="primary" onClick={handleFileInputs}>
                                 Upload File
                             </Button>
-                            <input
+                            {/* <input
                                 type="file"
                                 ref={fileInputRef}
                                 style={{ display: 'none' }} // Hide the input
                                 onChange={handleInputFileChange}
                                 accept=".pdf,.doc,.docx,.txt" // Optional: file types you want to allow
-                            />
+                            /> */}
                         </>
                     )}
                 </CardContent>
@@ -387,24 +447,23 @@ const EditionDetails = () => {
                     </Box>
                     {/* PDF Viewer */}
                     {/* PDF Viewer */}
-                    <Box sx={{ flex: 1, p: 1, display: "flex", alignItems: "center", justifyContent: "center",    flexDirection: "column", minHeight: "500px" }}>
-                        {tabData[selectedCategory]?.[subTab] && selectedCategory !== "Inputs" && canShowButton && (!approvedCategories?.TypeSetting || !approvedCategories?.coverdesign) && !approvedCategories?.[selectedCategory] && (
+                    <Box sx={{ flex: 1, p: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", minHeight: "500px" }}>
+                        {tabData[selectedCategory]?.[subTab] && selectedCategory !== "Inputs" && canShowButton && (!approvedCategories?.TypeSetting || !approvedCategories?.coverdesign) && !approvedCategories?.[selectedCategory] && subTab === parseInt(subTabArray[lastIndex]) && (
                             <Button
                                 variant="contained"
                                 color="success"
-                                size="small"
+                                size="large"
                                 sx={{ alignSelf: "flex-end", mb: 1 }} // Align right and add margin-bottom
-                            onClick={() => handleApprove(tabData[selectedCategory][subTab])} // You can define this function
+                                onClick={() => handleApprove(tabData[selectedCategory][subTab])} // You can define this function
                             >
                                 Approve
                             </Button>
                         )}
-
                         {tabData[selectedCategory]?.[subTab] ? (
                             <iframe
                                 src={
                                     selectedCategory === "Inputs"
-                                        ? `${import.meta.env.VITE_API_URL}/${tabData[selectedCategory][subTab].filePath}`
+                                        ? `${tabData[selectedCategory][subTab].filePath}`
                                         : tabData[selectedCategory][subTab].fileStorageUrl
                                 }
                                 width="100%"
@@ -446,7 +505,7 @@ const EditionDetails = () => {
                         sx={{ mb: 2 }}
                     />
 
-                    <TextField
+                    {/* <TextField
                         fullWidth
                         label="Category"
                         variant="outlined"
@@ -456,7 +515,7 @@ const EditionDetails = () => {
                         disabled={true}
                         error={!!formErrors.category}
                         helperText={formErrors.category}
-                    />
+                    /> */}
 
                     <TextField
                         fullWidth
@@ -512,6 +571,41 @@ const EditionDetails = () => {
                             Cancel
                         </Button>
                         <Button disabled={submitAvailable} onClick={handleSubmit} variant="contained" color="primary">
+                            Submit
+                        </Button>
+                    </Stack>
+                </Paper>
+            </Modal>
+
+            <Modal open={openInputModal} onClose={handleInputCloseModal} sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Paper sx={{ width: "100%", maxWidth: 500, p: 3, borderRadius: "10px" }}>
+                    <Typography variant="h6" gutterBottom>
+                        Upload Input Files
+                    </Typography>
+
+                    <Box {...getRootPropsMultiple()} sx={{ p: 2, border: "2px dashed #ccc", textAlign: "center", cursor: "pointer", mb: 2 }}>
+                        <input {...getInputPropsMultiple()} />
+                        <Typography variant="body1">Drag & Drop or Click to Upload PDFs</Typography>
+                    </Box>
+
+                    {inputFiles.length > 0 && (
+                        <Box sx={{ mb: 2 }}>
+                            {inputFiles.map((file, index) => (
+                                <Stack key={index} direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1, p: 1, border: "1px solid #ccc", borderRadius: 1 }}>
+                                    <Typography variant="body2">{file.name}</Typography>
+                                    <Button size="small" variant="outlined" color="secondary" onClick={() => handleRemoveFile(index)}>
+                                        Remove
+                                    </Button>
+                                </Stack>
+                            ))}
+                        </Box>
+                    )}
+
+                    <Stack direction="row" spacing={2} justifyContent="flex-end">
+                        <Button onClick={handleInputCloseModal} variant="outlined">
+                            Cancel
+                        </Button>
+                        <Button variant="contained" color="primary" onClick={handleInputFileChange}>
                             Submit
                         </Button>
                     </Stack>

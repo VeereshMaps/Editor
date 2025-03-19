@@ -5,10 +5,10 @@ import axios from "axios";
 
 export const fetchAssets = createAsyncThunk(
   "assets/fetchAssets",
-  async ({ page, limit }, { rejectWithValue }) => {
+  async ({ search,page, limit }, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.get("/api/assets", {
-        params: { page, limit },
+        params: { search,page, limit },
       });
       return response.data;
     } catch (error) {

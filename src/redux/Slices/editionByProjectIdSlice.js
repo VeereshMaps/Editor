@@ -6,7 +6,6 @@ export const getEditionsByProjectId = createAsyncThunk(
   "edition/fetchEditionsByProjectId",
   async (projectId, { rejectWithValue }) => {
     try {
-      console.log("Fetching editions for projectId:", projectId);
       const response = await axiosInstance.get(`/api/editions/project/${projectId}`);
       return response.data; // Expecting an array of editions
     } catch (error) {

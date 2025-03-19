@@ -7,7 +7,9 @@ export const uploadProjectFile = createAsyncThunk(
   async ({ projectId, file }, { rejectWithValue }) => {
     try {
       const formData = new FormData();
-      formData.append("files", file);
+      file.forEach((file) => {
+        formData.append("files", file); // Append each file
+      });
       formData.append("projectId", projectId);
       const response = await axiosInstance.post("/api/projects/upload", formData, {
         headers: {

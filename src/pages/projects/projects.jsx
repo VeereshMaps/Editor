@@ -66,19 +66,19 @@ const BooksRepo = () => {
     };
 
     const columns = [
-        { field: 'id', headerName: 'ID', width: 70 },
+        { field: 'id', headerName: 'Sl No', width: 70 },
         { field: 'title', headerName: 'Book Title', flex: 2 },
         { field: 'author', headerName: 'Author', flex: 1 },
         { field: 'genre', headerName: 'Genre', width: 150 },
         { field: 'publicationDate', headerName: 'Publication Date', width: 150 },
-        {
-            field: 'status',
-            headerName: 'Status',
-            width: 130,
-            renderCell: (params) => (
-                <Chip size='small' variant='outlined' label={params.value} color={getStatusColor(params.value)} />
-            ),
-        },
+        // {
+        //     field: 'status',
+        //     headerName: 'Status',
+        //     width: 130,
+        //     renderCell: (params) => (
+        //         <Chip size='small' variant='outlined' label={params.value} color={getStatusColor(params.value)} />
+        //     ),
+        // },
         {
             field: 'actions',
             headerName: 'Actions',

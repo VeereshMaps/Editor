@@ -13,8 +13,6 @@ const AddAuthorForm = ({ id, onSubmit }) => {
     const navigate = useNavigate();
     const [showPassword, setShowPassword] = useState(false);
     const authorData1 = location.state?.authorData;
-    console.log("authorData1",authorData1);
-    
 
     // State for form fields
     const [author, setAuthor] = useState({
@@ -91,7 +89,6 @@ const AddAuthorForm = ({ id, onSubmit }) => {
     // Handle form submit
     const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log("author",author,authorData1)
         const submitPayload = {
             payload: author,
             userId: authorData1?.userId

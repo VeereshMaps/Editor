@@ -54,7 +54,7 @@ const GoldRepo = () => {
   };
 
   const columns = [
-    { field: 'id', headerName: 'ID', width: 70 },
+    { field: 'id', headerName: 'Sl No.', width: 70 },
     { field: 'title', headerName: 'Project Title', flex: 2 },
     { field: 'versionTitle', headerName: 'Version Title', flex: 2 },
     { field: 'publisher', headerName: 'Publisher', flex: 1 },
@@ -112,7 +112,6 @@ const GoldRepo = () => {
   const isAdminOrPM = loginDetails?.user?.role === "Admin" || loginDetails?.user?.role === "Project Manager";
   const dataSource = isAdminOrPM ? allGoldProjects : filteredGoldEditions;
 
-
 const rows = dataSource?.projects?.map((item, index) => ({
   id: index + 1,
   title: item.project.title,
@@ -121,6 +120,7 @@ const rows = dataSource?.projects?.map((item, index) => ({
   subject: item.subject,
   publicationDate: moment(item.publicationDate).format("DD-MM-YYYY"),
   versions:item.versions,
+  versionId:item._id
 }));
 
 

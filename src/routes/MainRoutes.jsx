@@ -109,7 +109,7 @@ const MainRoutes = {
           path: 'edit',
           element: <AddProjectForm />
         }, {
-          path: 'editions',
+          path: 'editions/:editionId/:projectId',
           element: <EditionDetails />
         },
       ]
