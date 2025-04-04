@@ -4,6 +4,8 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import { useDispatch, useSelector } from "react-redux";
 import { createAsset, resetState } from "../../redux/Slices/createAssetSlice";
 import { useNavigate } from "react-router";
+import Notification from "../../components/Notification";
+
 
 const AddAssets = () => {
   const dispatch = useDispatch();
@@ -16,6 +18,8 @@ const AddAssets = () => {
   const [licenceText, setLicenceText] = useState("");
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [open, setOpen] = useState(false);
+
 
   const handleImageChange = (event) => {
     const file = event.target.files[0];
@@ -24,6 +28,11 @@ const AddAssets = () => {
       setPreview(URL.createObjectURL(file));
     }
   };
+
+  useEffect(()=>{
+    setOpen(true);
+    console.log("asdasd")
+  },[])
 
   const handleKeywordAdd = () => {
     if (keywordInput.trim() && !keywords.includes(keywordInput)) {
@@ -48,7 +57,7 @@ const AddAssets = () => {
   // Effect to handle success alert and reset form
   useEffect(() => {
     if (success) {
-      window.alert("Asset uploaded successfully!");
+        setOpen(true);
       setName("");
       setLicenceText("");
       setKeywords([]);
@@ -161,6 +170,7 @@ const AddAssets = () => {
             </Grid>
           )}
         </Grid>
+        <Notification open={open} onClose={() => setOpen(false)} message="Asset uploaded successfully!" />
       </Box>
     </Paper>
   );

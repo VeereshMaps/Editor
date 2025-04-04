@@ -29,10 +29,12 @@ const roleBasedOrAllUsersSlice = createSlice({
       .addCase(getRoleBasedOrAllUsers.fulfilled, (state, action) => {
         state.status = "success";
         state.data = action.payload;
+        state.error= null;
       })
       .addCase(getRoleBasedOrAllUsers.rejected, (state, action) => {
         state.status = "failed";
         state.error = action.payload;
+        state.data= null;
       });
   },
 });

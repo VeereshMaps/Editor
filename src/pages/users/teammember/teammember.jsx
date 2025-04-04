@@ -1,4 +1,4 @@
-import { Button, Grid, IconButton, Paper, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, Select, FormControl, InputLabel } from '@mui/material';
+import { Button, Grid, IconButton, Paper, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, Select, FormControl, InputLabel, Box, CircularProgress } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import { EditOutlined, DeleteOutlineSharp } from '@mui/icons-material';
 import { useEffect, useState } from 'react';
@@ -63,7 +63,7 @@ export default function TeamMember() {
     };
 
     const columns = [
-        { field: 'id', headerName: 'ID', width: 70 },
+        { field: 'id', headerName: 'Sl No', width: 70 },
         { field: 'firstName', headerName: 'First Name', flex: 1 },
         { field: 'lastName', headerName: 'Last Name', flex: 1 },
         { field: 'email', headerName: 'Email Address', flex: 2 },
@@ -92,11 +92,15 @@ export default function TeamMember() {
         lastName: item.lastName,
         email: item.email,
         role: item.role,
+        country: item.country,
         userId: item._id,
+        bio: item.bio,
+        password:item.password
     }));
 
     // Apply role filter
     const filteredRows = roleFilter ? allRows.filter(row => row.role === roleFilter) : allRows;
+
 
     const handleAddAuthor = () => {
         navigate('/users/add-reader', { state: { authorData: null } });
@@ -108,7 +112,7 @@ export default function TeamMember() {
             <Grid container spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
                 <Grid item>
                     <FormControl variant="outlined" size="small" sx={{ minWidth: 250 }}>
-                        <InputLabel style={{marginTop:6}}>Filter by Role</InputLabel>
+                        <InputLabel style={{ marginTop: 6 }}>Filter by Role</InputLabel>
                         <Select
                             value={roleFilter}
                             onChange={handleRoleFilterChange}
@@ -136,18 +140,24 @@ export default function TeamMember() {
             </Grid>
 
             <Paper sx={{ height: '80%', width: '100%' }}>
-                <DataGrid
-                    rows={filteredRows}
-                    columns={columns}
-                    pageSizeOptions={[5, 10]}
-                    checkboxSelection
-                    sx={{
-                        border: 0,
-                        '& .MuiDataGrid-columnHeaders': {
-                            fontWeight: 'bold',
-                        },
-                    }}
-                />
+                {roleBasedOrAllUsers?.status === "loading" ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
+                        <CircularProgress color="primary" />
+                    </Box>
+                ) : (
+                    <DataGrid
+                        rows={filteredRows}
+                        columns={columns}
+                        pageSizeOptions={[5, 10]}
+                        checkboxSelection
+                        sx={{
+                            border: 0,
+                            '& .MuiDataGrid-columnHeaders': {
+                                fontWeight: 'bold',
+                            },
+                        }}
+                    />
+                )}
             </Paper>
 
             {/* Confirmation Dialog */}

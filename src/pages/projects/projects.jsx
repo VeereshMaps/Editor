@@ -1,4 +1,4 @@
-import { Button, Chip, Grid, IconButton, Paper, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
+import { Button, Chip, Grid, IconButton, Paper, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, CircularProgress, Box } from '@mui/material';
 import Typography from '@mui/material/Typography';
 import { DataGrid } from '@mui/x-data-grid';
 import { useNavigate } from 'react-router-dom';
@@ -27,6 +27,11 @@ const BooksRepo = () => {
             projectDataAPI(loginDetails?.user);
         }
     }, []);
+
+    useEffect(() => {
+        console.log("projectDetails", projectDetails);
+
+    }, [projectDetails]);
 
     const projectDataAPI = async (userData) => {
         try {
@@ -131,14 +136,14 @@ const BooksRepo = () => {
         editor: `${item.editor?.firstName || "N/A"} ${item.editor?.lastName || ""}`.trim(),
         projectManager: `${item.projectManager?.firstName || "N/A"} ${item.projectManager?.lastName || ""}`.trim(),
         proofReader: item.proofReader ? `${item.proofReader.firstName} ${item.proofReader.lastName}` : "N/A",
-        designer: item.designer ? `${item.designer.firstName} ${item.designer.lastName}` : "N/A",
+        designer: item.designer ? `${item.designer.firstName} ${item.designer.lastName}` : null,
         teamLead: Array.isArray(item.teamLead)
             ? item.teamLead.map(tl => `${tl.firstName} ${tl.lastName}`)
             : item.teamLead
                 ? [`${item.teamLead.firstName} ${item.teamLead.lastName}`]
                 : [],
         genre: ["Fiction", "Non-Fiction", "Technology", "Publishing", "Science"][index % 5],
-        publicationDate: item.createdOn ? new Date(item.createdOn).toISOString().split("T")[0] : "N/A",
+        publicationDate: item.publicationDate ? new Date(item.publicationDate).toISOString().split("T")[0] : null,
         status: item.status || "Unknown",
         projectId: item._id
     })) || [];
@@ -153,8 +158,15 @@ const BooksRepo = () => {
                         </Button>
                     )}
             </Grid>
-            <DataGrid rows={rows} columns={columns} autoHeight pageSize={10} />
-            
+            {projectDetails?.loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
+                    <CircularProgress color="primary" />
+                </Box>
+            ) : (
+                <DataGrid rows={rows} columns={columns} autoHeight pageSize={10} />
+            )}
+
+
             {/* Confirmation Dialog */}
             <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
                 <DialogTitle>Confirm Deletion</DialogTitle>

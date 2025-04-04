@@ -1,4 +1,4 @@
-import { Button, Grid, IconButton, Paper, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
+import { Button, Grid, IconButton, Paper, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, CircularProgress, Box } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import { EditOutlined, DeleteOutlineSharp } from '@mui/icons-material';
 import { useEffect, useState } from 'react';
@@ -95,7 +95,8 @@ export default function Authors() {
         role: item.role,
         country: item.country,
         bio: item.bio,
-        userId: item._id
+        userId: item._id,
+        password:item.password
     }));
 
     const paginationModel = { page: 0, pageSize: 15 };
@@ -117,19 +118,25 @@ export default function Authors() {
                 </Button>
             </Grid>
             <Paper sx={{ height: '80%', width: '100%' }}>
-                <DataGrid
-                    rows={rows}
-                    columns={columns}
-                    initialState={{ pagination: { paginationModel } }}
-                    pageSizeOptions={[5, 10]}
-                    checkboxSelection
-                    sx={{
-                        border: 0,
-                        '& .MuiDataGrid-columnHeaders': {
-                            fontWeight: 'bold',
-                        },
-                    }}
-                />
+                {roleBasedOrAllUsers?.status === "loading" ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
+                        <CircularProgress color="primary" />
+                    </Box>
+                ) : (
+                    <DataGrid
+                        rows={rows}
+                        columns={columns}
+                        initialState={{ pagination: { paginationModel } }}
+                        pageSizeOptions={[5, 10]}
+                        checkboxSelection
+                        sx={{
+                            border: 0,
+                            '& .MuiDataGrid-columnHeaders': {
+                                fontWeight: 'bold',
+                            },
+                        }}
+                    />
+                )}
             </Paper>
 
             {/* Delete Confirmation Dialog */}

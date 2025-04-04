@@ -1,4 +1,4 @@
-import { Button, Grid, IconButton, Paper, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
+import { Button, Grid, IconButton, Paper, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Box, CircularProgress } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import { EditOutlined, DeleteOutlineSharp } from '@mui/icons-material';
 import { useEffect, useState } from 'react';
@@ -78,7 +78,11 @@ export default function TeamLead() {
         firstName: item.firstName,
         lastName: item.lastName,
         email: item.email,
-        userId: item._id
+        role: item.role,
+        country: item.country,
+        userId: item._id,
+        bio: item.bio,
+        password:item.password
     }));
 
     return (
@@ -97,6 +101,11 @@ export default function TeamLead() {
                 </Button>
             </Grid>
             <Paper sx={{ height: '80%', width: '100%' }}>
+            {roleBasedOrAllUsers?.status === "loading" ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
+                        <CircularProgress color="primary" />
+                    </Box>
+                ) : (
                 <DataGrid
                     rows={rows}
                     columns={columns}
@@ -107,6 +116,7 @@ export default function TeamLead() {
                         '& .MuiDataGrid-columnHeaders': { fontWeight: 'bold' },
                     }}
                 />
+                )}
             </Paper>
 
             {/* Confirmation Dialog */}

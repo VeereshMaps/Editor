@@ -6,279 +6,201 @@ import { updateUserDetailsFunc } from 'redux/Slices/updateUserSlice';
 import { useDispatch } from 'react-redux';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { createUserFunc } from 'redux/Slices/createUserSlice';
+import Notification from "../../../components/Notification";
+import { useFormik } from 'formik';
+import * as yup from 'yup';
 
-const AddProjectManagerForm = ({ id, authorData, onSubmit }) => {
+const validationSchema = yup.object({
+    firstName: yup.string().required('First Name is required'),
+    lastName: yup.string().required('Last Name is required'),
+    email: yup.string().email('Invalid email').required('Email is required'),
+    password: yup.string().min(8, 'Password must be at least 8 characters').when("isNewUser", {
+        is: true, // Apply validation only if isNewUser is true
+        then: (schema) => schema.required('Password is required'),
+        otherwise: (schema) => schema.notRequired()
+    }),
+    bio: yup.string().required('Bio is required'),
+    country: yup.string().required('Country is required'),
+});
+
+const AddProjectManagerForm = ({ id, onSubmit }) => {
     const location = useLocation();
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const authorData1 = location.state?.authorData;
     const [showPassword, setShowPassword] = useState(false);
-    
-    // State for form fields
-    const [author, setAuthor] = useState({
-        firstName: authorData1?.firstName || '',
-        lastName: authorData1?.firstName || '',
-        email: authorData1?.email || '',
-        bio: authorData1?.bio || '',
-        role:"Project Manager",
-        country: authorData1?.country || '',
-        profilePicture: authorData1?.profilePicture || null,
-        // dob: authorData1?.dob || '',
-        // twitter: authorData1?.twitter || '',
-        // linkedin: authorData1?.linkedin || '',
-    });
-
+    const [disableButton, setDisableButton] = useState(false);
+    const authorData1 = location.state?.authorData || null;
+    const [notification, setNotification] = useState({ open: false, message: "", severity: "idle" });
 
     useEffect(() => {
-        if (location.state && location.state.authorData) {
-            const authorData = location.state.authorData;
-            setAuthor({
-                firstName: authorData?.firstName || '',
-                lastName: authorData?.lastName || '',
-                email: authorData?.email || '',
-                bio: authorData?.bio || '',
-                role:authorData?.role || 'Project Manager',
-                country: authorData?.country || '',
-                profilePicture: authorData?.profilePicture || null,
-                // dob: authorData?.dob || '',
-                // twitter: authorData?.twitter || '',
-                // linkedin: authorData?.linkedin || '',
-            });
+        if (!notification.open && notification.severity === "success") {
+            setDisableButton(false);
+            navigate(-1);  // Navigate back after the notification is closed
         }
-    }, [location.state]);
+    }, [notification.open]);
 
+    const formik = useFormik({
+        initialValues: {
+            firstName: authorData1?.firstName || '',
+            lastName: authorData1?.lastName || '',
+            email: authorData1?.email || '',
+            bio: authorData1?.bio || '',
+            role: "Project Manager",
+            country: authorData1?.country || '',
+            password: authorData1?.password || '',
+            profilePicture: authorData1?.profilePicture || null,
+        },
+        validationSchema,
+        context: { isNewUser: !authorData1 },
+        onSubmit: async (values) => {
+            setDisableButton(true);
+            try {
+                const submitPayload = {
+                    payload: values,
+                    userId: authorData1?.userId
+                };
+                if (authorData1) {
+                    const updatedUserResponse = await dispatch(updateUserDetailsFunc(submitPayload));
+                    setNotification({ open: true, message: updatedUserResponse?.payload?.message, severity: "success" });
+                } else {
+                    const createdUserResponse = await dispatch(createUserFunc(values));
+                    setNotification({ open: true, message: createdUserResponse?.payload?.message, severity: "success" });
 
-    // Handle input changes
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setAuthor((prev) => ({
-            ...prev,
-            [name]: value
-        }));
+                }
+            } catch (error) {
+                console.error("Updating author failed", error);
+            }
+        },
+    });
+
+    const handleGeneratePassword = () => {
+        const generatedPassword = Math.random().toString(36).slice(-8);
+        formik.setFieldValue('password', generatedPassword);
     };
+
     const onDrop = (acceptedFiles) => {
-        setAuthor((prev) => ({
-            ...prev,
-            profilePicture: acceptedFiles[0]  // Store the first uploaded file
-        }));
+        formik.setFieldValue('profilePicture', acceptedFiles[0]);
     };
 
     const { getRootProps, getInputProps } = useDropzone({
         onDrop,
-        accept: 'image/*',  // Only accept image files
-        multiple: false,    // Only one file at a time
+        accept: 'image/*',
+        multiple: false,
     });
 
-    // Handle file change (Profile picture)
-    const handleFileChange = (e) => {
-        setAuthor((prev) => ({
-            ...prev,
-            profilePicture: e.target.files[0]
-        }));
+    const handleCloseNotification = () => {
+        setNotification({ ...notification, open: false });
     };
 
-    const handleGeneratePassword = () => {
-        const generatedPassword = Math.random().toString(36).slice(-8); // Generates an 8-character random password
-        setAuthor((prev) => ({
-            ...prev,
-            password: generatedPassword
-        }));
-    };
-
-    // Handle form submit
-    const handleSubmit = async(e) => {
-        e.preventDefault();
-        try {
-            if(authorData1 === null ){
-                dispatch(createUserFunc(author));
-            }else{
-                const submitPayload = {
-                    payload: author,
-                    userId: authorData1.userId
-                }
-                await dispatch(updateUserDetailsFunc(submitPayload));
-            }
-            
-            navigate(-1);
-        } catch (error) {
-            console.log("updating author failed", error);
-        }
-    };
 
     return (
         <Paper sx={{ padding: 3 }}>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={formik.handleSubmit}>
                 <Grid container spacing={2}>
-                    {/* Author Name Field */}
                     <Grid item xs={12}>
                         <TextField
                             label="First Name"
                             name="firstName"
-                            value={author.firstName}
-                            onChange={handleChange}
                             fullWidth
                             margin="normal"
-                            required
+                            {...formik.getFieldProps('firstName')}
+                            error={formik.touched.firstName && Boolean(formik.errors.firstName)}
+                            helperText={formik.touched.firstName && formik.errors.firstName}
                         />
                     </Grid>
                     <Grid item xs={12}>
                         <TextField
                             label="Last Name"
                             name="lastName"
-                            value={author.lastName}
-                            onChange={handleChange}
                             fullWidth
                             margin="normal"
-                            required
+                            {...formik.getFieldProps('lastName')}
+                            error={formik.touched.lastName && Boolean(formik.errors.lastName)}
+                            helperText={formik.touched.lastName && formik.errors.lastName}
                         />
                     </Grid>
-
-                    {/* Email Field */}
                     <Grid item xs={12}>
                         <TextField
                             label="Email"
                             name="email"
-                            value={author.email}
-                            onChange={handleChange}
+                            type="email"
                             fullWidth
                             margin="normal"
-                            type="email"
-                            required
+                            {...formik.getFieldProps('email')}
+                            error={formik.touched.email && Boolean(formik.errors.email)}
+                            helperText={formik.touched.email && formik.errors.email}
                         />
                     </Grid>
-                    {authorData1 === null &&
+                    {!authorData1 && (
                         <Grid item xs={12}>
                             <TextField
                                 label="Password"
                                 name="password"
-                                value={author.password}
-                                onChange={handleChange}
                                 fullWidth
                                 margin="normal"
-                                required
                                 type={showPassword ? "text" : "password"}
-                                InputLabelProps={{ shrink: true }} // Prevents label overlap
+                                {...formik.getFieldProps('password')}
+                                error={formik.touched.password && Boolean(formik.errors.password)}
+                                helperText={formik.touched.password && formik.errors.password}
                                 InputProps={{
                                     endAdornment: (
                                         <InputAdornment position="end">
-                                            <IconButton onClick={() => setShowPassword((prev) => !prev)} edge="end">
+                                            <IconButton onClick={() => setShowPassword(!showPassword)}>
                                                 {showPassword ? <VisibilityOff /> : <Visibility />}
                                             </IconButton>
                                         </InputAdornment>
-                                    )
+                                    ),
                                 }}
                             />
-                            <Button
-                                variant="outlined"
-                                color="primary"
-                                onClick={handleGeneratePassword}
-                                sx={{ marginTop: 2, display: "block" }} // Ensures visibility & spacing
-                            >
-                                Generate Password
-                            </Button>
+                            <Button variant="outlined" color="primary" onClick={handleGeneratePassword} sx={{ marginTop: 2 }}>Generate Password</Button>
                         </Grid>
-                    }
-                    {/* Bio Field */}
+                    )}
                     <Grid item xs={12}>
                         <TextField
                             label="Bio"
                             name="bio"
-                            value={author.bio}
-                            onChange={handleChange}
                             fullWidth
                             margin="normal"
                             multiline
                             rows={4}
+                            {...formik.getFieldProps('bio')}
+                            error={formik.touched.bio && Boolean(formik.errors.bio)}
+                            helperText={formik.touched.bio && formik.errors.bio}
                         />
                     </Grid>
-
-                    {/* Date of Birth Field */}
-                    {/* <Grid item xs={12}>
-            <TextField
-              label="Date of Birth"
-              name="dob"
-              type="date"
-              value={author.dob}
-              onChange={handleChange}
-              fullWidth
-              margin="normal"
-              InputLabelProps={{
-                shrink: true,
-              }}
-            />
-          </Grid> */}
-
-                    {/* Country Field */}
                     <Grid item xs={12}>
                         <FormControl fullWidth margin="normal">
                             <InputLabel>Country</InputLabel>
                             <Select
-                                label="Country"
                                 name="country"
-                                value={author.country}
-                                onChange={handleChange}
+                                {...formik.getFieldProps('country')}
+                                error={formik.touched.country && Boolean(formik.errors.country)}
                             >
                                 <MenuItem value="USA">USA</MenuItem>
                                 <MenuItem value="India">India</MenuItem>
                                 <MenuItem value="UK">UK</MenuItem>
                                 <MenuItem value="Australia">Australia</MenuItem>
-                                {/* Add more countries as needed */}
                             </Select>
                         </FormControl>
                     </Grid>
-
-                    {/* Profile Picture Upload */}
                     <Grid item xs={12}>
-                        <div {...getRootProps()} style={{
-                            border: '2px dashed #1976d2',
-                            padding: '20px',
-                            textAlign: 'center',
-                            cursor: 'pointer'
-                        }}>
+                        <div {...getRootProps()} style={{ border: '2px dashed #1976d2', padding: '20px', textAlign: 'center', cursor: 'pointer' }}>
                             <input {...getInputProps()} />
                             <p>Drag & drop a profile picture, or click to select one</p>
-                            {author.profilePicture && (
-                                <p>Selected File: {author.profilePicture.name}</p>
-                            )}
+                            {formik.values.profilePicture && <p>Selected File: {formik.values.profilePicture.name}</p>}
                         </div>
                     </Grid>
-
-                    {/* Social Media Links */}
-                    {/* <Grid item xs={12}>
-            <TextField
-              label="Twitter Link"
-              name="twitter"
-              value={author.twitter}
-              onChange={handleChange}
-              fullWidth
-              margin="normal"
-            />
-          </Grid>
-
-          <Grid item xs={12}>
-            <TextField
-              label="LinkedIn Link"
-              name="linkedin"
-              value={author.linkedin}
-              onChange={handleChange}
-              fullWidth
-              margin="normal"
-            />
-          </Grid> */}
-
-                    {/* Submit Button */}
                     <Grid item xs={12}>
-                        <Button
-                            type="submit"
-                            variant="contained"
-                            color="primary"
-                            fullWidth
-                        >
-                            {authorData1 ? 'Save Changes' : 'Add Manager'}
-                        </Button>
+                        <Button type="submit" variant="contained" disabled={disableButton} color="primary" fullWidth>{authorData1 ? 'Save Changes' : 'Add Author'}</Button>
                     </Grid>
                 </Grid>
             </form>
+            <Notification
+                open={notification.open}
+                onClose={handleCloseNotification}
+                message={notification.message}
+                severity={notification.severity}
+            />
         </Paper>
     );
 };

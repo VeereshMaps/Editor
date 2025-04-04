@@ -1,4 +1,4 @@
-import { Button, Grid, IconButton, Paper, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
+import { Button, Grid, IconButton, Paper, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Box, CircularProgress } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import { EditOutlined, DeleteOutlineSharp } from '@mui/icons-material';
 import { useEffect, useState } from 'react';
@@ -79,7 +79,10 @@ export default function ProjectManager() {
         lastName: item.lastName,
         email: item.email,
         role: item.role,
-        userId: item._id
+        country: item.country,
+        userId: item._id,
+        bio: item.bio,
+        password:item.password
     }));
 
     return (
@@ -95,16 +98,22 @@ export default function ProjectManager() {
                 </Button>
             </Grid>
             <Paper sx={{ height: '80%', width: '100%' }}>
-                <DataGrid
-                    rows={rows}
-                    columns={columns}
-                    pageSizeOptions={[5, 10]}
-                    checkboxSelection
-                    sx={{
-                        border: 0,
-                        '& .MuiDataGrid-columnHeaders': { fontWeight: 'bold' },
-                    }}
-                />
+                {roleBasedOrAllUsers?.status === "loading" ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
+                        <CircularProgress color="primary" />
+                    </Box>
+                ) : (
+                    <DataGrid
+                        rows={rows}
+                        columns={columns}
+                        pageSizeOptions={[5, 10]}
+                        checkboxSelection
+                        sx={{
+                            border: 0,
+                            '& .MuiDataGrid-columnHeaders': { fontWeight: 'bold' },
+                        }}
+                    />
+                )}
             </Paper>
 
             {/* Confirmation Dialog */}

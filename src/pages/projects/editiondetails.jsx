@@ -15,6 +15,7 @@ import { uploadProjectFile } from "redux/Slices/uploadProjectInputFileSlice";
 import { approveVersionById } from "redux/Slices/versionApproveSlice";
 import { getProjectDetailsById } from "redux/Slices/projectDetailsByIdSlice";
 import { getEditionsById } from "redux/Slices/editionByIdSlice";
+import Notification from "../../components/Notification";
 
 const EditionDetails = () => {
     const dispatch = useDispatch();
@@ -43,6 +44,7 @@ const EditionDetails = () => {
     const selectedCategory = mainTabs[mainTab] || ""; // Avoid undefined index errors
     const pdfLinks = selectedCategory ? tabData[selectedCategory] : []; // Ensure it's always an array
     const [chatHistory, setChatHistory] = useState([]);
+    const [notification, setNotification] = useState({ open: false, message: "", severity: "idle" });
 
 
     const [formData, setFormData] = useState({
@@ -69,21 +71,28 @@ const EditionDetails = () => {
         isAdminOrPM ||
         categoryRoleMap[selectedCategory] === role;
 
-        useEffect(() => {
-            if (tabData[selectedCategory]) {
-              setSubTabArray(Object.keys(tabData[selectedCategory]));
-            } else {
-              setSubTabArray([]);
-            }
-          }, [tabData, selectedCategory]);
-          
+    useEffect(() => {
+        if (tabData[selectedCategory]) {
+            setSubTabArray(Object.keys(tabData[selectedCategory]));
+        } else {
+            setSubTabArray([]);
+        }
+    }, [tabData, selectedCategory]);
+
+    useEffect(() => {
+        if (!notification.open && notification.severity === "success") {
+            handleInputCloseModal();
+            setOpenModal(false);
+        }
+    }, [notification.open]);
+
 
     useEffect(() => {
         getProjectDetails(projectId);
         getVersionDetails(editionId);
         dispatch(getEditionsById(editionId));
     }, [editionId, projectId]);
-    
+
     const handleMainTabChange = (_, newValue) => {
         setMainTab(newValue);
         setSubTab(0); // Reset version tab when switching main tabs
@@ -167,6 +176,9 @@ const EditionDetails = () => {
         setFormData((prev) => ({ ...prev, category: selectedCategory }));
     }, [selectedCategory]);
 
+    const handleCloseNotification = () => {
+        setNotification({ ...notification, open: false });
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -178,7 +190,16 @@ const EditionDetails = () => {
 
 
     const handleCreateNewVersion = () => {
-        setOpenModal(true)
+        setOpenModal(true);
+        setFormData({
+            projectID: projectId,
+            versionName: "",
+            category: selectedCategory,
+            remarks: "",
+            file: null,
+            editionId: editionId,
+            createdBy: loginDetails?.user?._id,
+        });
         // Handle creating a new version
     };
     const handleCloseModal = () => {
@@ -221,10 +242,11 @@ const EditionDetails = () => {
         if (validateForm()) {
             setSubmitAvailable(true);
             try {
-                await dispatch(createVersion(formData));
+                const createVersionResponse = await dispatch(createVersion(formData));
+                setNotification({ open: true, message: createVersionResponse?.payload?.message, severity: "success" });
                 await getVersionDetails(editionId);
-                setOpenModal(false);
             } catch (error) {
+                console.log("error",error);
                 setSubmitAvailable(false);
                 console.log("error creating new version", error);
             }
@@ -310,13 +332,15 @@ const EditionDetails = () => {
     const handleApprove = (version) => {
         if (version) {
             try {
-                dispatch(approveVersionById(version?._id)).then(() => {
-                    alert('Version approved successfully!');
+                dispatch(approveVersionById(version?._id)).then((response) => {
+                    setNotification({ open: true, message: response?.payload?.message, severity: "success" });
+                    // alert('Version approved successfully!');
                     getVersionDetails(editionId);
                 });
 
             } catch (error) {
                 console.log("error in approving version", error);
+                setNotification({ open: true, message: "Failed to create round", severity: "failed" });
             }
         }
     }
@@ -332,16 +356,14 @@ const EditionDetails = () => {
     const handleInputFileChange = async (event) => {
         if (inputFiles) {
             try {
-                await dispatch(uploadProjectFile({ projectId: projectId, file: inputFiles })).then(() => {
-                    handleInputCloseModal();
-                    setTimeout(() => {
-                        alert("Successfully uploaded");
-                    }, 100);
+                await dispatch(uploadProjectFile({ projectId: projectId, file: inputFiles })).then((response) => {
+                    setNotification({ open: true, message: response?.payload?.message, severity: "success" });
                     getProjectDetails(projectId);
                     dispatch(getEditionsById(editionId));
                 });
             } catch (error) {
                 console.log("Failed to upload to inputs", error);
+                setNotification({ open: true, message: "Failed to upload to inputs", severity: "failed" });
             }
         }
     };
@@ -754,6 +776,13 @@ const EditionDetails = () => {
 
 
             )}
+
+            <Notification
+                open={notification.open}
+                onClose={handleCloseNotification}
+                message={notification.message}
+                severity={notification.severity}
+            />
         </Box>
     );
 };

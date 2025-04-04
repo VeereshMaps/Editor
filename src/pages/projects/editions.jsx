@@ -68,6 +68,11 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
         }
     }, [bookDetails]);
 
+    useEffect(() => {
+        console.log("editionByProjectIdDetails", editionByProjectIdDetails);
+
+    }, [editionByProjectIdDetails]);
+
     const getEditionsFunc = async () => {
         try {
             await dispatch(getEditionsByProjectId(bookDetails.projects._id));
@@ -121,19 +126,20 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
     const handleMoveToGold = async (edition) => {
         try {
             const updatedEdition = { ...edition, status: "Gold" };
-    
+
             await dispatch(updateEdition({ id: edition._id, updatedData: updatedEdition }));
-    
+
             getEditionsFunc(); // Refresh the list after successful update
         } catch (error) {
             console.error("Error updating edition status to Gold:", error);
         }
     };
-    
+
 
     const handleSubmit = async () => {
         let newErrors = {};
-        
+        console.log("editionData.isbn13", editionData.isbn13);
+
         if (!editionData.title) newErrors.title = "Edition Name is required";
         if (!editionData.seriesTitle) newErrors.seriesTitle = "Series Title is required";
         if (!editionData.publicationDate) {
@@ -161,7 +167,7 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
         if (!editionData.textcolor) newErrors.textcolor = "Text Color is required";
         if (!editionData.description) newErrors.description = "Description is required";
         if (!editionData.status) newErrors.status = "Status is required";
-        
+        console.log("newErrors",newErrors)
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
             return;
@@ -224,7 +230,7 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
                 {/* Edition Cards */}
                 {editionByProjectIdDetails.editions.length > 0 ? editionByProjectIdDetails.editions.map((edition, index) => (
                     <Grid item xs={12} sm={4} key={index}>
-                        <Card sx={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between",    position: "relative" }}>
+                        <Card sx={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", position: "relative" }}>
                             <CardContent sx={{ padding: 2, flexGrow: 1 }}>
                                 <Typography variant="h6"><b>Title: {edition.title}</b></Typography>
                                 <Typography
@@ -255,9 +261,9 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
                                     View
                                 </Button>
                                 {(!edition.status || edition.status === "WIP") && formattedUserRole.includes(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase()) && (loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === superAccess || loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === elevatedAccess) && (edition?.isCoverDesignedApproved && edition?.isTypesettingApproved) && (
-                                <Button variant="outlined" color="primary" size="small"  onClick={() => handleMoveToGold(edition)}>
-                                    Move to GOLD
-                                </Button>
+                                    <Button variant="outlined" color="primary" size="small" onClick={() => handleMoveToGold(edition)}>
+                                        Move to GOLD
+                                    </Button>
                                 )}
                             </Stack>
                         </Card>
@@ -293,9 +299,75 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
                     <TextField fullWidth label="Publisher" variant="outlined" name="publisher" value={editionData.publisher} onChange={handleInputChange} error={!!errors.publisher} helperText={errors.publisher} sx={{ mb: 2 }} />
 
 
-                    <TextField fullWidth label="ISBN-10" variant="outlined" name="isbn10" value={editionData.isbn10} onChange={handleInputChange} error={!!errors.isbn10} helperText={errors.isbn10} sx={{ mb: 2 }} />
+                    <TextField
+                        fullWidth
+                        label="ISBN-10"
+                        variant="outlined"
+                        name="isbn10"
+                        value={editionData.isbn10}
+                        onChange={(e) => {
+                            let value = e.target.value.replace(/\D/g, ""); // Allow only numbers
 
-                    <TextField fullWidth label="ISBN-13" variant="outlined" name="isbn13" value={editionData.isbn13} onChange={handleInputChange} error={!!errors.isbn13} helperText={errors.isbn13} sx={{ mb: 2 }} />
+                            // Enforce max length of 10
+                            if (value.length > 10) {
+                                value = value.slice(0, 10);
+                            }
+
+                            setEditionData({ ...editionData, isbn10: value });
+
+                            // Validate length on input change
+                            setErrors({ ...errors, isbn10: value.length === 10 ? "" : "ISBN-10 must be exactly 10 digits" });
+                        }}
+                        error={!!errors.isbn10}
+                        helperText={errors.isbn10}
+                        sx={{ mb: 2 }}
+                        inputProps={{
+                            inputMode: "numeric", // Mobile-friendly numeric keypad
+                            pattern: "[0-9]*", // Only allow numbers (no letters/symbols)
+                        }}
+                        onBlur={() => {
+                            // Final validation on blur (if input is not exactly 10 digits)
+                            if (editionData.isbn10.length !== 10) {
+                                setErrors({ ...errors, isbn10: "ISBN-10 must be exactly 10 digits" });
+                            }
+                        }}
+                    />
+
+
+                    <TextField
+                        fullWidth
+                        label="ISBN-13"
+                        variant="outlined"
+                        name="isbn13"
+                        value={editionData.isbn13}
+                        onChange={(e) => {
+                            let value = e.target.value.replace(/\D/g, ""); // Allow only numbers
+
+                            // Enforce max length of 13
+                            if (value.length > 13) {
+                                value = value.slice(0, 13);
+                            }
+
+                            setEditionData({ ...editionData, isbn13: value });
+
+                            // Validate length on input change
+                            setErrors({ ...errors, isbn13: value.length === 13 ? "" : "ISBN-13 must be exactly 13 digits" });
+                        }}
+                        error={!!errors.isbn13}
+                        helperText={errors.isbn13}
+                        sx={{ mb: 2 }}
+                        inputProps={{
+                            inputMode: "numeric", // Mobile-friendly numeric keypad
+                            pattern: "[0-9]*", // Only allow numbers (no letters/symbols)
+                        }}
+                        onBlur={() => {
+                            // Final validation on blur (if input is not exactly 13 digits)
+                            if (editionData.isbn13.length !== 13) {
+                                setErrors({ ...errors, isbn13: "ISBN-13 must be exactly 13 digits" });
+                            }
+                        }}
+                    />
+
 
                     <TextField fullWidth label="eISBN" variant="outlined" name="eISBN" value={editionData.eISBN} onChange={handleInputChange} error={!!errors.eISBN} helperText={errors.eISBN} sx={{ mb: 2 }} />
 
