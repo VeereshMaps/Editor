@@ -412,7 +412,7 @@ const AddAssets = () => {
                     <Button
                         variant="contained"
                         onClick={async () => {
-                            const selectedStyle = artisticStyle || photoStyle || useCaseStyle;
+                            const selectedStyle = [artisticStyle, photoStyle, useCaseStyle].filter(Boolean).join(', ');
                             if (!aiDescription) return setLocalError("Please enter a description");
                             if (!selectedStyle) return setLocalError("Please select a style");
 
