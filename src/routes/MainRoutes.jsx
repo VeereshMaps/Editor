@@ -18,6 +18,7 @@ import ViewBook from 'pages/projects/viewproject';
 import GoldRepo from 'pages/goldrepo/projects';
 import ViewGoldBook from 'pages/goldrepo/viewproject';
 import EditionDetails from 'pages/projects/editiondetails';
+import PublishBook from 'pages/selfPublishing/publish-book';
 import ProtectedRoute from 'components/ProtectedRoute';
 import DashboardLayout from 'layout/Dashboard';
 import AssetForm from "pages/assetslib/addassets"
@@ -135,6 +136,16 @@ const MainRoutes = {
         },
       ]
     },
+    {
+        path: 'selfPublishing',
+        children: [
+          {
+            path: 'publish-book',
+            element: <PublishBook />
+          }
+        ]
+      }
+      
 
     // {
     //   path: 'shadow',

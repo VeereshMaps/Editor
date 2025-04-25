@@ -6,18 +6,18 @@ import Drawer from '@mui/material/Drawer';
 import { drawerWidth } from 'config';
 
 const openedMixin = (theme) => ({
-  width: drawerWidth,
-  borderRight: '1px solid',
-  borderRightColor: theme.palette.divider,
-
-  transition: theme.transitions.create('width', {
-    easing: theme.transitions.easing.sharp,
-    duration: theme.transitions.duration.enteringScreen
-  }),
-
-  overflowX: 'hidden',
-  boxShadow: 'none'
-});
+    width: drawerWidth,
+    borderRight: '1px solid',
+    borderRightColor: theme.palette.divider,
+    overflowX: 'hidden',
+    overflowY: 'auto', // 👈 enables vertical scroll
+    boxShadow: 'none',
+    transition: theme.transitions.create('width', {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen
+    })
+  });
+  
 
 const closedMixin = (theme) => ({
   transition: theme.transitions.create('width', {

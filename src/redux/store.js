@@ -26,6 +26,7 @@ import goldProjectReducer from'./Slices/goldProjectSlice';
 import fileUploadReducer from'./Slices/uploadProjectInputFileSlice';
 import versionApproveReducer from'./Slices/versionApproveSlice';
 import updateVersionReducer from'./Slices/updateVersionSlice';
+import docxParserReducer from'./Slices/docxParserSlice';
 
   const rootReducer = combineReducers({
         auth: authReducer,
@@ -51,6 +52,7 @@ import updateVersionReducer from'./Slices/updateVersionSlice';
         projectInputFileUpload:fileUploadReducer,
         versionApprove:versionApproveReducer,
         updateVersion:updateVersionReducer,
+        docxParser:docxParserReducer,
 });
 
 // const persistedReducer = persistReducer(persistConfig, rootReducer);
