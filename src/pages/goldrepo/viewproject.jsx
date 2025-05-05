@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Tabs, Tab, Typography, Modal, Paper, Button, Card, CardContent } from '@mui/material';
+import { Box, Tabs, Tab, Typography, Modal, Paper, Button, Card, CardContent, CircularProgress } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router';
 import { useDropzone } from 'react-dropzone';
 import { useDispatch, useSelector } from 'react-redux';
@@ -16,6 +16,7 @@ const ViewGoldBook = () => {
     const [categories, setCategories] = useState([]);
     const [groupedData, setGroupedData] = useState({});
     const [openModal, setOpenModal] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [formData, setFormData] = useState({ file: null, projectID: null });
     const loginDetails = useSelector((state) => state.auth);
     const goldProjectsById = useSelector((state) => state.goldProjects);
@@ -24,11 +25,21 @@ const ViewGoldBook = () => {
     const isAdminOrPM = role === "Admin" || role === "Project Manager";
 
     useEffect(() => {
-        if (goldProjectsData?.versionId) {
-            dispatch(getGoldProjects());
-            dispatch(getGoldProjectById(goldProjectsData.versionId));
-        }
-    }, [dispatch, goldProjectsData?.versionId]);
+        const fetchData = async () => {
+            setIsLoading(true);
+            try {
+                if (location.state?.bookData?.versionId) {
+                    await dispatch(getGoldProjects());
+                    await dispatch(getGoldProjectById(location.state.bookData.versionId));
+                }
+            } finally {
+                setIsLoading(false); // Done loading
+            }
+        };
+        fetchData();
+    }, [dispatch, location.state?.bookData?.versionId]);
+    
+
 
 
     useEffect(() => {
@@ -42,8 +53,9 @@ const ViewGoldBook = () => {
             setGroupedData(groups);
             setCategories(Object.keys(groups));
         }
-    }, [goldProjectsById?.selectedProject?.versions?.length]);
-    
+    }, [goldProjectsById?.selectedProject?.versions]);
+
+
 
 
     const handleMainTabChange = (event, newValue) => {
@@ -53,7 +65,7 @@ const ViewGoldBook = () => {
     const handleOpenModal = () => setOpenModal(true);
     const handleCloseModal = () => {
         setOpenModal(false);
-        setFormData({ file: null,projectID: null }); // Clear file on cancel/close
+        setFormData({ file: null, projectID: null }); // Clear file on cancel/close
     };
 
     const handleFileRemove = () => {
@@ -65,19 +77,19 @@ const ViewGoldBook = () => {
     );
     const fetchEditionDetails = async (editionId, dispatch) => {
         if (!editionId) return;
-    
+
         try {
             await dispatch(getEditionsById(editionId));
         } catch (error) {
             console.error("Error fetching edition details:", error);
         }
     };
-    
+
     // Use inside useEffect
     useEffect(() => {
         fetchEditionDetails(matchedVersion?.editionId, dispatch);
     }, [matchedVersion?.editionId]);
-    
+
     const handleSubmit = async () => {
         if (!formData.file || !matchedVersion) return;
 
@@ -101,7 +113,7 @@ const ViewGoldBook = () => {
 
 
     const { getRootProps, getInputProps } = useDropzone({
-        accept: categories[mainTab] === "coverdesign"  ? { 'image/*': [] } : { 'application/pdf': [] },
+        accept: categories[mainTab] === "coverdesign" ? { 'image/*': [] } : { 'application/pdf': [] },
         onDrop: (acceptedFiles) => {
             if (acceptedFiles.length > 0 && matchedVersion) {
                 setFormData({
@@ -112,6 +124,8 @@ const ViewGoldBook = () => {
         },
         multiple: false
     });
+
+    const currentFile = groupedData[categories[mainTab]]?.[0];
 
 
     return (
@@ -130,7 +144,7 @@ const ViewGoldBook = () => {
                             color="primary"
                             onClick={handleOpenModal}
                             sx={{ ml: 2, whiteSpace: "nowrap" }}
-                    >
+                        >
                             Update {categories[mainTab]}
                         </Button>
                     )}
@@ -167,12 +181,25 @@ const ViewGoldBook = () => {
                     minHeight: "500px",
                 }}
             >
-                {categories.length > 0 && groupedData[categories[mainTab]]?.[0]?.fileStorageUrl ? (
+                    {isLoading ? (
+        <CircularProgress />
+    ) : currentFile?.fileStorageUrl ? (
+                    // <iframe
+                    //     src={groupedData[categories[mainTab]]?.[0]?.fileStorageUrl}
+                    //     width="100%"
+                    //     height="100%"
+                    //     style={{ border: "none", minHeight: "500px" }}
+                    //     title={`File - ${categories[mainTab]}`}
+                    //     onError={(e) => console.error("Failed to load file:", e)}
+                    //     aria-label={`Viewing file for ${categories[mainTab]}`}
+                    // />
                     <iframe
+                        key={groupedData[categories[mainTab]]?.[0]?._id} // or some unique value
                         src={groupedData[categories[mainTab]]?.[0]?.fileStorageUrl}
                         width="100%"
                         height="100%"
                         style={{ border: "none", minHeight: "500px" }}
+                        onLoad={() => setIsLoading(false)} 
                         title={`File - ${categories[mainTab]}`}
                         onError={(e) => console.error("Failed to load file:", e)}
                         aria-label={`Viewing file for ${categories[mainTab]}`}

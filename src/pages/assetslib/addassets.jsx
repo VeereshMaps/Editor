@@ -190,6 +190,75 @@ const AddAssets = () => {
         <Paper sx={{ padding: 3 }}>
             <Box component="form" onSubmit={handleSubmit}>
                 <Grid container spacing={2}>
+
+                    {/* Image Upload */}
+                    <Grid item xs={12}>
+                        <Grid container spacing={2} sx={{ mt: 2 }}>
+                            <Grid item xs={6}>
+                                <Button
+                                    variant="contained"
+                                    component="label"
+                                    startIcon={<CloudUploadIcon />}
+                                    fullWidth
+                                >
+                                    Upload Image
+                                    <input type="file" accept="image/*" hidden onChange={handleImageChange} />
+                                </Button>
+                            </Grid>
+                            <Grid item xs={6}>
+                                <Button
+                                    variant="outlined"
+                                    fullWidth
+                                    onClick={() => {
+                                        setAiDescription("");
+                                        setGeneratedImages([]);
+                                        setAiModalOpen(true);
+                                    }}
+                                >
+                                    Generate Image using AI
+                                </Button>
+                            </Grid>
+                            {preview && (
+                                <Grid item xs={12}>
+                                    <Box
+                                        sx={{
+                                            mt: 2,
+                                            display: "flex",
+                                            justifyContent: "center",
+                                            alignItems: "center",
+                                            position: "relative",
+                                        }}
+                                    >
+                                        <Box sx={{ position: "relative", display: "inline-block" }}>
+                                            <img
+                                                src={preview}
+                                                alt="Preview"
+                                                style={{ maxWidth: "50%", borderRadius: 4 }}
+                                            />
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => {
+                                                    setPreview(null);
+                                                    setImage(null);
+                                                    setKeywords([]);
+                                                }}
+                                                sx={{
+                                                    position: "absolute",
+                                                    top: 8,
+                                                    right: 8,
+                                                    backgroundColor: "white",
+                                                    ":hover": { backgroundColor: "#f0f0f0" },
+                                                }}
+                                            >
+                                                <CloseIcon fontSize="small" />
+                                            </IconButton>
+                                        </Box>
+                                    </Box>
+                                </Grid>
+                            )}
+                        </Grid>
+                    </Grid>
+
                     <Grid item xs={12}>
                         <TextField
                             label="Asset Name"
@@ -265,58 +334,6 @@ const AddAssets = () => {
                             ))}
                             {loadingKeyword && <CircularProgress size={20} />}
                         </Box>
-                    </Grid>
-
-                    {/* Image Upload */}
-                    <Grid item xs={12}>
-                        <Grid container spacing={2} sx={{ mt: 2 }}>
-                            <Grid item xs={6}>
-                                <Button
-                                    variant="contained"
-                                    component="label"
-                                    startIcon={<CloudUploadIcon />}
-                                    fullWidth
-                                >
-                                    Upload Image
-                                    <input type="file" accept="image/*" hidden onChange={handleImageChange} />
-                                </Button>
-                            </Grid>
-                            <Grid item xs={6}>
-                                <Button
-                                    variant="outlined"
-                                    fullWidth
-                                    onClick={() => {
-                                        setAiDescription("");
-                                        setGeneratedImages([]);
-                                        setAiModalOpen(true);
-                                    }}
-                                >
-                                    Generate Image using AI
-                                </Button>
-                            </Grid>
-                            {preview && (
-                                <Box sx={{ position: "relative", mt: 2, ml: 2, display: "inline-block" }}>
-                                    <img src={preview} alt="Preview" style={{ maxWidth: "50%", borderRadius: 4 }} />
-                                    <IconButton
-                                        size="small"
-                                        onClick={() => {
-                                            setPreview(null);
-                                            setImage(null);
-                                            setKeywords([]);
-                                        }}
-                                        sx={{
-                                            position: "absolute",
-                                            top: 8,
-                                            right: 8,
-                                            backgroundColor: "white",
-                                            ":hover": { backgroundColor: "#f0f0f0" },
-                                        }}
-                                    >
-                                        <CloseIcon fontSize="small" />
-                                    </IconButton>
-                                </Box>
-                            )}
-                        </Grid>
                     </Grid>
 
                     {/* Submit */}
@@ -406,8 +423,6 @@ const AddAssets = () => {
                             ))}
                         </Select>
                     </FormControl>
-
-
 
                     <Button
                         variant="contained"
