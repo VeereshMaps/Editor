@@ -45,6 +45,8 @@ const EditionDetails = () => {
     const pdfLinks = selectedCategory ? tabData[selectedCategory] : []; // Ensure it's always an array
     const [chatHistory, setChatHistory] = useState([]);
     const [notification, setNotification] = useState({ open: false, message: "", severity: "idle" });
+    const [selectedFile, setSelectedFile] = useState(null);
+    const currentUserName = `${loginDetails?.user.firstName} ${loginDetails?.user.lastName}`;
 
 
     const [formData, setFormData] = useState({
@@ -68,8 +70,11 @@ const EditionDetails = () => {
     const isAdminOrPM = role === "Admin" || role === "Project Manager";
 
     const canShowButton =
-        isAdminOrPM ||
-        categoryRoleMap[selectedCategory] === role;
+  (
+    isAdminOrPM ||
+    categoryRoleMap[selectedCategory] === role
+  ) &&
+  !editionDetailsById?.editions?.isCoverDesignedApproved && !editionDetailsById?.editions?.isTypesettingApproved;
 
     useEffect(() => {
         if (tabData[selectedCategory]) {
@@ -78,6 +83,11 @@ const EditionDetails = () => {
             setSubTabArray([]);
         }
     }, [tabData, selectedCategory]);
+
+    useEffect(() => {
+        console.log("selectedFile", editionDetailsById.editions.isCoverDesignedApproved);
+
+    }, [editionDetailsById]);
 
     useEffect(() => {
         if (!notification.open && notification.severity === "success") {
@@ -154,9 +164,10 @@ const EditionDetails = () => {
     useEffect(() => {
         if (commentDetails.status === "success") {
             const formattedChatHistory = commentDetails.comments.map((comment) => ({
-                username: `${comment.userId.firstName} ${comment.userId.lastName}`,
+                username: `${comment?.userId?.firstName} ${comment?.userId?.lastName}`,
                 message: comment.message,
                 timestamp: formatChatTimestamp(comment.createdAt),
+                fileUrl: comment.fileUrl || null, // Add this
             }));
             setChatHistory(formattedChatHistory);
         }
@@ -246,7 +257,7 @@ const EditionDetails = () => {
                 setNotification({ open: true, message: createVersionResponse?.payload?.message, severity: "success" });
                 await getVersionDetails(editionId);
             } catch (error) {
-                console.log("error",error);
+                console.log("error", error);
                 setSubmitAvailable(false);
                 console.log("error creating new version", error);
             }
@@ -294,6 +305,8 @@ const EditionDetails = () => {
     };
 
 
+
+
     const handleCommentClick = async (index) => {
         setChatname(index)
         setChatOpen(true); // Open the chat interface on comment icon click
@@ -309,25 +322,52 @@ const EditionDetails = () => {
         }
     };
 
+    // const handleChatSubmit = () => {
+    //     if (chatMessage.trim()) {
+    //         const newMessage = {
+    //             versionId: tabData[selectedCategory]?.[subTab]?._id,
+    //             userId: loginDetails?.user?._id,
+    //             message: chatMessage,
+    //         };
+
+    //         try {
+    //             dispatch(createComment(newMessage)).then(() => {
+    //                 dispatch(fetchCommentsByVersionId(newMessage.versionId));
+    //                 setChatMessage("");
+    //             });
+    //             // Fetch comments again after sending to ensure state updates
+    //         } catch (error) {
+    //             console.log("Error sending chat message:", error);
+    //         }
+    //     }
+    // };
+
+    //New chat with file attachments
     const handleChatSubmit = () => {
-        if (chatMessage.trim()) {
-            const newMessage = {
-                versionId: tabData[selectedCategory]?.[subTab]?._id,
-                userId: loginDetails?.user?._id,
-                message: chatMessage,
-            };
+        if (chatMessage.trim() || selectedFile) {
+            const formData = new FormData();
+            formData.append("versionId", tabData[selectedCategory]?.[subTab]?._id);
+            formData.append("userId", loginDetails?.user?._id);
+            formData.append("message", chatMessage);
+            if (selectedFile) {
+                console.log("selectedFile", selectedFile);
+
+                formData.append("file", selectedFile);
+            }
 
             try {
-                dispatch(createComment(newMessage)).then(() => {
-                    dispatch(fetchCommentsByVersionId(newMessage.versionId));
+                dispatch(createComment(formData)).then(() => {
+                    dispatch(fetchCommentsByVersionId(tabData[selectedCategory]?.[subTab]?._id));
                     setChatMessage("");
+                    setSelectedFile(null); // Reset after sending
                 });
-                // Fetch comments again after sending to ensure state updates
             } catch (error) {
                 console.log("Error sending chat message:", error);
             }
         }
     };
+
+
 
     const handleApprove = (version) => {
         if (version) {
@@ -386,24 +426,17 @@ const EditionDetails = () => {
                         <Typography variant="h5">{editionDetailsById && editionDetailsById?.editions?.title || 'NA'}</Typography>
                         <Typography variant="body2">{editionDetailsById && editionDetailsById?.editions?.publisher || 'NA'}</Typography>
                     </Box>
-                    {canShowButton && selectedCategory != "Inputs" ? (
-                        <Button variant="contained" color="primary" onClick={handleCreateNewVersion}>
-                            Create {selectedCategory} Rounds
-                        </Button>
-                    ) : (
-                        <>
+                    {canShowButton && (
+                        selectedCategory === "Inputs" ? (
                             <Button variant="contained" color="primary" onClick={handleFileInputs}>
                                 Upload File
+                            </Button>) : (
+                            <Button variant="contained" color="primary" onClick={handleCreateNewVersion}>
+                                Create {selectedCategory} Rounds
                             </Button>
-                            {/* <input
-                                type="file"
-                                ref={fileInputRef}
-                                style={{ display: 'none' }} // Hide the input
-                                onChange={handleInputFileChange}
-                                accept=".pdf,.doc,.docx,.txt" // Optional: file types you want to allow
-                            /> */}
-                        </>
+                        )
                     )}
+
                 </CardContent>
             </Card>
 
@@ -676,41 +709,71 @@ const EditionDetails = () => {
                             boxShadow: "none"
                         }}>
                             <List>
-                                {chatHistory.map((chat, index) => (
-                                    <React.Fragment key={index}>
-                                        <ListItem sx={{
-                                            background: index % 2 === 0
-                                                ? 'linear-gradient(to right, #ffffff, #e6f4ff)' // White to light blue for even messages
-                                                : '#ffffff', // White for odd messages
-                                            borderRadius: "8px",
-                                            padding: "8px",
-                                            marginBottom: "8px",
-                                        }}>
-                                            <ListItemText
-                                                primary={
-                                                    <Typography variant="body1" sx={{
-                                                        fontSize: "12px",
-                                                        fontWeight: "bold",
-                                                        color: "#000000", // Black for message text
-                                                    }}>
+                                {chatHistory.map((chat, index) => {
+                                    const isCurrentUser = chat.username === currentUserName; // adjust as per your logic
+                                    const isImage = /\.(jpeg|jpg|png|gif|bmp)$/i.test(chat.fileUrl || '');
+                                    const isDoc = /\.(pdf|docx?|xlsx?)$/i.test(chat.fileUrl || '');
+
+                                    return (
+                                        <React.Fragment key={index}>
+                                            <ListItem
+                                                sx={{
+                                                    display: 'flex',
+                                                    justifyContent: isCurrentUser ? 'flex-end' : 'flex-start',
+                                                }}
+                                            >
+                                                <Box
+                                                    sx={{
+                                                        maxWidth: "75%",
+                                                        background: isCurrentUser
+                                                            ? 'linear-gradient(to right, #2196f3, #64b5f6)'
+                                                            : '#e3f2fd',
+                                                        color: isCurrentUser ? 'white' : 'black',
+                                                        borderRadius: "16px",
+                                                        padding: "12px",
+                                                        textAlign: "left",
+                                                    }}
+                                                >
+                                                    <Typography variant="body2" sx={{ fontWeight: "bold", fontSize: "13px" }}>
                                                         {chat.message}
                                                     </Typography>
-                                                }
-                                                secondary={
-                                                    <Typography variant="body2" sx={{
-                                                        fontSize: "10px",
-                                                        color: "#0288d1", // Lighter blue for timestamp
-                                                        textAlign: "right",
-                                                        fontStyle: "italic"
-                                                    }}>
-                                                        {chat?.username} - {formatChatTimestamp(chat.updatedAt)}
+
+                                                    {chat.fileUrl && (
+                                                        <Box sx={{ mt: 1 }}>
+                                                            {isImage ? (
+                                                                <img
+                                                                    src={`https://publishingplatform.s3.ap-south-1.amazonaws.com/${chat.fileUrl}`}
+                                                                    alt="Attachment"
+                                                                    style={{ width: "100%", borderRadius: 8 }}
+                                                                />
+                                                            ) : isDoc ? (
+                                                                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                                                    <Typography variant="body2" sx={{ fontSize: "12px" }}>
+                                                                        {chat.fileUrl.split('/').pop()}
+                                                                    </Typography>
+                                                                    <a
+                                                                        href={chat.fileUrl}
+                                                                        download
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                    >
+                                                                        <Button variant="contained" size="small" sx={{ fontSize: "10px" }}>
+                                                                            Download
+                                                                        </Button>
+                                                                    </a>
+                                                                </Box>
+                                                            ) : null}
+                                                        </Box>
+                                                    )}
+
+                                                    <Typography variant="caption" sx={{ display: "block", fontStyle: "italic", fontSize: "10px", mt: 1 }}>
+                                                        {chat?.username} • {formatChatTimestamp(chat.updatedAt)}
                                                     </Typography>
-                                                }
-                                            />
-                                        </ListItem>
-                                        <Divider sx={{ margin: "4px 0", backgroundColor: "#0288d1" }} />
-                                    </React.Fragment>
-                                ))}
+                                                </Box>
+                                            </ListItem>
+                                        </React.Fragment>
+                                    );
+                                })}
                             </List>
                         </Paper>
 
@@ -767,6 +830,33 @@ const EditionDetails = () => {
                             >
                                 Close
                             </Button>
+                            <input
+                                type="file"
+                                style={{ display: "none" }}
+                                id="upload-file"
+                                onChange={(e) => setSelectedFile(e.target.files[0])}
+                            />
+                            <label htmlFor="upload-file">
+                                <Button
+                                    variant="outlined"
+                                    component="span"
+                                    sx={{
+                                        borderColor: "#0288d1",
+                                        color: "#0288d1",
+                                        '&:hover': {
+                                            borderColor: "#0277bd",
+                                            color: "#0277bd",
+                                        },
+                                    }}
+                                >
+                                    Attach File
+                                </Button>
+                            </label>
+                            {selectedFile && (
+                                <Typography variant="body2" sx={{ fontSize: "12px", color: "#000" }}>
+                                    {selectedFile.name}
+                                </Typography>
+                            )}
                         </Box>
                     </Box>
                 </Rnd>

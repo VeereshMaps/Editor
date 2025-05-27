@@ -6,7 +6,11 @@ export const createComment = createAsyncThunk(
     "comments/createComment",
     async (commentData, { rejectWithValue }) => {
         try {
-            const response = await axiosInstance.post("/api/comments", commentData);
+            const response = await axiosInstance.post("/api/comments", commentData, {
+                headers: {
+                    "Content-Type": "multipart/form-data", // 👈 very important
+                },
+            });
             return response.data;
         } catch (error) {
             return rejectWithValue(error.response.data);
