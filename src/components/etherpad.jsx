@@ -33,7 +33,7 @@ const EtherpadEmbed = () => {
       <iframe
        ref={iframeRef}
         title="Etherpad"
-        src="https://www.antennahouse.com/hubfs/xsl-fo-sample/pdf/basic-link-1.pdf"
+        src="http://3.6.37.29:9001"
         style={{ width: '100%', height: '90vh', border: 'none' }}
         allow="fullscreen"  
       />

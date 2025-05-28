@@ -16,8 +16,8 @@ import { approveVersionById } from "redux/Slices/versionApproveSlice";
 import { getProjectDetailsById } from "redux/Slices/projectDetailsByIdSlice";
 import { getEditionsById } from "redux/Slices/editionByIdSlice";
 import Notification from "../../components/Notification";
-import FabricImageEditor from '../projects/FabricImageEditor'; 
-import PdfViewer from "./PdfViewer";
+// import FabricImageEditor from '../projects/FabricImageEditor'; 
+// import PdfViewer from "./PdfViewer";
 import EtherpadEmbed from "components/etherpad";
 
 const EditionDetails = () => {
@@ -557,11 +557,13 @@ const EditionDetails = () => {
             border: "none",
           }}
         >
-          <FabricImageEditor imageUrl={fileUrl} />
+            <></>
+          {/* <FabricImageEditor imageUrl={fileUrl} /> */}
         </Box>
       ) : isPdf ? (
         <Box sx={{ height: "100vh", width: "100%", position: "relative" }}>
-          <PdfViewer fileUrl={fileUrl} />
+            <></>
+          {/* <PdfViewer fileUrl={fileUrl} /> */}
         </Box>
       ) : (
         <iframe
