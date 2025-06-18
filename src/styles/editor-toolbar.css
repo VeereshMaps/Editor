@@ -1,0 +1,75 @@
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #ddd;
+  background-color: #f9f9f9;
+  border-radius: 8px 8px 0 0;
+  padding-left: 1rem;
+}
+
+.editor-toolbar button {
+  background: #ffffff;
+  border: 1px solid #dcdcdc;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-family: sans-serif;
+  cursor: pointer;
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.editor-toolbar button:hover {
+  background-color: #f1f3f4;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.editor-toolbar button:active {
+  background-color: #e0e0e0;
+}
+
+.editor-toolbar button.active {
+  background-color: #e8f0fe;
+  border-color: #4285f4;
+  color: #1a73e8;
+  font-weight: 500;
+}
+.upload-docx-button {
+  display: inline-flex;
+  align-items: center;
+  background-color: #1a73e8;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: sans-serif;
+  cursor: pointer;
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.upload-docx-button:hover {
+  background-color: #1765cc;
+  box-shadow: 0 1px 3px rgba(26, 115, 232, 0.4);
+}
+.upload-docx-button {
+  display: inline-flex;
+  align-items: center;
+  background-color: #1a73e8 !important; /* Blue */
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: sans-serif;
+  cursor: pointer;
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.upload-docx-button:hover {
+  background-color: #1765cc;
+  box-shadow: 0 1px 3px rgba(26, 115, 232, 0.4);
+}

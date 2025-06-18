@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
-import Gallery from "react-photo-gallery";
-import Carousel, { Modal, ModalGateway } from "react-images";
+// import Gallery from "react-photo-gallery";
+// import Carousel, { Modal, ModalGateway } from "react-images";
 import {
     TextField,
     Pagination,
@@ -93,7 +93,8 @@ const AssetsLib = () => {
                 <p className="text-center text-red-500">{error}</p>
             ) : photos.length > 0 ? (
                 <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                    <Gallery
+                    <></>
+                    {/* <Gallery
                         photos={photos.map((photo, index) => ({
                             ...photo,
                             key: String(photo.id || index) // Ensure key is a string
@@ -101,7 +102,7 @@ const AssetsLib = () => {
                         margin={10}
                         onClick={openLightbox}
                         renderImage={(props) => <CustomImage key={props.photo.key} {...props} />}
-                    />
+                    /> */}
                 </div>
             ) : (
                 <p className="text-center">No images found.</p>
@@ -120,7 +121,7 @@ const AssetsLib = () => {
             )}
 
             {/* Modal Gateway for Lightbox */}
-            <ModalGateway>
+            {/* <ModalGateway>
                 {isOpen && (
                     <Modal onClose={closeLightbox}>
                         <Carousel
@@ -131,7 +132,7 @@ const AssetsLib = () => {
                         />
                     </Modal>
                 )}
-            </ModalGateway>
+            </ModalGateway> */}
         </div>
     );
 };

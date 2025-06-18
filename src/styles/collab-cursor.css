@@ -1,0 +1,28 @@
+/* collab-cursor.css */
+.collaboration-cursor__caret {
+  position: relative;
+  border-left: 2px solid var(--cursor-color, #ffa3ef);
+  height: 1em;
+  margin-left: -1px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.collaboration-cursor__label {
+  position: absolute;
+  top: -1.4em;
+  left: 0;
+  background-color: var(--cursor-color, #ffa3ef);
+  color: white;
+  font-size: 0.7rem;
+  font-family: sans-serif;
+  padding: 1px 6px;
+  border-radius: 4px;
+  z-index: 11;
+  white-space: nowrap;
+  max-width: 120px;        /* ✅ Limit the width */
+  overflow: hidden;        /* ✅ Hide overflow */
+  text-overflow: ellipsis; /* ✅ Add ellipsis if too long */
+  pointer-events: none;
+}
+

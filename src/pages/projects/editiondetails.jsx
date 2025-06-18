@@ -16,9 +16,7 @@ import { approveVersionById } from "redux/Slices/versionApproveSlice";
 import { getProjectDetailsById } from "redux/Slices/projectDetailsByIdSlice";
 import { getEditionsById } from "redux/Slices/editionByIdSlice";
 import Notification from "../../components/Notification";
-// import FabricImageEditor from '../projects/FabricImageEditor'; 
-// import PdfViewer from "./PdfViewer";
-import EtherpadEmbed from "components/etherpad";
+import CollabEditor from "components/CollabEditor";
 
 const EditionDetails = () => {
     const dispatch = useDispatch();
@@ -42,7 +40,7 @@ const EditionDetails = () => {
     const [tabData, setTabData] = useState({});
     const [formErrors, setFormErrors] = useState({});
     const [subTabArray, setSubTabArray] = useState([]);
-    const fixedTabs = ["Inputs", "editor","coverdesign", "TypeSetting",];
+    const fixedTabs = ["Inputs", "editor", "coverdesign", "TypeSetting",];
     const mainTabs = fixedTabs; // Ensure it’s always an array
     const selectedCategory = mainTabs[mainTab] || ""; // Avoid undefined index errors
     const pdfLinks = selectedCategory ? tabData[selectedCategory] : []; // Ensure it's always an array
@@ -73,11 +71,11 @@ const EditionDetails = () => {
     const isAdminOrPM = role === "Admin" || role === "Project Manager";
 
     const canShowButton =
-  (
-    isAdminOrPM ||
-    categoryRoleMap[selectedCategory] === role
-  ) &&
-  !editionDetailsById?.editions?.isCoverDesignedApproved && !editionDetailsById?.editions?.isTypesettingApproved;
+        (
+            isAdminOrPM ||
+            categoryRoleMap[selectedCategory] === role
+        ) &&
+        !editionDetailsById?.editions?.isCoverDesignedApproved && !editionDetailsById?.editions?.isTypesettingApproved;
 
     useEffect(() => {
         if (tabData[selectedCategory]) {
@@ -505,86 +503,70 @@ const EditionDetails = () => {
                     </Box>
                     {/* PDF Viewer */}
                     {/* PDF Viewer */}
-<Box
-  sx={{
-    flex: 1,
-    p: 1,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "column",
-    minHeight: "500px",
-    position: "relative",
-    width: "100%",
-  }}
->
-  {selectedCategory === "editor" ? (
-    <EtherpadEmbed />
-  ) : tabData[selectedCategory]?.[subTab] ? (
-    (() => {
-      const fileEntry = tabData[selectedCategory][subTab];
-      const fileUrl =
-        selectedCategory === "Inputs"
-          ? fileEntry.filePath
-          : fileEntry.fileStorageUrl;
+                    <Box
+                        sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            flex: 1,
+                            height: "100%", // ✅ critical
+                            minHeight: "500px",
+                            width: "100%",
+                        }}
+                    >
+                        {selectedCategory === "editor" ? (
+                            <CollabEditor />
+                        ) : (
 
-      if (!fileUrl) {
-        return (
-          <Typography variant="h6" color="textSecondary">
-            No valid file URL found
-          </Typography>
-        );
-      }
+                            <Box
+                                sx={{
+                                    flex: 1,
+                                    p: 1,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    flexDirection: "column",
+                                    minHeight: "500px"
+                                }}
+                            >
+                                {tabData[selectedCategory]?.[subTab] &&
+                                    selectedCategory !== "Inputs" &&
+                                    canShowButton &&
+                                    (!approvedCategories?.TypeSetting ||
+                                        !approvedCategories?.coverdesign) &&
+                                    !approvedCategories?.[selectedCategory] &&
+                                    subTab === parseInt(subTabArray[lastIndex]) && (
+                                        <Button
+                                            variant="contained"
+                                            color="success"
+                                            size="large"
+                                            sx={{ alignSelf: "flex-end", mb: 1 }}
+                                            onClick={() => handleApprove(tabData[selectedCategory][subTab])}
+                                        >
+                                            Approve
+                                        </Button>
+                                    )}
 
-      const extension = new URL(fileUrl).pathname.split(".").pop().toLowerCase();
-      const imageExtensions = ["jpg", "jpeg", "png", "gif", "bmp", "webp"];
-      const isImage = imageExtensions.includes(extension);
-      const isPdf = extension === "pdf";
-
-      return isImage ? (
-        <Box
-          sx={{
-            width: "100%",
-            maxWidth: "100vw",
-            height: "100%",
-            maxHeight: "100vh",
-            position: "relative",
-            overflow: "hidden",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: "transparent",
-            border: "none",
-          }}
-        >
-            <></>
-          {/* <FabricImageEditor imageUrl={fileUrl} /> */}
-        </Box>
-      ) : isPdf ? (
-        <Box sx={{ height: "100vh", width: "100%", position: "relative" }}>
-            <></>
-          {/* <PdfViewer fileUrl={fileUrl} /> */}
-        </Box>
-      ) : (
-        <iframe
-          src={fileUrl}
-          width="100%"
-          height="100%"
-          style={{ border: "none", minHeight: "500px" }}
-          title={`File ${subTab + 1}`}
-          onError={(e) => console.error("Failed to load file:", e)}
-        />
-      );
-    })()
-  ) : (
-    <Typography variant="h6" color="textSecondary">
-      No data found
-    </Typography>
-  )}
-</Box>
-
-
-
+                                {tabData[selectedCategory]?.[subTab] ? (
+                                    <iframe
+                                        src={
+                                            selectedCategory === "Inputs"
+                                                ? `${tabData[selectedCategory][subTab].filePath}`
+                                                : `${tabData[selectedCategory][subTab].fileStorageUrl}`
+                                        }
+                                        width="100%"
+                                        height="100%"
+                                        style={{ border: "none", minHeight: "500px" }}
+                                        title={`File ${subTab + 1}`}
+                                        onError={(e) => console.error("Failed to load file:", e)}
+                                    ></iframe>
+                                ) : (
+                                    <Typography variant="h6" color="textSecondary">
+                                        No data found
+                                    </Typography>
+                                )}
+                            </Box>
+                        )}
+                    </Box>
                 </Box>
             </Box>
 
