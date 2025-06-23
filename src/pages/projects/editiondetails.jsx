@@ -17,6 +17,7 @@ import { getProjectDetailsById } from "redux/Slices/projectDetailsByIdSlice";
 import { getEditionsById } from "redux/Slices/editionByIdSlice";
 import Notification from "../../components/Notification";
 import CollabEditor from "components/CollabEditor";
+import { fetchTiptapToken } from "redux/Slices/tiptapTokenSlice";
 
 const EditionDetails = () => {
     const dispatch = useDispatch();
@@ -119,6 +120,9 @@ const EditionDetails = () => {
         }
     }, [openModal])
 
+    useEffect(() => {
+        dispatch(fetchTiptapToken());
+    }, []);
 
     useEffect(() => {
         const filesArr = { Inputs: [] }

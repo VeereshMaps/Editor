@@ -27,6 +27,8 @@ import fileUploadReducer from'./Slices/uploadProjectInputFileSlice';
 import versionApproveReducer from'./Slices/versionApproveSlice';
 import updateVersionReducer from'./Slices/updateVersionSlice';
 import docxParserReducer from'./Slices/docxParserSlice';
+import tiptapTokenReducer from'./Slices/tiptapTokenSlice';
+import proofreadReducer from "./Slices/proofreadSlice";
 
   const rootReducer = combineReducers({
         auth: authReducer,
@@ -53,6 +55,8 @@ import docxParserReducer from'./Slices/docxParserSlice';
         versionApprove:versionApproveReducer,
         updateVersion:updateVersionReducer,
         docxParser:docxParserReducer,
+        tiptapToken:tiptapTokenReducer,
+        proofread: proofreadReducer,
 });
 
 // const persistedReducer = persistReducer(persistConfig, rootReducer);

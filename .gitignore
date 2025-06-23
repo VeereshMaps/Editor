@@ -9,6 +9,7 @@ yarn-error.log*
 .idea/
 *.swp
 Thumbs.db
+# .npmrc
 
 # Build & Output
 dist/
