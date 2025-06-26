@@ -1,6 +1,6 @@
 import { useThreadsState } from './context'
 import { ThreadsListItem } from './ThreadsListItem'
-
+import "../styles/tiptap.css";
 export const ThreadsList = ({ provider, threads }) => {
   const { selectedThreads, selectedThread } = useThreadsState()
 
@@ -10,15 +10,19 @@ export const ThreadsList = ({ provider, threads }) => {
 
   return (
     <div className="threads-group">
-      {threads.map(t => (
-        <ThreadsListItem
-          key={t.id}
-          thread={t}
-          active={selectedThreads.includes(t.id) || selectedThread === t.id}
-          open={selectedThread === t.id}
-          provider={provider}
-        />
-      ))}
+      {threads.map((thread) => {
+        // console.log('🧵 Thread:', thread);
+        return (
+          <ThreadsListItem
+            key={thread.id}
+            thread={thread}
+            active={selectedThreads.includes(thread.id) || selectedThread === thread.id}
+            open={selectedThread === thread.id}
+            provider={provider}
+          />
+        );
+      })}
     </div>
-  )
+  );
+
 }

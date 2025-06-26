@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
-
+import "../styles/tiptap.css";
 export const ThreadCard = ({
   id,
   active,

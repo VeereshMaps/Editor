@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-
+import "../styles/tiptap.css";
 export const CommentCard = ({
   name,
   createdAt,

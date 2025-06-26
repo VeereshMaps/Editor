@@ -4,7 +4,10 @@ import { useThreadsState } from './Context'
 import { CommentCard } from './CommentCard'
 import { ThreadCard } from './ThreadCard'
 import { ThreadComposer } from './ThreadComposer'
-
+import { useParams } from 'react-router'
+import { useDispatch } from 'react-redux'
+import { deleteComments, deleteThreads, updatecoments } from 'redux/Slices/tiptapSlice'
+import "../styles/tiptap.css";
 export const ThreadsListItem = ({
   thread,
   provider,
@@ -25,13 +28,27 @@ export const ThreadsListItem = ({
     classNames.push('threadsList--item--active')
   }
 
-  const comments = useMemo(() => provider.getThreadComments(thread.id, true), [provider, thread])
-
+  // const comments = useMemo(() => provider.getThreadComments(thread.id, true), [provider, thread])
+  const comments = useMemo(() => {
+    const result = thread.comments || provider.getThreadComments?.(thread.id, true) || [];
+    console.log('📦 Comments for thread', thread.id, result);
+    return result;
+  }, [provider, thread]);
   const firstComment = comments && comments[0]
+  const { editionId } = useParams();
+  const dispatch = useDispatch();
 
   const handleDeleteClick = useCallback(() => {
     deleteThread(thread.id)
-  }, [thread.id, deleteThread])
+    console.log(thread);
+    const payload = {
+      editionId: editionId,
+      commentListId: thread.id
+    };
+    // Send to backend
+    dispatch(deleteThreads(payload));
+
+  }, [thread.id, deleteThread, dispatch, editionId])
 
   const handleResolveClick = useCallback(() => {
     resolveThread(thread.id)
@@ -43,11 +60,32 @@ export const ThreadsListItem = ({
 
   const editComment = useCallback((commentId, val) => {
     provider.updateComment(thread.id, commentId, { content: val })
-  }, [provider, thread.id])
+    console.log(thread);
+    const content = {
+      content: val
+    }
+    const payload = {
+      editionId: editionId,
+      commentListId: thread.id,
+      commentId: commentId,
+      content: content
+    };
+
+    console.log(payload);
+    dispatch(updatecoments(payload));
+
+  }, [provider, thread.id, dispatch, editionId])
 
   const deleteComment = useCallback(commentId => {
     provider.deleteComment(thread.id, commentId, { deleteContent: true })
-  }, [provider, thread.id, deleteThread, firstComment])
+    const payload = {
+      editionId: editionId,
+      commentListId: thread.id,
+      commentId: commentId
+    };
+    // Send to backend
+    dispatch(deleteComments(payload));
+  }, [provider, thread.id, deleteThread, firstComment, dispatch, editionId])
 
   return (
     <div onMouseEnter={() => onHoverThread(thread.id)} onMouseLeave={() => onLeaveThread()}>
@@ -56,7 +94,7 @@ export const ThreadsListItem = ({
         active={active}
         open={open}
         onClick={!open ? onClickThread : null}
-        // onClickOutside
+      // onClickOutside
       >
         {open ? (
           <>

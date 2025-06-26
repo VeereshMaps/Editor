@@ -26,6 +26,7 @@ import { Import } from '@tiptap-pro/extension-import'
 
 import "../styles/editor-toolbar.css";
 import "../styles/collab-cursor.css";
+import "../styles/tiptap.css";
 
 import UndoIcon from '@mui/icons-material/Undo';
 import RedoIcon from '@mui/icons-material/Redo';
@@ -46,19 +47,28 @@ import TitleIcon from "@mui/icons-material/Title";
 import ClearAllIcon from "@mui/icons-material/ClearAll";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 
-// import { ThreadsList } from './ThreadsList'
-// import { ThreadsProvider } from './context'
-// import { useThreads } from './hooks/useThreads'
-// import { useUser } from './hooks/useUser'
-
+import { ThreadsList } from './ThreadsList'
+import { ThreadsProvider } from './context'
+import { useThreads } from './hooks/useThreads'
+import { useUser } from './hooks/useUser'
+import { TiptapCollabProvider } from '@hocuspocus/provider'
 
 
 import PageBreak from './extensions/PageBreak';
 import Placeholder from "@tiptap/extension-placeholder";
+import { useParams } from "react-router";
+import { createDocument, createDocumentFile, getCommentsByEditionId, getDocumentByEditionId } from "redux/Slices/tiptapSlice";
 
 const ydoc = new Y.Doc();
-const provider = new WebsocketProvider("ws://localhost:5000", "my-room", ydoc);
-
+const webIO = new WebsocketProvider("ws://localhost:5000", "my-room", ydoc);
+const doc = new Y.Doc()
+const isDev = import.meta.env.MODE === 'development' || 'development';
+const id = isDev ? 'dev' : uuid()
+const provider = new TiptapCollabProvider({
+    appId: 'pkry8p7m',
+    name: `tiptap-comments-demo/${id}`,
+    document: doc,
+})
 export default function CollabEditor() {
     const dispatch = useDispatch();
     const userDetails = useSelector((state) => state.auth);
@@ -69,16 +79,19 @@ export default function CollabEditor() {
     const [suggestionPosition, setSuggestionPosition] = useState({ top: 0, left: 0 });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
-    // const [showUnresolved, setShowUnresolved] = useState(true)
-    // const [selectedThread, setSelectedThread] = useState(null)
-    // const threadsRef = useRef([])
-    //   const user = useUser()
-
+    const [showUnresolved, setShowUnresolved] = useState(true)
+    const [selectedThread, setSelectedThread] = useState(null)
+    const threadsRef = useRef([])
+    const user = useUser();
+    const { editionId, projectId } = useParams();
+    console.log("@#$#$editionId " + editionId);
+    const [filteredThreads, setFilteredThreads] = useState([]);
     const editor = useEditor(
         token
             ? {
                 extensions: [
                     StarterKit.configure({ history: false }),
+                    webIO,
                     Collaboration.configure({ document: ydoc }),
                     CollaborationCursor.configure({
                         provider,
@@ -93,22 +106,23 @@ export default function CollabEditor() {
                         endpoint: 'https://api.tiptap.dev/v1/convert', // ✅ RE-ENABLE THIS
                         experimentalDocxImport: true,
                     }),
-                    // CommentsKit.configure({
-                    //     provider,
-                    //     useLegacyWrapping: false,
-                    //     onClickThread: threadId => {
-                    //         const isResolved = threadsRef.current.find(t => t.id === threadId)?.resolvedAt
+                    CommentsKit.configure({
+                        provider,
+                        useLegacyWrapping: false,
+                        onClickThread: (threadId) => {
+                            const isResolved = threadsRef.current.find(t => t.id === threadId)?.resolvedAt;
 
-                    //         if (!threadId || isResolved) {
-                    //             setSelectedThread(null)
-                    //             editor.chain().unselectThread().run()
-                    //             return
-                    //         }
+                            if (!threadId || isResolved) {
+                                setSelectedThread(null);
+                                editor?.chain().unselectThread().run();
+                                return;
+                            }
 
-                    //         setSelectedThread(threadId)
-                    //         editor.chain().selectThread({ id: threadId, updateSelection: false }).run()
-                    //     },
-                    // }),
+                            setSelectedThread(threadId);
+                            editor?.chain().selectThread({ id: threadId, updateSelection: false }).run();
+                        },
+                    }),
+
                     Placeholder.configure({
                         placeholder: 'Write a text to add comments …',
                     }),
@@ -134,64 +148,115 @@ export default function CollabEditor() {
             }
             : null
     );
+    useEffect(() => {
+        const fetchAndSetContent = async () => {
+            const payload = { editionId };
+            const response = await dispatch(getDocumentByEditionId(payload));
+            console.log("@#@$response11", response);
 
-    // useEffect(() => {
-    //     if (!editor) return;
+            const updatedContent = injectPageBreaksIntoJSON(response?.payload.content);
+            await waitUntilEditorViewIsReady(editor);
 
-    //     const handler = () => {
-    //         const selection = editor.state.selection;
-    //         const $pos = selection.$anchor;
+            requestAnimationFrame(() => {
+                try {
+                    editor.commands.setContent(updatedContent);
+                    console.log('✅ Synced with Tiptap Cloud (from saved doc)');
+                } catch (cloudErr) {
+                    console.error('🌩️ Cloud sync error:', cloudErr);
+                    setError('Setting content from cloud failed.');
+                } finally {
+                    setIsLoading(false);
+                }
+            });
+        };
+        fetchAndSetContent();
+    }, []);
+    useEffect(() => {
+        const fetchComments = async () => {
+            if (!editor || !editionId) return;
 
-    //         // ✅ 1. Get all pageBreak positions
-    //         const allPageBreaks = [];
-    //         editor.state.doc.descendants((node, pos) => {
-    //             if (node.type.name === 'pageBreak') {
-    //                 allPageBreaks.push(pos);
-    //             }
-    //         });
+            try {
+                const payload = { editionId };
+                const response = await dispatch(getCommentsByEditionId(payload));
 
-    //         // ✅ 2. Determine current page number
-    //         const currentPage = allPageBreaks.filter(pos => pos < $pos.pos).length + 1;
-    //         console.log('📄 Cursor is on page:', currentPage);
+                console.log("📩 Comments Response:", response);
+                setFilteredThreads(response?.payload)
+                // if (response?.payload) {
+                //     editor
+                //         .chain()
+                //         .focus()
+                //         .setThread(response.payload) // assuming payload is in the right format
+                //         .run();
+                // }
+            } catch (error) {
+                console.error("❌ Failed to fetch comments", error);
+            }
+        };
 
-    //         // ✅ 3. Compute slice positions based on page
-    //         const start =
-    //             currentPage === 1
-    //                 ? 0
-    //                 : allPageBreaks[currentPage - 2] + 1; // one after previous break
-    //         const end =
-    //             allPageBreaks[currentPage - 1] ?? editor.state.doc.content.size;
+        fetchComments();
+    }, [editor, editionId]); // include editor & editionId as dependencies
 
-    //         // ✅ 4. Extract plain text from current page
-    //         const pageSlice = editor.state.doc.slice(start, end);
-    //         const pageText = pageSlice.content.textBetween(0, pageSlice.content.size, '\n');
+    useEffect(() => {
 
-    //         // ✅ 5. Floating suggestion box near cursor
-    //         const { from } = editor.view.state.selection;
-    //         const coords = editor.view.coordsAtPos(from);
-    //         const container = document.querySelector(".tiptap"); // your editor wrapper
-    //         const rect = container.getBoundingClientRect();
+        if (!editor) return;
 
-    //         setSuggestionPosition({
-    //             top: coords.top - rect.top + 30,
-    //             left: coords.left - rect.left,
-    //         });
+        const handler = async () => {
+            const selection = editor.state.selection;
+            const $pos = selection.$anchor;
 
-    //         // ✅ 6. Run proofread only when triggered
-    //         console.log("showSuggestions", showSuggestions);
+            // ✅ 1. Get all pageBreak positions
+            const allPageBreaks = [];
+            editor.state.doc.descendants((node, pos) => {
+                if (node.type.name === 'pageBreak') {
+                    allPageBreaks.push(pos);
+                }
+            });
 
-    //         if (showSuggestions) {
-    //             console.log("📑 Proofreading content on page", currentPage, ":\n", pageText);
-    //             dispatch(proofreadText(pageText));
-    //             setShowSuggestions(false);
-    //         }
-    //     };
+            // ✅ 2. Determine current page number
+            const currentPage = allPageBreaks.filter(pos => pos < $pos.pos).length + 1;
+            console.log('📄 Cursor is on page:', currentPage);
 
-    //     editor.on("selectionUpdate", handler);
-    //     return () => {
-    //         editor.off("selectionUpdate", handler);
-    //     };
-    // }, [editor, showSuggestions]);
+            // ✅ 3. Compute slice positions based on page
+            const start =
+                currentPage === 1
+                    ? 0
+                    : allPageBreaks[currentPage - 2] + 1; // one after previous break
+            const end =
+                allPageBreaks[currentPage - 1] ?? editor.state.doc.content.size;
+
+            // ✅ 4. Extract plain text from current page
+            const pageSlice = editor.state.doc.slice(start, end);
+            const pageText = pageSlice.content.textBetween(0, pageSlice.content.size, '\n');
+
+            // ✅ 5. Floating suggestion box near cursor
+            const { from } = editor.view.state.selection;
+            const coords = editor.view.coordsAtPos(from);
+            const container = document.querySelector(".tiptap"); // your editor wrapper
+            const rect = container.getBoundingClientRect();
+
+            setSuggestionPosition({
+                top: coords.top - rect.top + 30,
+                left: coords.left - rect.left,
+            });
+
+            // ✅ 6. Run proofread only when triggered
+            console.log("showSuggestions", showSuggestions);
+
+            if (showSuggestions) {
+                console.log("📑 Proofreading content on page", currentPage, ":\n", pageText);
+                dispatch(proofreadText(pageText));
+                setShowSuggestions(false);
+            }
+        };
+
+
+
+        editor.on("selectionUpdate", handler);
+        return () => {
+            editor.off("selectionUpdate", handler);
+        };
+
+    }, [editor, showSuggestions]);
 
 
 
@@ -332,78 +397,137 @@ export default function CollabEditor() {
         importRef.current.click()
     }, []);
 
-    const handleImportFilePick = useCallback(
-        e => {
-            const file = e.target.files[0]
+    const handleImportFilePick = useCallback(async (e) => {
+        const file = e.target.files[0];
+        importRef.current.value = '';
 
-            importRef.current.value = ''
+        if (!file || !editor) return;
 
-            if (!file) {
-                return
-            }
+        setIsLoading(true);
+        setError(null);
+        //     // 🟢 1. Upload the binary file via FormData
+        //     //     const formData = new FormData();
+        //     //     formData.append('file', file);
+        //     //     formData.append('projectId', projectId);
+        //     //     console.log("FormData keys:", [...formData.entries()]);
+        //     //    const response= await dispatch(createDocumentFile(formData));
+        try {
+            const payload = { editionId };
+            const response = await dispatch(getDocumentByEditionId(payload));
+            console.log("@#@$response", response);
 
-            setIsLoading(true)
-            setError(null)
-            editor
+            // if (response?.payload?.content && response.payload.content.length > 0) {
+            //     const updatedContent = injectPageBreaksIntoJSON(response.payload);
+            //     await waitUntilEditorViewIsReady(editor);
+
+            //     requestAnimationFrame(() => {
+            //         try {
+            //             editor.commands.setContent(updatedContent);
+            //             console.log('✅ Set content from cloud');
+            //         } catch (err) {
+            //             console.error('❌ Failed to set editor content:', err);
+            //             setError('Failed to set editor content.');
+            //         } finally {
+            //             setIsLoading(false);
+            //         }
+            //     });
+            // }
+            // else {
+            // ❌ No cloud content, fallback to importing file
+            // alert("No cloud document found. Falling back to local import.");
+
+            await editor
                 .chain()
                 .import({
                     file,
-                    onImport(context) {
-                        console.log("🖼️ Images returned", context.images); // ✅ Add this
+                    onImport: async (context) => {
                         if (context.error) {
-                            setError(context.error)
-                            setIsLoading(false)
-                            return
+                            setError(context.error);
+                            setIsLoading(false);
+                            return;
                         }
+                        console.log("@######context.content " + JSON.stringify(context.content));
+
                         const updatedContent = injectPageBreaksIntoJSON(context.content);
 
-                        context.setEditorContent(updatedContent) // Automatically uses context.content
-                        setError(null)
-                        setIsLoading(false)
+                        dispatch(createDocument({
+                            editionId,
+                            content: updatedContent,
+                        }));
+
+                        await waitUntilEditorViewIsReady(editor);
+
+                        requestAnimationFrame(() => {
+                            try {
+                                context.setEditorContent(updatedContent);
+                                console.log('✅ Synced with Tiptap Cloud (fresh import)');
+                            } catch (cloudErr) {
+                                console.error('🌩️ Cloud sync error:', cloudErr);
+                                setError('Imported locally, but syncing failed.');
+                            } finally {
+                                setIsLoading(false);
+                            }
+                        });
                     },
                 })
-                .run()
+                .run();
+            // }
+        } catch (err) {
+            console.error('❌ Import or sync failed:', err);
+            setError('Import or sync failed');
+            setIsLoading(false);
+        }
+    }, [editor, editionId, dispatch]);
 
-        },
-        [editor],
-    )
+    const waitUntilEditorViewIsReady = async (editor, retries = 10, delay = 100) => {
+        for (let i = 0; i < retries; i++) {
+            if (editor?.view?.dom?.getBoundingClientRect) {
+                return;
+            }
+            await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+        throw new Error("Editor view not ready after waiting.");
+    };
 
-    // const { threads = [], createThread } = useThreads(provider, editor, user)
+    const { threads = [], createThread } = useThreads(provider, editor, user)
 
-    // threadsRef.current = threads
+    threadsRef.current = threads
 
-    // const selectThreadInEditor = useCallback(threadId => {
-    //     editor.chain().selectThread({ id: threadId }).run()
-    // }, [editor])
+    const selectThreadInEditor = useCallback(threadId => {
+        editor.chain().selectThread({ id: threadId }).run()
+    }, [editor])
 
-    // const deleteThread = useCallback(threadId => {
-    //     provider.deleteThread(threadId)
-    //     editor.commands.removeThread({ id: threadId })
-    // }, [editor])
+    const deleteThread = useCallback(threadId => {
+        console.log("threadId");
 
-    // const resolveThread = useCallback(threadId => {
-    //     editor.commands.resolveThread({ id: threadId })
-    // }, [editor])
+        provider.deleteThread(threadId)
+        editor.commands.removeThread({ id: threadId })
+    }, [editor])
 
-    // const unresolveThread = useCallback(threadId => {
-    //     editor.commands.unresolveThread({ id: threadId })
-    // }, [editor])
+    const resolveThread = useCallback(threadId => {
+        editor.commands.resolveThread({ id: threadId })
+    }, [editor])
 
-    // const updateComment = useCallback((threadId, commentId, content, metaData) => {
-    //     editor.commands.updateComment({
-    //         threadId, id: commentId, content, data: metaData,
-    //     })
-    // }, [editor])
+    const unresolveThread = useCallback(threadId => {
+        editor.commands.unresolveThread({ id: threadId })
+    }, [editor])
 
-    // const onHoverThread = useCallback(threadId => {
-    //     hoverThread(editor, [threadId])
-    // }, [editor])
+    const updateComment = useCallback((threadId, commentId, content, metaData) => {
+        editor.commands.updateComment({
+            threadId, id: commentId, content, data: metaData,
+        })
+    }, [editor])
 
-    // const onLeaveThread = useCallback(() => {
-    //     hoverOffThread(editor)
-    // }, [editor])
+    const onHoverThread = useCallback(threadId => {
+        hoverThread(editor, [threadId])
+    }, [editor])
+
+    const onLeaveThread = useCallback(() => {
+        hoverOffThread(editor)
+    }, [editor])
 
     // const filteredThreads = threads.filter(t => (showUnresolved ? !t.resolvedAt : !!t.resolvedAt))
+    console.log("filteredThreads" + JSON.stringify(filteredThreads));
 
 
 
@@ -590,71 +714,71 @@ export default function CollabEditor() {
                 </div>
             )}
             {!isLoading && editor ? (
-                // <ThreadsProvider
-                //     onClickThread={selectThreadInEditor}
-                //     onDeleteThread={deleteThread}
-                //     onHoverThread={onHoverThread}
-                //     onLeaveThread={onLeaveThread}
-                //     onResolveThread={resolveThread}
-                //     onUpdateComment={updateComment}
-                //     onUnresolveThread={unresolveThread}
-                //     selectedThreads={editor.storage.comments.focusedThreads}
-                //     selectedThread={selectedThread}
-                //     setSelectedThread={setSelectedThread}
-                //     threads={threads}
-                // >
-                //     <div className="col-group" data-viewmode={showUnresolved ? 'open' : 'resolved'}>
-                //         <div className="main">
-                //             <div className="control-group">
-                //                 <div className="button-group">
-                //                     <button onClick={createThread} disabled={editor.state.selection.empty}>Add comment</button>
-                //                     <button onClick={() => editor.chain().focus().setImage({ src: 'https://placehold.co/800x500' }).run()}>Add image</button>
-                //                 </div>
-                //             </div>
-                <>
-                    <EditorContent editor={editor} />
-                    <button
-                        onClick={handleProofread}
-                        title="Proofread"
-                        style={{
-                            position: "fixed", // or "absolute" if scoped to container
-                            bottom: "1.5rem",
-                            right: "1.5rem",
-                            backgroundColor: "#28a745",
-                            color: "white",
-                            padding: "0.75rem 1rem",
-                            border: "none",
-                            borderRadius: "50px",
-                            boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
-                            cursor: "pointer",
-                            fontSize: "1rem",
-                            zIndex: 999,
-                        }}
-                    >
-                        ✍️ Proofread
-                    </button>
-                </>
-                //        </div>
-                //        <div className="sidebar">
-                //             <div className="sidebar-options">
-                //                 <div className="option-group">
-                //                     <div className="label-large">Comments</div>
-                //                     <div className="switch-group">
-                //                         <label>
-                //                             <input type="radio" name="thread-state" onChange={() => setShowUnresolved(true)} checked={showUnresolved} />
-                //                             Open
-                //                         </label>
-                //                         <label>
-                //                             <input type="radio" name="thread-state" onChange={() => setShowUnresolved(false)} checked={!showUnresolved} />
-                //                             Resolved
-                //                         </label>
-                //                     </div>
-                //                 </div>
-                //                 <ThreadsList provider={provider} threads={filteredThreads} />
-                //             </div>
-                //        </div>
-                //    </div>
-                // </ThreadsProvider>
+                <ThreadsProvider
+                    onClickThread={selectThreadInEditor}
+                    onDeleteThread={deleteThread}
+                    onHoverThread={onHoverThread}
+                    onLeaveThread={onLeaveThread}
+                    onResolveThread={resolveThread}
+                    onUpdateComment={updateComment}
+                    onUnresolveThread={unresolveThread}
+                    selectedThreads={editor.storage.comments.focusedThreads}
+                    selectedThread={selectedThread}
+                    setSelectedThread={setSelectedThread}
+                    threads={threads}
+                >
+                    <div style={{ display: 'flex', flexDirection: 'row' }} className="col-group" data-viewmode={showUnresolved ? 'open' : 'resolved'}>
+                        <div className="main" style={{ width: '80%' }}>
+                            <div className="control-group">
+                                <div className="button-group">
+                                    <button onClick={createThread} disabled={editor.state.selection.empty}>Add comment</button>
+                                    <button onClick={() => editor.chain().focus().setImage({ src: 'https://placehold.co/800x500' }).run()}>Add image</button>
+                                </div>
+                            </div>
+
+                            <EditorContent editor={editor} />
+                            <button
+                                onClick={handleProofread}
+                                title="Proofread"
+                                style={{
+                                    position: "fixed", // or "absolute" if scoped to container
+                                    bottom: "1.5rem",
+                                    right: "1.5rem",
+                                    backgroundColor: "#28a745",
+                                    color: "white",
+                                    padding: "0.75rem 1rem",
+                                    border: "none",
+                                    borderRadius: "50px",
+                                    boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+                                    cursor: "pointer",
+                                    fontSize: "1rem",
+                                    zIndex: 999,
+                                }}
+                            >
+                                ✍️ Proofread
+                            </button>
+
+                        </div>
+                        <div className="sidebar" style={{ width: '20%' }}>
+                            <div className="sidebar-options">
+                                <div className="option-group">
+                                    <div className="label-large">Comments</div>
+                                    <div className="switch-group">
+                                        <label>
+                                            <input type="radio" name="thread-state" onChange={() => setShowUnresolved(true)} checked={showUnresolved} />
+                                            Open
+                                        </label>
+                                        <label>
+                                            <input type="radio" name="thread-state" onChange={() => setShowUnresolved(false)} checked={!showUnresolved} />
+                                            Resolved
+                                        </label>
+                                    </div>
+                                </div>
+                                <ThreadsList provider={provider} threads={filteredThreads} />
+                            </div>
+                        </div>
+                    </div>
+                </ThreadsProvider>
 
 
             ) : (
