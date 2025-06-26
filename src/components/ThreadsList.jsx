@@ -4,13 +4,12 @@ import "../styles/tiptap.css";
 export const ThreadsList = ({ provider, threads }) => {
   const { selectedThreads, selectedThread } = useThreadsState()
 
-  if (threads.length === 0) {
-    return <label className="label">No threads.</label>
+  if (!Array.isArray(threads) || threads.length === 0) {
+    return <label className="label">No threads.</label>;
   }
-
   return (
     <div className="threads-group">
-      {threads.map((thread) => {
+      {Array.isArray(threads) && threads.map((thread) => {
         // console.log('🧵 Thread:', thread);
         return (
           <ThreadsListItem

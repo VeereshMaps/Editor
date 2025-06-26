@@ -52,12 +52,13 @@ import { ThreadsProvider } from './context'
 import { useThreads } from './hooks/useThreads'
 import { useUser } from './hooks/useUser'
 import { TiptapCollabProvider } from '@hocuspocus/provider'
+import TextStyle from '@tiptap/extension-text-style';
 
 
 import PageBreak from './extensions/PageBreak';
 import Placeholder from "@tiptap/extension-placeholder";
 import { useParams } from "react-router";
-import { createDocument, createDocumentFile, getCommentsByEditionId, getDocumentByEditionId } from "redux/Slices/tiptapSlice";
+import { createDocument, createDocumentFile, getCommentsByEditionId, getDocumentByEditionId, updateDocument } from "redux/Slices/tiptapSlice";
 
 const ydoc = new Y.Doc();
 const webIO = new WebsocketProvider("ws://localhost:5000", "my-room", ydoc);
@@ -83,6 +84,7 @@ export default function CollabEditor() {
     const [selectedThread, setSelectedThread] = useState(null)
     const threadsRef = useRef([])
     const user = useUser();
+    const [mode, setMode] = useState(false);
     const { editionId, projectId } = useParams();
     console.log("@#$#$editionId " + editionId);
     const [filteredThreads, setFilteredThreads] = useState([]);
@@ -91,6 +93,7 @@ export default function CollabEditor() {
             ? {
                 extensions: [
                     StarterKit.configure({ history: false }),
+                    TextStyle,
                     webIO,
                     Collaboration.configure({ document: ydoc }),
                     CollaborationCursor.configure({
@@ -149,28 +152,35 @@ export default function CollabEditor() {
             : null
     );
     useEffect(() => {
+        if (!editor) return;
         const fetchAndSetContent = async () => {
             const payload = { editionId };
             const response = await dispatch(getDocumentByEditionId(payload));
             console.log("@#@$response11", response);
+            if (response?.payload.content) {
+                setMode(true)
+                const updatedContent = injectPageBreaksIntoJSON(response?.payload.content);
+                await waitUntilEditorViewIsReady(editor);
+                requestAnimationFrame(() => {
+                    try {
+                        editor.commands.setContent(updatedContent);
+                        console.log('✅ Synced with Tiptap Cloud (from saved doc)');
+                    } catch (cloudErr) {
+                        console.error('🌩️ Cloud sync error:', cloudErr);
+                        setError('Setting content from cloud failed.');
+                    } finally {
+                        setIsLoading(false);
+                    }
+                });
+            } else {
+                setMode(false)
+            }
 
-            const updatedContent = injectPageBreaksIntoJSON(response?.payload.content);
-            await waitUntilEditorViewIsReady(editor);
-
-            requestAnimationFrame(() => {
-                try {
-                    editor.commands.setContent(updatedContent);
-                    console.log('✅ Synced with Tiptap Cloud (from saved doc)');
-                } catch (cloudErr) {
-                    console.error('🌩️ Cloud sync error:', cloudErr);
-                    setError('Setting content from cloud failed.');
-                } finally {
-                    setIsLoading(false);
-                }
-            });
         };
+
         fetchAndSetContent();
-    }, []);
+    }, [editor, editionId]);
+
     useEffect(() => {
         const fetchComments = async () => {
             if (!editor || !editionId) return;
@@ -181,20 +191,13 @@ export default function CollabEditor() {
 
                 console.log("📩 Comments Response:", response);
                 setFilteredThreads(response?.payload)
-                // if (response?.payload) {
-                //     editor
-                //         .chain()
-                //         .focus()
-                //         .setThread(response.payload) // assuming payload is in the right format
-                //         .run();
-                // }
             } catch (error) {
                 console.error("❌ Failed to fetch comments", error);
             }
         };
 
         fetchComments();
-    }, [editor, editionId]); // include editor & editionId as dependencies
+    }, [editor, editionId]);
 
     useEffect(() => {
 
@@ -405,37 +408,13 @@ export default function CollabEditor() {
 
         setIsLoading(true);
         setError(null);
-        //     // 🟢 1. Upload the binary file via FormData
-        //     //     const formData = new FormData();
-        //     //     formData.append('file', file);
-        //     //     formData.append('projectId', projectId);
-        //     //     console.log("FormData keys:", [...formData.entries()]);
-        //     //    const response= await dispatch(createDocumentFile(formData));
+            // 🟢 1. Upload the binary file via FormData
+            //     const formData = new FormData();
+            //     formData.append('file', file);
+            //     formData.append('projectId', projectId);
+            //     console.log("FormData keys:", [...formData.entries()]);
+            //    const response= await dispatch(createDocumentFile(formData));
         try {
-            const payload = { editionId };
-            const response = await dispatch(getDocumentByEditionId(payload));
-            console.log("@#@$response", response);
-
-            // if (response?.payload?.content && response.payload.content.length > 0) {
-            //     const updatedContent = injectPageBreaksIntoJSON(response.payload);
-            //     await waitUntilEditorViewIsReady(editor);
-
-            //     requestAnimationFrame(() => {
-            //         try {
-            //             editor.commands.setContent(updatedContent);
-            //             console.log('✅ Set content from cloud');
-            //         } catch (err) {
-            //             console.error('❌ Failed to set editor content:', err);
-            //             setError('Failed to set editor content.');
-            //         } finally {
-            //             setIsLoading(false);
-            //         }
-            //     });
-            // }
-            // else {
-            // ❌ No cloud content, fallback to importing file
-            // alert("No cloud document found. Falling back to local import.");
-
             await editor
                 .chain()
                 .import({
@@ -449,12 +428,20 @@ export default function CollabEditor() {
                         console.log("@######context.content " + JSON.stringify(context.content));
 
                         const updatedContent = injectPageBreaksIntoJSON(context.content);
+                        if (mode == false) {
+                            alert("Create")
+                            dispatch(createDocument({
+                                editionId,
+                                content: updatedContent,
+                            }));
 
-                        dispatch(createDocument({
-                            editionId,
-                            content: updatedContent,
-                        }));
-
+                        } else {
+                            alert("update")
+                            dispatch(updateDocument({
+                                editionId,
+                                content: updatedContent,
+                            }));
+                        }
                         await waitUntilEditorViewIsReady(editor);
 
                         requestAnimationFrame(() => {
@@ -471,7 +458,6 @@ export default function CollabEditor() {
                     },
                 })
                 .run();
-            // }
         } catch (err) {
             console.error('❌ Import or sync failed:', err);
             setError('Import or sync failed');
@@ -727,8 +713,10 @@ export default function CollabEditor() {
                     setSelectedThread={setSelectedThread}
                     threads={threads}
                 >
-                    <div style={{ display: 'flex', flexDirection: 'row' }} className="col-group" data-viewmode={showUnresolved ? 'open' : 'resolved'}>
-                        <div className="main" style={{ width: '80%' }}>
+                    {/* style={{ display: 'flex', flexDirection: 'row' }}  */}
+                    <div className="col-group" data-viewmode={showUnresolved ? 'open' : 'resolved'}>
+                    {/* style={{ width: '80%' }} */}
+                        <div className="main" >
                             <div className="control-group">
                                 <div className="button-group">
                                     <button onClick={createThread} disabled={editor.state.selection.empty}>Add comment</button>
@@ -759,7 +747,8 @@ export default function CollabEditor() {
                             </button>
 
                         </div>
-                        <div className="sidebar" style={{ width: '20%' }}>
+                        {/* style={{ width: '20%',height:'100%',overflowY:'auto' }} */}
+                        <div className="sidebar" >
                             <div className="sidebar-options">
                                 <div className="option-group">
                                     <div className="label-large">Comments</div>

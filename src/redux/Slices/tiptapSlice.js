@@ -1,7 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "../../api/axiosInstance";
-
-// Sends the document data to your backend
 export const createDocument = createAsyncThunk(
   'tiptap/createDocument',
   async (userData, { rejectWithValue }) => {

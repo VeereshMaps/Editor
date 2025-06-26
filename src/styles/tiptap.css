@@ -278,6 +278,7 @@ body {
   margin: 0 -1rem;
   overflow: auto;
   padding: 0 1rem;
+  height: 24rem;
 
   @media (max-width: 540px) {
     margin: 0 -1.5rem;
