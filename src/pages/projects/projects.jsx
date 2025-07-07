@@ -28,11 +28,6 @@ const BooksRepo = () => {
         }
     }, []);
 
-    useEffect(() => {
-        console.log("projectDetails", projectDetails);
-
-    }, [projectDetails]);
-
     const projectDataAPI = async (userData) => {
         try {
             await dispatch(getProjects(userData.role));
@@ -152,7 +147,8 @@ const BooksRepo = () => {
         <Paper sx={{ padding: 2 }}>
             <Grid container justifyContent="flex-end" sx={{ marginBottom: 2 }}>
                 {formattedUserRole.includes(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase()) &&
-                    loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === superAccess && (
+                    (loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === superAccess ||
+                        loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === "author") && (
                         <Button endIcon={<AddCircleOutline />} variant="contained" color="primary" onClick={handleAddBook}>
                             Add Book/Project
                         </Button>

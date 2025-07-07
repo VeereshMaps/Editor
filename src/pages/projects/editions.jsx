@@ -205,7 +205,7 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
         <>
             <Grid container spacing={2} alignItems="stretch">
                 {/* Add New Edition Card */}
-                {formattedUserRole.includes(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase()) && loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === superAccess &&
+                {formattedUserRole.includes(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase()) && (loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === superAccess || loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === "author") &&
                     <Grid item xs={12} sm={4}>
                         <Card sx={{ textAlign: "center", height: "100%" }}>
                             <CardActionArea onClick={handleAddEdition}>

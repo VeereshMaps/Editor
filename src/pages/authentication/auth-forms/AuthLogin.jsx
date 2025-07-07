@@ -67,7 +67,7 @@ export default function AuthLogin({ isDemo = false }) {
                 setLoginError(result.payload.message);
                 actions.setErrors({ submit: result.payload.message });
             } else {
-                navigate("/dashboard");
+                navigate("/projects");
             }
         } catch (error) {
             setLoginError("Invalid username or password.");

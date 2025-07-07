@@ -6,7 +6,6 @@ export const userColor = getRandomColor()
 
 export const useUser = () => {
   const storedUser = JSON.parse(localStorage.getItem("user"));
-  console.log("DJJD" + storedUser);
   const userName = storedUser.firstName + ' ' + storedUser.lastName;
   const _id = storedUser._id;
   return {

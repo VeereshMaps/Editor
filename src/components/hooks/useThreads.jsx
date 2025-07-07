@@ -50,7 +50,6 @@ export const useThreads = (provider, editor, user) => {
     // Send to backend
     dispatch(createThrad(payload));
   }, [editor, user, dispatch]);
-  console.log(threads);
 
   return { threads, createThread }
 }

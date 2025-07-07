@@ -4,7 +4,7 @@ import utilities from "./utilities";
 import publishing from "./selfPublish";
 
 const getMenuItems = (role) => ({
-  items: [dashboard, ...(role === "Admin" ? [pages,publishing] : []), utilities],
+  items: [ ...(role === "Admin" ? [pages,publishing] : []), utilities,dashboard],
 });
 
 export default getMenuItems;

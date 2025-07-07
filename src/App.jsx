@@ -30,8 +30,6 @@ export default function App() {
   }, [dispatch]);
 
   useEffect(() => {
-    console.log("app.jsx");
-
     if (userDetails?.user && userDetails?.isAuthenticated) {
         fetchUserDetailsById(userDetails.user);
     } else {

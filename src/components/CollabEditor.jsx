@@ -1,13 +1,17 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useEditor, EditorContent } from "@tiptap/react";
-import { proofreadText } from "../redux/Slices/proofreadSlice";
-import * as Y from "yjs";
-import { WebsocketProvider } from "y-websocket";
+import { useParams } from "react-router";
+import { EditorContent, useEditor } from "@tiptap/react";
+
+
+import { MenuBar } from "./MenuBar";
+import { RulesModal } from "./RulesModal";
+import { SidebarRulesSection } from "./SidebarRulesSection";
+import { SuggestionTooltip } from "./SuggestionTooltip";
+import { initialRules } from "../constants/initial-rules";
+import { Decoration } from "@tiptap/pm/view";
 
 import StarterKit from "@tiptap/starter-kit";
-import Collaboration from "@tiptap/extension-collaboration";
-import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
 import Underline from '@tiptap/extension-underline'
 import Strike from '@tiptap/extension-strike'
 import Highlight from '@tiptap/extension-highlight'
@@ -21,333 +25,308 @@ import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import { CommentsKit, hoverOffThread, hoverThread } from '@tiptap-pro/extension-comments'
 
-
+import AiSuggestion from "@tiptap-pro/extension-ai-suggestion";
+import * as Y from "yjs";
+import { WebsocketProvider } from "y-websocket";
 import { Import } from '@tiptap-pro/extension-import'
-
-import "../styles/editor-toolbar.css";
-import "../styles/collab-cursor.css";
-import "../styles/tiptap.css";
-
-import UndoIcon from '@mui/icons-material/Undo';
-import RedoIcon from '@mui/icons-material/Redo';
-import FormatUnderlinedIcon from '@mui/icons-material/FormatUnderlined';
-import StrikethroughSIcon from '@mui/icons-material/StrikethroughS';
-import HighlightIcon from '@mui/icons-material/Highlight';
-import FormatAlignLeftIcon from '@mui/icons-material/FormatAlignLeft';
-import FormatAlignCenterIcon from '@mui/icons-material/FormatAlignCenter';
-import FormatAlignRightIcon from '@mui/icons-material/FormatAlignRight';
-import InsertLinkIcon from '@mui/icons-material/InsertLink';
-import ImageIcon from '@mui/icons-material/Image';
-
-import FormatBoldIcon from "@mui/icons-material/FormatBold";
-import FormatItalicIcon from "@mui/icons-material/FormatItalic";
-import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
-import FormatListNumberedIcon from "@mui/icons-material/FormatListNumbered";
-import TitleIcon from "@mui/icons-material/Title";
-import ClearAllIcon from "@mui/icons-material/ClearAll";
-import UploadFileIcon from "@mui/icons-material/UploadFile";
-
 import { ThreadsList } from './ThreadsList'
 import { ThreadsProvider } from './context'
 import { useThreads } from './hooks/useThreads'
 import { useUser } from './hooks/useUser'
 import { TiptapCollabProvider } from '@hocuspocus/provider'
 import TextStyle from '@tiptap/extension-text-style';
-
-
 import PageBreak from './extensions/PageBreak';
 import Placeholder from "@tiptap/extension-placeholder";
-import { useParams } from "react-router";
-import { createDocument, createDocumentFile, getCommentsByEditionId, getDocumentByEditionId, updateDocument } from "redux/Slices/tiptapSlice";
+import Collaboration from "@tiptap/extension-collaboration";
+import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
 
+import "../styles/collab-cursor.css";
+import "../styles/tiptap.css";
+import { CircularProgress } from "@mui/material";
+import { CustomHighlight } from "./CustomHighlight";
+import { AISuggestionsSidebar } from "./EditorSidebar";
+import { CommentsSidebar } from "./CommentsSidebar";
+
+const APP_ID = "pkry8p7m";//7j9y6m10
 const ydoc = new Y.Doc();
-const webIO = new WebsocketProvider("ws://localhost:5000", "my-room", ydoc);
-const doc = new Y.Doc()
+const doc = new Y.Doc();
 const isDev = import.meta.env.MODE === 'development' || 'development';
-const id = isDev ? 'dev' : uuid()
-const provider = new TiptapCollabProvider({
-    appId: 'pkry8p7m',
-    name: `tiptap-comments-demo/${id}`,
-    document: doc,
-})
+// const id = isDev ? 'dev' : uuid();
+
+
+
 export default function CollabEditor() {
     const dispatch = useDispatch();
+    const { editionId, projectId } = useParams();
     const userDetails = useSelector((state) => state.auth);
-    const { token, status } = useSelector((state) => state.tiptapToken);
+    const { contentAIToken, documentToken } = useSelector((state) => state.tiptapToken);
     const proofreadState = useSelector((state) => state.proofread);
     const importRef = useRef(null);
-    const [showSuggestions, setShowSuggestions] = useState(false);
-    const [suggestionPosition, setSuggestionPosition] = useState({ top: 0, left: 0 });
+    const user = useUser();
+
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
     const [showUnresolved, setShowUnresolved] = useState(true)
     const [selectedThread, setSelectedThread] = useState(null)
-    const threadsRef = useRef([])
-    const user = useUser();
-    const [mode, setMode] = useState(false);
-    const { editionId, projectId } = useParams();
-    console.log("@#$#$editionId " + editionId);
-    const [filteredThreads, setFilteredThreads] = useState([]);
+
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [rules, setRules] = useState(initialRules);
+    const [tooltipElement, setTooltipElement] = useState(null);
+
+    const webIORef = useRef(null);
+    let webIODEv = useRef(null);
+    const provider = new TiptapCollabProvider({
+        appId: "7j9y6m10",
+        name: `MapSystems_Room`,
+        document: doc,
+    })
+
+    // useEffect(() => {
+    //     if (!editionId || webIODEv) return;
+    //     const wpro = new WebsocketProvider("ws://localhost:5000", editionId, ydoc);
+    //     webIODEv = wpro;
+    // }, [editionId]);
+
+    // useEffect(() => {
+
+    //     if (!editionId || webIORef.current) return;
+
+    //     const ws = new WebSocket("ws://localhost:5000/" + editionId);
+    //     webIORef.current = ws;
+
+    //     ws.onopen = () => {
+    //         console.log("✅ WebSocket connected");
+    //         ws.send(JSON.stringify({ type: "join-room", userId: user._id, username: user.name }));
+    //         ws.send(JSON.stringify({ type: "get-all-documents", editionId }));
+    //         ws.send(JSON.stringify({ type: "all-comments", editionId }));
+    //     };
+
+    //     ws.onmessage = async (event) => {
+    //         const message = JSON.parse(event.data);
+
+    //         switch (message.type) {
+    //             case "user-joined":
+    //                 console.log("👤 User joined:", message.username);
+    //                 break;
+    //             case "user-left":
+    //                 console.log("👋 User left:", message.username);
+    //                 break;
+    //             case "current-users":
+    //                 console.log("🧑‍🤝‍🧑 Users in room:", message.users);
+    //                 break;
+    //             case "all-documents":
+    //                 console.log("📄 Got documents:", message.data);
+    //                 if (message.data?.content) {
+    //                     setMode(true);
+    //                     const updatedContent = injectPageBreaksIntoJSON(message.data.content);
+    //                     await waitUntilEditorViewIsReady(editor);
+    //                     requestAnimationFrame(() => {
+    //                         try {
+    //                             editor?.commands.setContent(updatedContent);
+    //                             console.log("✅ Content synced");
+    //                         } catch (err) {
+    //                             console.error("❌ Set content error:", err);
+    //                             setError("Setting content failed.");
+    //                         } finally {
+    //                             setIsLoading(false);
+    //                         }
+    //                     });
+    //                 } else {
+    //                     setMode(false);
+    //                 }
+    //                 break;
+    //             case "all-comments":
+    //                 setFilteredThreads(message.data);
+    //                 break;
+    //         }
+    //     };
+
+    //     ws.onerror = (err) => {
+    //         console.error("❌ WebSocket error:", err);
+    //     };
+
+    //     ws.onclose = () => {
+    //         console.log("🔌 WebSocket closed");
+    //         webIORef.current = null;
+    //     };
+
+    //     return () => {
+    //         ws.close();
+    //         webIORef.current = null;
+    //     };
+    // }, [editionId]);
+
     const editor = useEditor(
-        token
+        documentToken
             ? {
                 extensions: [
                     StarterKit.configure({ history: false }),
-                    TextStyle,
-                    webIO,
-                    Collaboration.configure({ document: ydoc }),
-                    CollaborationCursor.configure({
-                        provider,
-                        user: {
-                            name: `${userDetails?.user?.firstName} ${userDetails?.user?.lastName}`,
-                            color: stringToColor(`${userDetails?.user?.firstName} ${userDetails?.user?.lastName}`),
-                        },
-                    }),
                     Import.configure({
-                        appId: 'pkry8p7m',
-                        token,
-                        endpoint: 'https://api.tiptap.dev/v1/convert', // ✅ RE-ENABLE THIS
+                        appId: APP_ID,
+                        token: documentToken,
+                        endpoint: 'https://api.tiptap.dev/v1/convert',
                         experimentalDocxImport: true,
+                    }),
+                    // Placeholder.configure({
+                    //     placeholder: 'Write a text to add comments …',
+                    // }),
+                    Collaboration.configure({ document: ydoc }),
+                    // CollaborationCursor.configure({
+                    //     user: {
+                    //         name: `${userDetails?.user?.firstName} ${userDetails?.user?.lastName}`,
+                    //         color: stringToColor(`${userDetails?.user?.firstName} ${userDetails?.user?.lastName}`),
+                    //     },
+                    // }),
+                    CollaborationCursor.configure({ provider }),
+                    AiSuggestion.configure({
+                        rules,
+                        appId: APP_ID,
+                        token: contentAIToken,
+                        getCustomSuggestionDecoration({ suggestion, isSelected, getDefaultDecorations }) {
+                            const decorations = getDefaultDecorations();
+                            if (isSelected && !suggestion.isRejected) {
+                                decorations.push(
+                                    Decoration.widget(suggestion.deleteRange.to, () => {
+                                        const element = document.createElement('span');
+                                        setTooltipElement(element);
+                                        return element;
+                                    }),
+                                );
+                            }
+                            return decorations;
+                        },
                     }),
                     CommentsKit.configure({
                         provider,
                         useLegacyWrapping: false,
                         onClickThread: (threadId) => {
                             const isResolved = threadsRef.current.find(t => t.id === threadId)?.resolvedAt;
-
                             if (!threadId || isResolved) {
                                 setSelectedThread(null);
                                 editor?.chain().unselectThread().run();
-                                return;
+                            } else {
+                                setSelectedThread(threadId);
+                                editor?.chain().selectThread({ id: threadId, updateSelection: false }).run();
                             }
-
-                            setSelectedThread(threadId);
-                            editor?.chain().selectThread({ id: threadId, updateSelection: false }).run();
                         },
                     }),
-
-                    Placeholder.configure({
-                        placeholder: 'Write a text to add comments …',
-                    }),
-
-                    PageBreak,
-                    Image.configure({
-                        inline: true,       // ✅ Required for imported images
-                        allowBase64: true,  // ✅ Good for embedded image content
-                    }),
+                    CustomHighlight,
+                    webIODEv,
+                    Image.configure({ inline: true, allowBase64: true }),
                     Table.configure({ resizable: true }),
-                    TableRow,
-                    TableCell,
-                    TableHeader,
                     History,
+                    TextStyle,
                     Underline,
                     Strike,
                     Highlight,
                     Link,
-                    TextAlign.configure({
-                        types: ['heading', 'paragraph'],
-                    }),
+                    TextAlign.configure({ types: ['heading', 'paragraph'] }),
+                    TableRow,
+                    TableCell,
+                    TableHeader,
+                    PageBreak,
                 ],
+                // content: "<p>Start writing collaboratively...</p>",
+                // onUpdate: ({ editor }) => {
+                //     const json = editor.getJSON();
+                //     const updatedContent = injectPageBreaksIntoJSON(json.content);
+                //     // AI suggestions load on update
+                //     updatedEditor.commands.loadAiSuggestions();
+                //     // ✅ Safe WebSocket send
+                //     console.log("webIORef.current" + webIORef.current);
+                //     if (webIORef.current == null) {
+                //         const ws = new WebSocket("ws://localhost:5000/" + editionId);
+                //         webIORef.current = ws;
+
+                //     }
+                //     console.log("webIORef.current" + webIORef.current);
+                //     if (webIORef.current) {
+                //         ws.send(JSON.stringify({
+                //             type: "update-document",
+                //             userId: user._id,
+                //             username: user.name,
+                //             editionId,
+                //             content: updatedContent,
+                //         }));
+                //     }
+                // },
             }
             : null
     );
-    useEffect(() => {
-        if (!editor) return;
-        const fetchAndSetContent = async () => {
-            const payload = { editionId };
-            const response = await dispatch(getDocumentByEditionId(payload));
-            console.log("@#@$response11", response);
-            if (response?.payload.content) {
-                setMode(true)
-                const updatedContent = injectPageBreaksIntoJSON(response?.payload.content);
-                await waitUntilEditorViewIsReady(editor);
-                requestAnimationFrame(() => {
-                    try {
-                        editor.commands.setContent(updatedContent);
-                        console.log('✅ Synced with Tiptap Cloud (from saved doc)');
-                    } catch (cloudErr) {
-                        console.error('🌩️ Cloud sync error:', cloudErr);
-                        setError('Setting content from cloud failed.');
-                    } finally {
-                        setIsLoading(false);
-                    }
-                });
-            } else {
-                setMode(false)
-            }
 
-        };
-
-        fetchAndSetContent();
-    }, [editor, editionId]);
-
-    useEffect(() => {
-        const fetchComments = async () => {
-            if (!editor || !editionId) return;
-
-            try {
-                const payload = { editionId };
-                const response = await dispatch(getCommentsByEditionId(payload));
-
-                console.log("📩 Comments Response:", response);
-                setFilteredThreads(response?.payload)
-            } catch (error) {
-                console.error("❌ Failed to fetch comments", error);
-            }
-        };
-
-        fetchComments();
-    }, [editor, editionId]);
-
-    useEffect(() => {
-
-        if (!editor) return;
-
-        const handler = async () => {
-            const selection = editor.state.selection;
-            const $pos = selection.$anchor;
-
-            // ✅ 1. Get all pageBreak positions
-            const allPageBreaks = [];
-            editor.state.doc.descendants((node, pos) => {
-                if (node.type.name === 'pageBreak') {
-                    allPageBreaks.push(pos);
-                }
-            });
-
-            // ✅ 2. Determine current page number
-            const currentPage = allPageBreaks.filter(pos => pos < $pos.pos).length + 1;
-            console.log('📄 Cursor is on page:', currentPage);
-
-            // ✅ 3. Compute slice positions based on page
-            const start =
-                currentPage === 1
-                    ? 0
-                    : allPageBreaks[currentPage - 2] + 1; // one after previous break
-            const end =
-                allPageBreaks[currentPage - 1] ?? editor.state.doc.content.size;
-
-            // ✅ 4. Extract plain text from current page
-            const pageSlice = editor.state.doc.slice(start, end);
-            const pageText = pageSlice.content.textBetween(0, pageSlice.content.size, '\n');
-
-            // ✅ 5. Floating suggestion box near cursor
-            const { from } = editor.view.state.selection;
-            const coords = editor.view.coordsAtPos(from);
-            const container = document.querySelector(".tiptap"); // your editor wrapper
-            const rect = container.getBoundingClientRect();
-
-            setSuggestionPosition({
-                top: coords.top - rect.top + 30,
-                left: coords.left - rect.left,
-            });
-
-            // ✅ 6. Run proofread only when triggered
-            console.log("showSuggestions", showSuggestions);
-
-            if (showSuggestions) {
-                console.log("📑 Proofreading content on page", currentPage, ":\n", pageText);
-                dispatch(proofreadText(pageText));
-                setShowSuggestions(false);
-            }
-        };
+    // useEffect(() => {
+    //     if (editor) {
+    //         editor.commands.loadAiSuggestions();
+    //     }
+    // }, [editor]);
 
 
+    // const handleProofread = () => {
+    //     if (!editor) return;
+    //     setIsLoading(true);
+    //     const selection = editor.state.selection;
+    //     const $pos = selection.$anchor;
 
-        editor.on("selectionUpdate", handler);
-        return () => {
-            editor.off("selectionUpdate", handler);
-        };
+    //     const allPageBreaks = [];
+    //     editor.state.doc.descendants((node, pos) => {
+    //         if (node.type.name === 'pageBreak') {
+    //             allPageBreaks.push(pos);
+    //         }
+    //     });
 
-    }, [editor, showSuggestions]);
+    //     const currentPage = allPageBreaks.filter(pos => pos < $pos.pos).length + 1;
+
+    //     const start = currentPage === 1 ? 0 : allPageBreaks[currentPage - 2] + 1;
+    //     const end = allPageBreaks[currentPage - 1] ?? editor.state.doc.content.size;
+
+    //     const pageSlice = editor.state.doc.slice(start, end);
+    //     const pageText = pageSlice.content.textBetween(0, pageSlice.content.size, '\n');
+
+    //     const { from } = editor.view.state.selection;
+    //     const coords = editor.view.coordsAtPos(from);
+    //     const container = document.querySelector(".tiptap");
+    //     const rect = container.getBoundingClientRect();
+
+    //     setSuggestionPosition({
+    //         top: coords.top - rect.top + 30,
+    //         left: coords.left - rect.left,
+    //     });
+
+    //     // ✅ Trigger loader and API call
+    //     setIsLoading(true); // show loader
+    //     dispatch(proofreadText(pageText))
+    //         .then(() => setIsLoading(false)) // hide loader after success
+    //         .catch(() => setIsLoading(false)); // hide loader on error
+    // };
 
 
+    const handleImportClick = useCallback(() => {
+        importRef.current.click();
+    }, []);
 
-
-    if (!editor) return <p>Loading editor...</p>;
-
-    function stringToColor(str) {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            hash = str.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        const color = `#${((hash >> 24) & 0xff).toString(16).padStart(2, "0")}${(
-            (hash >> 16) & 0xff
-        ).toString(16).padStart(2, "0")}${((hash >> 8) & 0xff).toString(16).padStart(2, "0")}`;
-        return color.slice(0, 7);
-    }
-
-    function getCurrentPage(editor) {
-        if (!editor) return 1;
-
-        const pos = editor.state.selection.anchor; // Cursor position
-        const doc = editor.state.doc;
-
-        let page = 1;
-
-        doc.descendants((node, posStart) => {
-            if (node.type.name === 'pageBreak' && posStart < pos) {
-                page++;
-            }
-        });
-
-        return page;
-    }
-
-    const handleImageUpload = (e) => {
+    const handleImportFilePick = useCallback(async (e) => {
         const file = e.target.files[0];
+        importRef.current.value = "";
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = () => {
-            editor.chain().focus().setImage({ src: reader.result }).run();
-        };
-        reader.readAsDataURL(file);
-    };
+        setIsLoading(true);
 
-    const handleProofread = () => {
-        if (!editor) return;
+        await editor.chain().import({
+            file,
+            onImport: (context) => {
+                if (context.error) {
+                    console.error("Import error:", context.error);
+                } else {
+                    setIsLoading(false);
+                    console.log("context.content", context.content);
 
-        const selection = editor.state.selection;
-        const $pos = selection.$anchor;
-
-        // 🔍 Find all page breaks
-        const allPageBreaks = [];
-        editor.state.doc.descendants((node, pos) => {
-            if (node.type.name === 'pageBreak') {
-                allPageBreaks.push(pos);
-            }
-        });
-
-        const currentPage = allPageBreaks.filter(pos => pos < $pos.pos).length + 1;
-
-        const start =
-            currentPage === 1
-                ? 0
-                : allPageBreaks[currentPage - 2] + 1;
-
-        const end =
-            allPageBreaks[currentPage - 1] ?? editor.state.doc.content.size;
-
-        const pageSlice = editor.state.doc.slice(start, end);
-        const pageText = pageSlice.content.textBetween(0, pageSlice.content.size, '\n');
-
-        // 📍 Floating position for suggestion box
-        const { from } = editor.view.state.selection;
-        const coords = editor.view.coordsAtPos(from);
-        const container = document.querySelector(".tiptap");
-        const rect = container.getBoundingClientRect();
-
-        setSuggestionPosition({
-            top: coords.top - rect.top + 30,
-            left: coords.left - rect.left,
-        });
-
-        // ✅ Trigger proofread and show suggestions
-        dispatch(proofreadText(pageText));
-        setShowSuggestions(true);
-        console.log("📄 Proofreading Page", currentPage, "Text:\n", pageText);
-    };
+                    editor.commands.setContent(context.content);
+                    // editor.commands.setTextSelection(editor.state.doc.content.size);
+                    // editor.commands.focus();
+                }
+            },
+        }).run();
+    }, [editor]);
 
     function injectPageBreaksIntoJSON(content, blocksPerPage = 10) {
         if (!content || !content.content) return content;
@@ -373,97 +352,16 @@ export default function CollabEditor() {
         };
     }
 
-
-    // const handleDocxImport = async (event) => {
-    //     const file = event.target.files[0];
-    //     if (!file || !editor) return;
-
-    //     const arrayBuffer = await file.arrayBuffer();
-
-    //     const { value: html } = await mammoth.convertToHtml({
-    //         arrayBuffer,
-    //         convertImage: mammoth.images.inline((element) =>
-    //             element.read("base64").then((imageBuffer) => {
-    //                 return {
-    //                     src: `data:${element.contentType};base64,${imageBuffer}`,
-    //                 };
-    //             })
-    //         ),
-    //     });
-
-    //     const paginatedHTML = injectPageBreaksEveryNBlocks(html, 1);
-    //     editor.commands.setContent(paginatedHTML, false); // Insert HTML into Tiptap
-
-    // };
-
-    const handleImportClick = useCallback(() => {
-        importRef.current.click()
-    }, []);
-
-    const handleImportFilePick = useCallback(async (e) => {
-        const file = e.target.files[0];
-        importRef.current.value = '';
-
-        if (!file || !editor) return;
-
-        setIsLoading(true);
-        setError(null);
-            // 🟢 1. Upload the binary file via FormData
-            //     const formData = new FormData();
-            //     formData.append('file', file);
-            //     formData.append('projectId', projectId);
-            //     console.log("FormData keys:", [...formData.entries()]);
-            //    const response= await dispatch(createDocumentFile(formData));
-        try {
-            await editor
-                .chain()
-                .import({
-                    file,
-                    onImport: async (context) => {
-                        if (context.error) {
-                            setError(context.error);
-                            setIsLoading(false);
-                            return;
-                        }
-                        console.log("@######context.content " + JSON.stringify(context.content));
-
-                        const updatedContent = injectPageBreaksIntoJSON(context.content);
-                        if (mode == false) {
-                            alert("Create")
-                            dispatch(createDocument({
-                                editionId,
-                                content: updatedContent,
-                            }));
-
-                        } else {
-                            alert("update")
-                            dispatch(updateDocument({
-                                editionId,
-                                content: updatedContent,
-                            }));
-                        }
-                        await waitUntilEditorViewIsReady(editor);
-
-                        requestAnimationFrame(() => {
-                            try {
-                                context.setEditorContent(updatedContent);
-                                console.log('✅ Synced with Tiptap Cloud (fresh import)');
-                            } catch (cloudErr) {
-                                console.error('🌩️ Cloud sync error:', cloudErr);
-                                setError('Imported locally, but syncing failed.');
-                            } finally {
-                                setIsLoading(false);
-                            }
-                        });
-                    },
-                })
-                .run();
-        } catch (err) {
-            console.error('❌ Import or sync failed:', err);
-            setError('Import or sync failed');
-            setIsLoading(false);
+    function stringToColor(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
         }
-    }, [editor, editionId, dispatch]);
+        const color = `#${((hash >> 24) & 0xff).toString(16).padStart(2, "0")}${(
+            (hash >> 16) & 0xff
+        ).toString(16).padStart(2, "0")}${((hash >> 8) & 0xff).toString(16).padStart(2, "0")}`;
+        return color.slice(0, 7);
+    }
 
     const waitUntilEditorViewIsReady = async (editor, retries = 10, delay = 100) => {
         for (let i = 0; i < retries; i++) {
@@ -475,373 +373,94 @@ export default function CollabEditor() {
         throw new Error("Editor view not ready after waiting.");
     };
 
-    const { threads = [], createThread } = useThreads(provider, editor, user)
-
-    threadsRef.current = threads
+    const { threads = [], createThread } = useThreads(provider, editor, user);
+    const threadsRef = useRef(threads);
+    threadsRef.current = threads;
 
     const selectThreadInEditor = useCallback(threadId => {
-        editor.chain().selectThread({ id: threadId }).run()
-    }, [editor])
+        editor.chain().selectThread({ id: threadId }).run();
+    }, [editor]);
 
     const deleteThread = useCallback(threadId => {
-        console.log("threadId");
-
-        provider.deleteThread(threadId)
-        editor.commands.removeThread({ id: threadId })
-    }, [editor])
+        provider.deleteThread(threadId);
+        editor.commands.removeThread({ id: threadId });
+    }, [editor]);
 
     const resolveThread = useCallback(threadId => {
-        editor.commands.resolveThread({ id: threadId })
-    }, [editor])
+        editor.commands.resolveThread({ id: threadId });
+    }, [editor]);
 
     const unresolveThread = useCallback(threadId => {
-        editor.commands.unresolveThread({ id: threadId })
-    }, [editor])
+        editor.commands.unresolveThread({ id: threadId });
+    }, [editor]);
 
     const updateComment = useCallback((threadId, commentId, content, metaData) => {
         editor.commands.updateComment({
             threadId, id: commentId, content, data: metaData,
-        })
-    }, [editor])
+        });
+    }, [editor]);
 
     const onHoverThread = useCallback(threadId => {
-        hoverThread(editor, [threadId])
-    }, [editor])
+        hoverThread(editor, [threadId]);
+    }, [editor]);
 
     const onLeaveThread = useCallback(() => {
-        hoverOffThread(editor)
-    }, [editor])
+        hoverOffThread(editor);
+    }, [editor]);
 
-    // const filteredThreads = threads.filter(t => (showUnresolved ? !t.resolvedAt : !!t.resolvedAt))
-    console.log("filteredThreads" + JSON.stringify(filteredThreads));
+    if (!editor) return <p>Loading editor...</p>;
 
+    const storage = editor.extensionStorage.aiSuggestion;
+    const suggestions = storage.getSuggestions()
 
 
     return (
-        <div style={{ position: "relative", padding: "1rem", border: "1px solid #ccc", borderRadius: "8px" }}>
-            <div className="editor-toolbar">
-                <button
-                    className={editor?.isActive("bold") ? "active" : ""}
-                    onClick={() => editor.chain().focus().toggleBold().run()}
-                    title="Bold"
-                >
-                    <FormatBoldIcon />
-                </button>
-
-                <button
-                    className={editor?.isActive("italic") ? "active" : ""}
-                    onClick={() => editor.chain().focus().toggleItalic().run()}
-                    title="Italic"
-                >
-                    <FormatItalicIcon />
-                </button>
-
-                <button
-                    className={editor?.isActive("heading", { level: 1 }) ? "active" : ""}
-                    onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-                    title="Heading 1"
-                >
-                    <TitleIcon />
-                </button>
-
-                <button
-                    className={editor?.isActive("bulletList") ? "active" : ""}
-                    onClick={() => editor.chain().focus().toggleBulletList().run()}
-                    title="Bullet List"
-                >
-                    <FormatListBulletedIcon />
-                </button>
-
-                <button
-                    className={editor?.isActive("orderedList") ? "active" : ""}
-                    onClick={() => editor.chain().focus().toggleOrderedList().run()}
-                    title="Numbered List"
-                >
-                    <FormatListNumberedIcon />
-                </button>
-
-                <button
-                    onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()}
-                    title="Clear Formatting"
-                >
-                    <ClearAllIcon />
-                </button>
-                {/* Undo */}
-                <button
-                    onClick={() => editor.chain().focus().undo().run()}
-                    title="Undo"
-                >
-                    <UndoIcon />
-                </button>
-
-                {/* Redo */}
-                <button
-                    onClick={() => editor.chain().focus().redo().run()}
-                    title="Redo"
-                >
-                    <RedoIcon />
-                </button>
-
-                {/* Underline */}
-                <button
-                    className={editor?.isActive("underline") ? "active" : ""}
-                    onClick={() => editor.chain().focus().toggleUnderline().run()}
-                    title="Underline"
-                >
-                    <FormatUnderlinedIcon />
-                </button>
-
-                {/* Strike-through */}
-                <button
-                    className={editor?.isActive("strike") ? "active" : ""}
-                    onClick={() => editor.chain().focus().toggleStrike().run()}
-                    title="Strike-through"
-                >
-                    <StrikethroughSIcon />
-                </button>
-
-                {/* Highlight */}
-                <button
-                    className={editor?.isActive("highlight") ? "active" : ""}
-                    onClick={() => editor.chain().focus().toggleHighlight().run()}
-                    title="Highlight"
-                >
-                    <HighlightIcon />
-                </button>
-
-                {/* Align Left */}
-                <button
-                    className={editor?.isActive({ textAlign: "left" }) ? "active" : ""}
-                    onClick={() => editor.chain().focus().setTextAlign("left").run()}
-                    title="Align Left"
-                >
-                    <FormatAlignLeftIcon />
-                </button>
-
-                {/* Align Center */}
-                <button
-                    className={editor?.isActive({ textAlign: "center" }) ? "active" : ""}
-                    onClick={() => editor.chain().focus().setTextAlign("center").run()}
-                    title="Align Center"
-                >
-                    <FormatAlignCenterIcon />
-                </button>
-
-                {/* Align Right */}
-                <button
-                    className={editor?.isActive({ textAlign: "right" }) ? "active" : ""}
-                    onClick={() => editor.chain().focus().setTextAlign("right").run()}
-                    title="Align Right"
-                >
-                    <FormatAlignRightIcon />
-                </button>
-
-                {/* Link */}
-                <button
-                    className={editor?.isActive("link") ? "active" : ""}
-                    onClick={() => {
-                        const url = window.prompt("Enter the URL");
-                        if (url) {
-                            editor.chain().focus().setLink({ href: url }).run();
-                        }
-                    }}
-                    title="Insert Link"
-                >
-                    <InsertLinkIcon />
-                </button>
-
-                {/* <button onClick={handleProofread} title="Proofread">
-                    ✍️ Proofread
-                </button> */}
-
-                <button
-                    onClick={() => setShowSuggestions(false)}>❌ Clear Suggestion</button>
-
-                {/* Image Upload */}
-                <button
-                    title="Insert Image"
-                    onClick={() => document.getElementById("image-upload-input").click()}
-                >
-                    <ImageIcon />
-                </button>
-                <input
-                    type="file"
-                    id="image-upload-input"
-                    accept="image/*"
-                    style={{ display: "none" }}
-                    onChange={handleImageUpload}
-                />
-                <button
-                    className="upload-docx-button"
-                    title="Upload DOCX"
-                    onClick={handleImportClick}
-                >
-                    <UploadFileIcon style={{ marginRight: "6px" }} />
-                    Upload
-                </button>
-                <input
-                    onChange={handleImportFilePick}
-                    type="file"
-                    ref={importRef}
-                    style={{ display: 'none' }}
-                />
-            </div>
-            {/* ✅ Loading Indicator */}
-            {isLoading && (
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    minHeight: '400px', // or 100vh if full screen
-                    flexDirection: 'column',
-                }}>
-                    <span className="spinner" />
-                    <p style={{ marginTop: '1rem', color: '#555' }}>Processing .docx file...</p>
-                </div>
-            )}
-            {!isLoading && editor ? (
-                <ThreadsProvider
-                    onClickThread={selectThreadInEditor}
-                    onDeleteThread={deleteThread}
-                    onHoverThread={onHoverThread}
-                    onLeaveThread={onLeaveThread}
-                    onResolveThread={resolveThread}
-                    onUpdateComment={updateComment}
-                    onUnresolveThread={unresolveThread}
-                    selectedThreads={editor.storage.comments.focusedThreads}
-                    selectedThread={selectedThread}
-                    setSelectedThread={setSelectedThread}
-                    threads={threads}
-                >
-                    {/* style={{ display: 'flex', flexDirection: 'row' }}  */}
-                    <div className="col-group" data-viewmode={showUnresolved ? 'open' : 'resolved'}>
-                    {/* style={{ width: '80%' }} */}
-                        <div className="main" >
-                            <div className="control-group">
-                                <div className="button-group">
-                                    <button onClick={createThread} disabled={editor.state.selection.empty}>Add comment</button>
-                                    <button onClick={() => editor.chain().focus().setImage({ src: 'https://placehold.co/800x500' }).run()}>Add image</button>
+        <>
+            <RulesModal
+                rules={rules}
+                isOpen={isModalOpen}
+                onSave={(newRules) => {
+                    setRules(newRules);
+                    editor.chain().setAiSuggestionRules(newRules).loadAiSuggestions().run();
+                    setIsModalOpen(false);
+                }}
+                onClose={() => setIsModalOpen(false)}
+            />
+            <MenuBar
+                editor={editor}
+                // handleProofread={handleProofread}
+                handleImportClick={handleImportClick}
+                importRef={importRef}
+                handleImportFilePick={handleImportFilePick}
+            />
+            {console.log("isLoading", isLoading, editor)}
+            {!isLoading ? (
+                <>
+                    <div className="col-group">
+                        <div className="main">
+                            <div className="editor-container">
+                                <div className="editor-page">
+                                    <EditorContent editor={editor} />
                                 </div>
                             </div>
-
-                            <EditorContent editor={editor} />
-                            <button
-                                onClick={handleProofread}
-                                title="Proofread"
-                                style={{
-                                    position: "fixed", // or "absolute" if scoped to container
-                                    bottom: "1.5rem",
-                                    right: "1.5rem",
-                                    backgroundColor: "#28a745",
-                                    color: "white",
-                                    padding: "0.75rem 1rem",
-                                    border: "none",
-                                    borderRadius: "50px",
-                                    boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
-                                    cursor: "pointer",
-                                    fontSize: "1rem",
-                                    zIndex: 999,
-                                }}
-                            >
-                                ✍️ Proofread
-                            </button>
-
                         </div>
-                        {/* style={{ width: '20%',height:'100%',overflowY:'auto' }} */}
-                        <div className="sidebar" >
-                            <div className="sidebar-options">
-                                <div className="option-group">
-                                    <div className="label-large">Comments</div>
-                                    <div className="switch-group">
-                                        <label>
-                                            <input type="radio" name="thread-state" onChange={() => setShowUnresolved(true)} checked={showUnresolved} />
-                                            Open
-                                        </label>
-                                        <label>
-                                            <input type="radio" name="thread-state" onChange={() => setShowUnresolved(false)} checked={!showUnresolved} />
-                                            Resolved
-                                        </label>
-                                    </div>
-                                </div>
-                                <ThreadsList provider={provider} threads={filteredThreads} />
-                            </div>
-                        </div>
+                        <AISuggestionsSidebar editor={editor} />
                     </div>
-                </ThreadsProvider>
-
-
-            ) : (
-                <p>Loading collaborative editor...</p>
-            )}
-
-            {/* ✅ Feedback display below editor */}
-            {proofreadState.status === "loading" && (
-                <div className="editor-overlay">
-                    <div className="spinner" />
-                </div>
-
-            )}
-
-
-            {proofreadState.error && (
-                <p style={{ color: "red" }}>
-                    {typeof proofreadState.error === "string"
-                        ? proofreadState.error
-                        : proofreadState.error.error || "An error occurred."}
-                </p>
-            )}
-
-            {proofreadState.suggestions && showSuggestions && (
-                <div
-                    style={{
-                        position: "absolute",
-                        top: `${suggestionPosition.top}px`,
-                        left: `${suggestionPosition.left}px`,
-                        backgroundColor: "#fff",
-                        border: "1px solid #ccc",
-                        borderRadius: "8px",
-                        boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
-                        padding: "1rem",
-                        maxWidth: "300px",
-                        zIndex: 1000,
-                        overflowY: "auto",
-                        maxHeight: "400px",
-                    }}
-                >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <h4 style={{ margin: 0, color: "#28a745" }}>Suggestions</h4>
-                        <button
-                            onClick={() => setShowSuggestions(false)}
-                            style={{
-                                background: "none",
-                                border: "none",
-                                fontWeight: "bold",
-                                fontSize: "1.5rem",
-                                padding: "0.25rem 0.5rem",
-                                cursor: "pointer",
-                                color: "#888",
-                                lineHeight: "1",
-                            }}
-                            title="Close"
-                        >
-                            ×
-                        </button>
+                </>) : (
+                (
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        minHeight: '400px', // or 100vh if full screen
+                        flexDirection: 'column',
+                    }}>
+                        <CircularProgress />
+                        <p style={{ marginTop: '1rem', color: '#555' }}>Processing .docx file...</p>
                     </div>
-                    <pre style={{ marginTop: "0.5rem", whiteSpace: "pre-wrap", wordBreak: "break-word", fontSize: "0.85rem" }}>
-                        {proofreadState.suggestions?.proofread}
-                    </pre>
-                </div>
+                )
             )}
-
-
-
-
-            {/* ✅ Error display */}
-            {error && (
-                <div style={{ color: 'red', marginTop: '1rem' }}>
-                    {error.message || 'Something went wrong during import.'}
-                </div>
-            )}
-        </div>
+            <SuggestionTooltip element={tooltipElement} editor={editor} />
+        </>
     );
 }

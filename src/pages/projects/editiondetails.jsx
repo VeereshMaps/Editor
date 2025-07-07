@@ -17,7 +17,8 @@ import { getProjectDetailsById } from "redux/Slices/projectDetailsByIdSlice";
 import { getEditionsById } from "redux/Slices/editionByIdSlice";
 import Notification from "../../components/Notification";
 import CollabEditor from "components/CollabEditor";
-import { fetchTiptapToken } from "redux/Slices/tiptapTokenSlice";
+import { fetchContentAIToken, fetchTiptapToken } from "redux/Slices/tiptapTokenSlice";
+import TiptapEditor from "components/TiptabEditor";
 
 const EditionDetails = () => {
     const dispatch = useDispatch();
@@ -69,7 +70,7 @@ const EditionDetails = () => {
         TypeSetting: "proofReader",
     };
 
-    const isAdminOrPM = role === "Admin" || role === "Project Manager";
+    const isAdminOrPM = role === "Admin" || role === "Project Manager" || role === "author";
 
     const canShowButton =
         (
@@ -122,6 +123,7 @@ const EditionDetails = () => {
 
     useEffect(() => {
         dispatch(fetchTiptapToken());
+        dispatch(fetchContentAIToken());
     }, []);
 
     useEffect(() => {
@@ -422,6 +424,7 @@ const EditionDetails = () => {
     const lastIndex = subTabArray.length - 1;
 
 
+
     return (
         <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100px" }}>
             <Card sx={{ p: 2, width: "100%", minHeight: "80px" }}>
@@ -493,12 +496,13 @@ const EditionDetails = () => {
                                         }
                                         sx={{ textAlign: "left", justifyContent: "flex-start" }}
                                     />
-                                )) : Object.entries(tabData).length > 0 && tabData[selectedCategory].map((item, index) => (
+                                )) :
+                                Object.entries(tabData).length > 0 && tabData[selectedCategory].map((item, index) => (
                                     <Tab
                                         key={index}
                                         label={
                                             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
-                                                <Typography sx={{ flexGrow: 1 }}>{index}</Typography>
+                                                <Typography sx={{ flexGrow: 1 }}>{'File '+(index+1)}</Typography>
                                             </Box>
                                         }
                                     />
@@ -518,7 +522,8 @@ const EditionDetails = () => {
                         }}
                     >
                         {selectedCategory === "editor" ? (
-                            <CollabEditor />
+                            // <CollabEditor />
+                            <TiptapEditor />
                         ) : (
 
                             <Box
@@ -549,25 +554,38 @@ const EditionDetails = () => {
                                             Approve
                                         </Button>
                                     )}
+                                {tabData[selectedCategory]?.[subTab] ? (() => {
+                                    const fileObj = tabData[selectedCategory][subTab];
+                                    const fileUrl = selectedCategory === "Inputs" ? fileObj.filePath : fileObj.fileStorageUrl;
+                                    const cleanUrl = fileUrl.split("?")[0];
+                                    const extension = cleanUrl.substring(cleanUrl.lastIndexOf(".") + 1).toLowerCase();
 
-                                {tabData[selectedCategory]?.[subTab] ? (
-                                    <iframe
-                                        src={
-                                            selectedCategory === "Inputs"
-                                                ? `${tabData[selectedCategory][subTab].filePath}`
-                                                : `${tabData[selectedCategory][subTab].fileStorageUrl}`
-                                        }
-                                        width="100%"
-                                        height="100%"
-                                        style={{ border: "none", minHeight: "500px" }}
-                                        title={`File ${subTab + 1}`}
-                                        onError={(e) => console.error("Failed to load file:", e)}
-                                    ></iframe>
-                                ) : (
+                                    const supportedExtensions = ["pdf", "jpg", "jpeg", "png", "gif", "webp", "svg"];
+
+                                    if (!supportedExtensions.includes(extension)) {
+                                        return (
+                                            <Typography variant="h6" color="textSecondary">
+                                                This document type ({extension}) is not supported for preview.
+                                            </Typography>
+                                        );
+                                    }
+
+                                    return (
+                                        <iframe
+                                            src={fileUrl}
+                                            width="100%"
+                                            height="100%"
+                                            style={{ border: "none", minHeight: "500px" }}
+                                            title={`File ${subTab + 1}`}
+                                            onError={(e) => console.error("Failed to load file:", e)}
+                                        ></iframe>
+                                    );
+                                })() : (
                                     <Typography variant="h6" color="textSecondary">
                                         No data found
                                     </Typography>
                                 )}
+
                             </Box>
                         )}
                     </Box>

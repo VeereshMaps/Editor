@@ -35,6 +35,7 @@ const AddProjectForm = ({ id, Data, onSubmit }) => {
     const [errors, setErrors] = useState({});
     const [disableButton, setDisableButton] = useState(false);
     const [notification, setNotification] = useState({ open: false, message: "", severity: "info" });
+    const userRole = loginDetails?.user?.role?.toLowerCase();
 
     // State for form fields
     const [project, setProject] = useState({
@@ -65,6 +66,11 @@ const AddProjectForm = ({ id, Data, onSubmit }) => {
             navigate(-1);
         }
     }, [notification.open]);
+
+    useEffect(() => {
+        console.log("loginDetails", loginDetails?.user?.role);
+
+    }, [loginDetails]);
 
     const handleCloseNotification = () => {
         setNotification({ ...notification, open: false });
@@ -106,6 +112,7 @@ const AddProjectForm = ({ id, Data, onSubmit }) => {
 
 
 
+
     useEffect(() => {
         if (location.state && location.state.bookData && teamleads.length > 0) {
             const bookData = location.state.bookData;
@@ -138,9 +145,12 @@ const AddProjectForm = ({ id, Data, onSubmit }) => {
 
     useEffect(() => {
         if (typeof project.author === "string" && authors.length > 0) {
+            console.log("INNN");
+            
             const matchedAuthor = authors.find(
-                (item) => `${item.firstName} ${item.lastName}` === project.author
+                (item) => `${item.firstName} ${item.lastName}` === (project.author != "" ? project.author : `${loginDetails?.user.firstName} ${loginDetails?.user?.lastName}`)
             );
+            console.log("000", matchedAuthor,`${loginDetails?.user.firstName} ${loginDetails?.user?.lastName}`)
             if (matchedAuthor) {
                 setProject((prev) => ({
                     ...prev,
@@ -149,6 +159,11 @@ const AddProjectForm = ({ id, Data, onSubmit }) => {
             }
         }
     }, [project.author, authors]);
+
+    useEffect(()=>{
+        console.log("asdd",project);
+        
+    },[project])
     // Runs when response or authors list changes
 
     useEffect(() => {
@@ -212,14 +227,18 @@ const AddProjectForm = ({ id, Data, onSubmit }) => {
         let tempErrors = {};
         if (!project.title.trim()) tempErrors.title = "Project Name is required.";
         if (!project.originLanguage) tempErrors.originLanguage = "Language is required.";
-        if (!project.author) tempErrors.author = "Author is required.";
+        if (userRole != "author") {
+            if (!project.author) tempErrors.author = "Author is required.";
+            if (!project.projectManager) tempErrors.projectManager = "Project Manager is required.";
+            if (!project.editor) tempErrors.editor = "Editor is required.";
+            if (!project.proofReader) tempErrors.proofReader = "Proof Reader is required.";
+            if (!project.designer) tempErrors.designer = "Cover Designer is required.";
+            if (project.teamLead.length === 0) tempErrors.teamLead = "Select at least one Team Lead.";
+        }
+
         if (!project.publicationDate) tempErrors.publicationDate = "Publication Date is required.";
         if (!project.genre) tempErrors.genre = "Genre is required.";
-        if (!project.projectManager) tempErrors.projectManager = "Project Manager is required.";
-        if (!project.editor) tempErrors.editor = "Editor is required.";
-        if (!project.proofReader) tempErrors.proofReader = "Proof Reader is required.";
-        if (!project.designer) tempErrors.designer = "Cover Designer is required.";
-        if (project.teamLead.length === 0) tempErrors.teamLead = "Select at least one Team Lead.";
+
 
         setErrors(tempErrors);
 
@@ -305,23 +324,25 @@ const AddProjectForm = ({ id, Data, onSubmit }) => {
                         </FormControl>
                     </Grid>
 
-                    <Grid item xs={6}>
-                        <FormControl fullWidth margin="normal" error={!!errors.author}>
-                            <InputLabel>Author Name</InputLabel>
-                            <Select
-                                name="author"
-                                value={project.author ? JSON.stringify(project.author) : ""}
-                                onChange={(e) => handleChange({ target: { name: "author", value: JSON.parse(e.target.value) } })}
-                            >
-                                {authors.map((authorItem) => (
-                                    <MenuItem key={authorItem._id} value={JSON.stringify(authorItem)}>
-                                        {authorItem.firstName} {authorItem.lastName}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                            {errors.author && <FormHelperText>{errors.author}</FormHelperText>}
-                        </FormControl>
-                    </Grid>
+                    {userRole !== "author" && (
+                        <Grid item xs={6}>
+                            <FormControl fullWidth margin="normal" error={!!errors.author}>
+                                <InputLabel>Author Name</InputLabel>
+                                <Select
+                                    name="author"
+                                    value={project.author ? JSON.stringify(project.author) : ""}
+                                    onChange={(e) => handleChange({ target: { name: "author", value: JSON.parse(e.target.value) } })}
+                                >
+                                    {authors.map((authorItem) => (
+                                        <MenuItem key={authorItem._id} value={JSON.stringify(authorItem)}>
+                                            {authorItem.firstName} {authorItem.lastName}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                                {errors.author && <FormHelperText>{errors.author}</FormHelperText>}
+                            </FormControl>
+                        </Grid>
+                    )}
 
                     <Grid item xs={6}>
                         <FormControl fullWidth margin="normal" error={!!errors.publicationDate}>
@@ -357,123 +378,128 @@ const AddProjectForm = ({ id, Data, onSubmit }) => {
                         </FormControl>
                     </Grid>
 
-                    <Grid item xs={6}>
-                        <FormControl fullWidth margin="normal" error={!!errors.projectManager}>
-                            <InputLabel>Project Manager</InputLabel>
-                            <Select
-                                name="projectManager"
-                                value={project.projectManager ? JSON.stringify(project.projectManager) : ""}
-                                onChange={(e) => handleChange({ target: { name: "projectManager", value: JSON.parse(e.target.value) } })}
-                            >
-                                {projectManager.map((manager) => (
-                                    <MenuItem key={manager._id} value={JSON.stringify(manager)}>
-                                        {manager.firstName} {manager.lastName}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                            {errors.projectManager && <FormHelperText>{errors.projectManager}</FormHelperText>}
-                        </FormControl>
-                    </Grid>
-
-                    <Grid item xs={6}>
-                        <FormControl fullWidth margin="normal" error={!!errors.teamLead}>
-                            <InputLabel>Team Lead</InputLabel>
-                            <Select
-                                name="teamLead"
-                                multiple
-                                value={project.teamLead?.map(tl => tl._id) || []}
-                                onChange={(e) => {
-                                    const selectedIds = e.target.value;
-                                    const selectedTeamLeads = teamleads.filter(tl => selectedIds.includes(tl._id));
-                                    handleChange({ target: { name: "teamLead", value: selectedIds } });
-                                }}
-                                renderValue={(selectedIds) => {
-                                    if (!Array.isArray(selectedIds)) return "";
-                                    const selectedObjects = teamleads.filter(tl => selectedIds.includes(tl._id));
-                                    return selectedObjects.map(tl => `${tl.firstName} ${tl.lastName}`).join(", ");
-                                }}
-                            >
-                                {teamleads.map((teamLead) => (
-                                    <MenuItem key={teamLead._id} value={teamLead._id}>
-                                        <Checkbox checked={project.teamLead?.some(tl => tl._id === teamLead._id) || false} />
-                                        {teamLead.firstName} {teamLead.lastName}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                            {errors.teamLead && <FormHelperText>{errors.teamLead}</FormHelperText>}
-                        </FormControl>
-                    </Grid>
-
-
-                    <Grid item xs={6}>
-                        <FormControl fullWidth margin="normal" error={!!errors.proofReader}>
-                            <InputLabel>Proof Reader</InputLabel>
-                            <Select
-                                name="proofReader"
-                                value={project.proofReader ? JSON.stringify(project.proofReader) : ""}
-                                onChange={(e) => handleChange({ target: { name: "proofReader", value: JSON.parse(e.target.value) } })}
-                            >
-                                {proofReader.length > 0 ? (
-                                    proofReader.map((reader) => (
-                                        <MenuItem key={reader._id} value={JSON.stringify(reader)}>
-                                            {reader.firstName} {reader.lastName}
+                    {userRole !== "author" && (
+                        <Grid item xs={6}>
+                            <FormControl fullWidth margin="normal" error={!!errors.projectManager}>
+                                <InputLabel>Project Manager</InputLabel>
+                                <Select
+                                    name="projectManager"
+                                    value={project.projectManager ? JSON.stringify(project.projectManager) : ""}
+                                    onChange={(e) => handleChange({ target: { name: "projectManager", value: JSON.parse(e.target.value) } })}
+                                >
+                                    {projectManager.map((manager) => (
+                                        <MenuItem key={manager._id} value={JSON.stringify(manager)}>
+                                            {manager.firstName} {manager.lastName}
                                         </MenuItem>
-                                    ))
-                                ) : (
-                                    <MenuItem disabled>No Proof Reader available</MenuItem>
-                                )}
-                            </Select>
-                            {errors.proofReader && <FormHelperText>{errors.proofReader}</FormHelperText>}
-                        </FormControl>
+                                    ))}
+                                </Select>
+                                {errors.projectManager && <FormHelperText>{errors.projectManager}</FormHelperText>}
+                            </FormControl>
+                        </Grid>
+                    )}
 
-                    </Grid>
-
-                    <Grid item xs={6}>
-                        <FormControl fullWidth margin="normal" error={!!errors.designer}>
-                            <InputLabel>Cover Designer</InputLabel>
-                            <Select
-                                name="designer"
-                                value={project.designer ? JSON.stringify(project.designer) : ""}
-                                onChange={(e) => handleChange({ target: { name: "designer", value: JSON.parse(e.target.value) } })}
-                            >
-                                {coverDesigner.length > 0 ? (
-                                    coverDesigner.map((reader) => (
-                                        <MenuItem key={reader._id} value={JSON.stringify(reader)}>
-                                            {reader.firstName} {reader.lastName}
+                    {userRole !== "author" && (
+                        <Grid item xs={6}>
+                            <FormControl fullWidth margin="normal" error={!!errors.teamLead}>
+                                <InputLabel>Team Lead</InputLabel>
+                                <Select
+                                    name="teamLead"
+                                    multiple
+                                    value={project.teamLead?.map(tl => tl._id) || []}
+                                    onChange={(e) => {
+                                        const selectedIds = e.target.value;
+                                        const selectedTeamLeads = teamleads.filter(tl => selectedIds.includes(tl._id));
+                                        handleChange({ target: { name: "teamLead", value: selectedIds } });
+                                    }}
+                                    renderValue={(selectedIds) => {
+                                        if (!Array.isArray(selectedIds)) return "";
+                                        const selectedObjects = teamleads.filter(tl => selectedIds.includes(tl._id));
+                                        return selectedObjects.map(tl => `${tl.firstName} ${tl.lastName}`).join(", ");
+                                    }}
+                                >
+                                    {teamleads.map((teamLead) => (
+                                        <MenuItem key={teamLead._id} value={teamLead._id}>
+                                            <Checkbox checked={project.teamLead?.some(tl => tl._id === teamLead._id) || false} />
+                                            {teamLead.firstName} {teamLead.lastName}
                                         </MenuItem>
-                                    ))
-                                ) : (
-                                    <MenuItem disabled>No Cover Designer available</MenuItem>
-                                )}
-                            </Select>
-                            {errors.designer && <FormHelperText>{errors.designer}</FormHelperText>}
-                        </FormControl>
+                                    ))}
+                                </Select>
+                                {errors.teamLead && <FormHelperText>{errors.teamLead}</FormHelperText>}
+                            </FormControl>
+                        </Grid>
+                    )}
 
-                    </Grid>
+                    {userRole !== "author" && (
+                        <Grid item xs={6}>
+                            <FormControl fullWidth margin="normal" error={!!errors.proofReader}>
+                                <InputLabel>Proof Reader</InputLabel>
+                                <Select
+                                    name="proofReader"
+                                    value={project.proofReader ? JSON.stringify(project.proofReader) : ""}
+                                    onChange={(e) => handleChange({ target: { name: "proofReader", value: JSON.parse(e.target.value) } })}
+                                >
+                                    {proofReader.length > 0 ? (
+                                        proofReader.map((reader) => (
+                                            <MenuItem key={reader._id} value={JSON.stringify(reader)}>
+                                                {reader.firstName} {reader.lastName}
+                                            </MenuItem>
+                                        ))
+                                    ) : (
+                                        <MenuItem disabled>No Proof Reader available</MenuItem>
+                                    )}
+                                </Select>
+                                {errors.proofReader && <FormHelperText>{errors.proofReader}</FormHelperText>}
+                            </FormControl>
+                        </Grid>
+                    )}
+                    {userRole !== "author" && (
+                        <Grid item xs={6}>
+                            <FormControl fullWidth margin="normal" error={!!errors.designer}>
+                                <InputLabel>Cover Designer</InputLabel>
+                                <Select
+                                    name="designer"
+                                    value={project.designer ? JSON.stringify(project.designer) : ""}
+                                    onChange={(e) => handleChange({ target: { name: "designer", value: JSON.parse(e.target.value) } })}
+                                >
+                                    {coverDesigner.length > 0 ? (
+                                        coverDesigner.map((reader) => (
+                                            <MenuItem key={reader._id} value={JSON.stringify(reader)}>
+                                                {reader.firstName} {reader.lastName}
+                                            </MenuItem>
+                                        ))
+                                    ) : (
+                                        <MenuItem disabled>No Cover Designer available</MenuItem>
+                                    )}
+                                </Select>
+                                {errors.designer && <FormHelperText>{errors.designer}</FormHelperText>}
+                            </FormControl>
 
-                    <Grid item xs={6}>
-                        <FormControl fullWidth margin="normal" error={!!errors.editor}>
-                            <InputLabel>Editor</InputLabel>
-                            <Select
-                                name="editor"
-                                value={project.editor ? JSON.stringify(project.editor) : ""}
-                                onChange={(e) => handleChange({ target: { name: "editor", value: JSON.parse(e.target.value) } })}
-                            >
-                                {editor.length > 0 ? (
-                                    editor.map((reader) => (
-                                        <MenuItem key={reader._id} value={JSON.stringify(reader)}>
-                                            {reader.firstName} {reader.lastName}
-                                        </MenuItem>
-                                    ))
-                                ) : (
-                                    <MenuItem disabled>No Editor available</MenuItem>
-                                )}
-                            </Select>
-                            {errors.editor && <FormHelperText>{errors.editor}</FormHelperText>}
-                        </FormControl>
+                        </Grid>
+                    )}
+                    {userRole !== "author" && (
+                        <Grid item xs={6}>
+                            <FormControl fullWidth margin="normal" error={!!errors.editor}>
+                                <InputLabel>Editor</InputLabel>
+                                <Select
+                                    name="editor"
+                                    value={project.editor ? JSON.stringify(project.editor) : ""}
+                                    onChange={(e) => handleChange({ target: { name: "editor", value: JSON.parse(e.target.value) } })}
+                                >
+                                    {editor.length > 0 ? (
+                                        editor.map((reader) => (
+                                            <MenuItem key={reader._id} value={JSON.stringify(reader)}>
+                                                {reader.firstName} {reader.lastName}
+                                            </MenuItem>
+                                        ))
+                                    ) : (
+                                        <MenuItem disabled>No Editor available</MenuItem>
+                                    )}
+                                </Select>
+                                {errors.editor && <FormHelperText>{errors.editor}</FormHelperText>}
+                            </FormControl>
 
-                    </Grid>
-
+                        </Grid>
+                    )}
 
                     {/* Form fields end */}
 
