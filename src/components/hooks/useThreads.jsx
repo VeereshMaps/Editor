@@ -1,12 +1,9 @@
+import { useCallback, useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { subscribeToThreads } from '@tiptap-pro/extension-comments'
-import { useCallback, useEffect, useState } from 'react'
-import { useDispatch } from 'react-redux'
-import { useParams } from 'react-router'
-import {createThrad } from 'redux/Slices/tiptapSlice'
-export const useThreads = (provider, editor, user) => {
-  const [threads, setThreads] = useState()
+export const useThreads = (provider, editor, user, webIORef, getThreds = []) => {
   const { editionId } = useParams();
-  const dispatch = useDispatch();
+  const [threads, setThreads] = useState()
   useEffect(() => {
     if (provider) {
       const unsubscribe = subscribeToThreads({
@@ -23,10 +20,8 @@ export const useThreads = (provider, editor, user) => {
   }, [provider])
   const createThread = useCallback(() => {
     const input = window.prompt('Comment content');
-
     if (!input || !editor) return;
 
-    // Create in Tiptap/Yjs
     editor.chain().focus().setThread({
       content: input,
       commentData: {
@@ -35,22 +30,26 @@ export const useThreads = (provider, editor, user) => {
         color: user.color
       },
     }).run();
-    const comments = {
-      content: input,
-      data: {
-        userName: user.name,
-        userId: user._id,
-        color: user.color
-      },
-    }
+
     const payload = {
-      editionId: editionId,
-      content: comments
+      editionId,
+      content: {
+        content: input,
+        data: {
+          userName: user.name,
+          userId: user._id,
+          color: user.color
+        }
+      }
     };
-    // Send to backend
-    dispatch(createThrad(payload));
-  }, [editor, user, dispatch]);
 
-  return { threads, createThread }
-}
+    if (webIORef.current && webIORef.current.readyState === 1) {
+      webIORef.current.send(JSON.stringify({
+        type: "create-thread",
+        ...payload
+      }));
+    }
+  }, [editor, user, editionId, webIORef]);
 
+  return { threads: getThreds, createThread };
+};

@@ -43,6 +43,8 @@ import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
 
 import "../styles/collab-cursor.css";
 import "../styles/tiptap.css";
+import "../styles/comment.css";
+import "../styles/style.scss";
 import { CircularProgress } from "@mui/material";
 import { CustomHighlight } from "./CustomHighlight";
 import { AISuggestionsSidebar } from "./EditorSidebar";
@@ -53,7 +55,8 @@ import CharacterCount from '@tiptap/extension-character-count';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import { Markdown } from 'tiptap-markdown';
-import { useParams } from 'react-router';
+// import { useParams } from 'react-router';
+import Comments from '@tiptap-pro/extension-comments';
 
 const colors = [
     '#958DF1', '#F98181', '#FBBC88', '#FAF594', '#70CFF8',
@@ -72,17 +75,11 @@ const getRandomElement = list => list[Math.floor(Math.random() * list.length)];
 
 const getRandomColor = () => getRandomElement(colors);
 
-const waitUntilEditorViewIsReady = async (editor) => {
-    while (!editor?.view) {
-        await new Promise(res => setTimeout(res, 50));
-    }
-};
 const getInitialUser = () => {
     const storedUser = JSON.parse(localStorage.getItem('user')) || {};
     const userName = `${storedUser.firstName || 'User'} ${storedUser.lastName || ''}`.trim();
     return {
         name: userName || 'Anonymous',
-        // name: setName(),
         color: getRandomColor(),
     };
 };
@@ -100,26 +97,28 @@ const Editor = ({ ydoc, provider, room }) => {
     const importRef = useRef(null);
     const APP_ID = "pkry8p7m";
 
-    // newly integrated
-    const { editionId } = useParams();
+
+    const [editionId, setEditionId] = useState(room);
     const webIORef = useRef(null);
-    const [filteredThreads, setFilteredThreads] = useState([]);
+    const [getThreds, setThreads] = useState([]);
     const [mode, setMode] = useState(false);
     const user = useUser();
+    const threadsRef = useRef([])
+    const [selectedThread, setSelectedThread] = useState(null)
 
-    console.log("editionId", editionId);
+    // console.log("editionId", editionId);
 
 
 
     const editor = useEditor({
-
+        room,
         extensions: [
 
             StarterKit.configure({ history: false }),
 
             Import.configure({
 
-                appId: "pkry8p7m",
+                appId: APP_ID,
 
                 token: documentToken,
 
@@ -135,7 +134,7 @@ const Editor = ({ ydoc, provider, room }) => {
 
                 rules,
 
-                appId: "pkry8p7m",
+                appId: APP_ID,
 
                 token: contentAIToken,
 
@@ -167,14 +166,14 @@ const Editor = ({ ydoc, provider, room }) => {
 
             }),
 
-            /* CommentsKit.configure({
+            CommentsKit.configure({
 
                 provider,
 
                 useLegacyWrapping: false,
-
+                deleteUnreferencedThreads: false,
                 onClickThread: (threadId) => {
-
+                    console.log("@#@@THREAD  " + JSON.stringify(threadId));
                     const isResolved = threadsRef.current.find(t => t.id === threadId)?.resolvedAt;
 
                     if (!threadId || isResolved) {
@@ -192,8 +191,8 @@ const Editor = ({ ydoc, provider, room }) => {
                     }
 
                 },
+            }),
 
-            }), */
 
             CustomHighlight,
 
@@ -310,6 +309,7 @@ const Editor = ({ ydoc, provider, room }) => {
         ws.onopen = () => {
             console.log("✅ WebSocket connected");
             // alert("WebSocket URL: " + ws.url);
+            // alert("Enter")
             // alert("Ready state: " + ws.readyState);
             webIORef.current = ws;
             // 0: CONNECTING
@@ -318,12 +318,13 @@ const Editor = ({ ydoc, provider, room }) => {
             // 3: CLOSED
             ws.send(JSON.stringify({ type: "join-room", userId: user._id, username: user.name }));
             ws.send(JSON.stringify({ type: "get-all-documents", editionId }));
-            // ws.send(JSON.stringify({ type: "all-comments", editionId }));
+            ws.send(JSON.stringify({ type: "all-comments", editionId }));
         };
 
         ws.onmessage = async (event) => {
             const message = JSON.parse(event.data);
 
+            // alert("fhjhjh" + message.type)
             switch (message.type) {
                 case "user-joined":
                     console.log("👤 User joined:", message.username);
@@ -356,7 +357,13 @@ const Editor = ({ ydoc, provider, room }) => {
                     }
                     break;
                 case "all-comments":
-                    setFilteredThreads(message.data);
+
+                    console.log("📄 Got comments:", message.data);
+                    setThreads(message.data);
+                    // editor
+                    //     .chain()
+                    //     .setThread(message.data)
+                    //     .run()
                     break;
             }
         };
@@ -393,9 +400,9 @@ const Editor = ({ ydoc, provider, room }) => {
         return () => clearInterval(interval);
     }, [editor]);
 
-    useEffect(()=>{
+    useEffect(() => {
         // editor.setOptions({editable: true});
-    },[]);
+    }, []);
 
     useEffect(() => {
         if (editor && currentUser) {
@@ -510,6 +517,51 @@ const Editor = ({ ydoc, provider, room }) => {
         };
     }
 
+    const [showUnresolved, setShowUnresolved] = useState(true)
+    const [activeTab, setActiveTab] = useState('ai'); // 'ai' or 'comments'
+    const { threads, createThread } = useThreads(provider, editor, user, webIORef, getThreds || []);
+    const filteredThreads = Array.isArray(threads)
+        ? threads.filter(t => (showUnresolved ? !t.resolvedAt : !!t.resolvedAt))
+        : [];
+
+
+    // console.log("@#### 1" + JSON.stringify(filteredThreads));
+    // console.log("@#### 12" + JSON.stringify(threads));
+
+    threadsRef.current = threads;
+
+    const updateComment = useCallback((threadId, commentId, content, metaData) => {
+        editor.commands.updateComment({
+            threadId, id: commentId, content, data: metaData,
+        })
+    }, [editor])
+    const resolveThread = useCallback(threadId => {
+        editor.commands.resolveThread({ id: threadId })
+    }, [editor])
+    const unresolveThread = useCallback(threadId => {
+        editor.commands.unresolveThread({ id: threadId })
+    }, [editor]);
+    const onHoverThread = useCallback(threadId => {
+        console.log("@##ThraedID" + threadId)
+        console.log(editor.commands);
+
+        hoverThread(editor, [threadId])
+    }, [editor]);
+
+    const onLeaveThread = useCallback(() => {
+        hoverOffThread(editor)
+    }, [editor]);
+    const deleteThread = useCallback(threadId => {
+        console.log("threadId", threadId);
+        provider.deleteThread(threadId)
+        editor.commands.removeThread({ id: threadId })
+    }, [editor])
+
+    const selectThreadInEditor = useCallback(threadId => {
+        console.log("selectThreadInEditor" + threadId);
+        editor.chain().selectThread({ id: threadId }).run()
+    }, [editor])
+
     return (
         <>
             <RulesModal
@@ -534,30 +586,100 @@ const Editor = ({ ydoc, provider, room }) => {
 
                 {!isLoading ? (
                     <>
-                        <div className="col-group">
-                            <div className="main" style={{ width: "80%" }}>
-                                <div className="editor-container">
-                                    <div className="editor-page">
-                                        <EditorContent editor={editor} />
-                                        <div className="collab-status-group"
-                                            data-state={status === 'connected' ? 'online' : 'offline'}>
-                                            {/* <label>
+                        <ThreadsProvider
+                            onClickThread={selectThreadInEditor}
+                            onDeleteThread={deleteThread}
+                            onHoverThread={onHoverThread}
+                            onLeaveThread={onLeaveThread}
+                            onResolveThread={resolveThread}
+                            onUpdateComment={updateComment}
+                            onUnresolveThread={unresolveThread}
+                            selectedThreads={editor.storage.comments.focusedThreads}
+                            selectedThread={selectedThread}
+                            setSelectedThread={setSelectedThread}
+                            threads={threads}
+                        >
+                            <div className="col-group">
+                                <div className="main" style={{ width: "80%" }}>
+                                    <div className="control-group">
+                                        <div className="button-group">
+                                            <button onClick={createThread} disabled={editor.state.selection.empty}>Add comment</button>
+                                            {/* <button onClick={() => editor.chain().focus().setImage({ src: 'https://placehold.co/800x500' }).run()}>Add image</button> */}
+                                        </div>
+                                    </div>
+                                    <div className="editor-container">
+                                        <div className="editor-page">
+                                            <EditorContent editor={editor}  />
+                                            <div className="collab-status-group"
+                                                data-state={status === 'connected' ? 'online' : 'offline'}>
+                                                {/* <label>
                                                 {status === 'connected'
                                                     ? `${editor.storage.collaborationCursor.users.length} user${editor.storage.collaborationCursor.users.length === 1 ? '' : 's'} online in ${room}`
                                                     : 'offline'}
                                             </label> */}
-                                            {/* <button style={{ '--color': currentUser.color }} onClick={setName}>
+                                                {/* <button style={{ '--color': currentUser.color }} onClick={setName}>
                                                 ✎ {currentUser.name}
                                             </button> */}
+                                            </div>
+                                            {/* <EditorContent editor={editor} /> */}
                                         </div>
-                                        {/* <EditorContent editor={editor} /> */}
+                                    </div>
+                                </div>
+                                <div style={{ width: '20%' }}>
+                                    {/* Tab Buttons */}
+                                    <div className="tab-header">
+                                        <button
+                                            className={activeTab === 'ai' ? 'active' : ''}
+                                            onClick={() => setActiveTab('ai')}
+                                        >
+                                            AI Suggestions
+                                        </button>
+                                        <button
+                                            className={activeTab === 'comments' ? 'active' : ''}
+                                            onClick={() => setActiveTab('comments')}
+                                        >
+                                            Comments
+                                        </button>
+                                    </div>
+
+                                    {/* Tab Content */}
+                                    <div className="tab-content">
+                                        {activeTab === 'ai' && (
+                                            <AISuggestionsSidebar editor={editor} aiLoading={aiLoading} />
+                                        )}
+
+                                        {activeTab === 'comments' && (
+                                            <div className="sidebar-options sidebar" style={{ background: '#fdfdfd', width: '100%', padding: '10px' }}>
+                                                <div className="option-group">
+                                                    <div className="label-large">Comments</div>
+                                                    <div className="switch-group">
+                                                        <label>
+                                                            <input
+                                                                type="radio"
+                                                                name="thread-state"
+                                                                onChange={() => setShowUnresolved(true)}
+                                                                checked={showUnresolved}
+                                                            />
+                                                            Open
+                                                        </label>
+                                                        <label>
+                                                            <input
+                                                                type="radio"
+                                                                name="thread-state"
+                                                                onChange={() => setShowUnresolved(false)}
+                                                                checked={!showUnresolved}
+                                                            />
+                                                            Resolved
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <ThreadsList className="tiptap" provider={provider} threads={filteredThreads} WebSocket={webIORef} />
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
-                            <div style={{ width: "20%" }}>
-                                <AISuggestionsSidebar editor={editor} aiLoading={aiLoading} />
-                            </div>
-                        </div>
+                        </ThreadsProvider>
                     </>) : (
                     (
                         <div style={{
@@ -573,7 +695,7 @@ const Editor = ({ ydoc, provider, room }) => {
                     )
                 )}
                 <SuggestionTooltip element={tooltipElement} editor={editor} />
-            </div>
+            </div >
         </>
     );
 

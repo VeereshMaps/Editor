@@ -32,6 +32,8 @@ export const ThreadsProvider = ({
 }) => {
   const handleThreadClick = useCallback(threadId => {
     setSelectedThread(currentThreadId => {
+      console.log("currentThreadId ",currentThreadId,"  threadId "+threadId);
+      
       if (currentThreadId !== threadId) {
         onClickThread(threadId)
         setSelectedThread(threadId)
