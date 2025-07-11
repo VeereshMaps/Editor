@@ -58,6 +58,10 @@ import { Markdown } from 'tiptap-markdown';
 // import { useParams } from 'react-router';
 import Comments from '@tiptap-pro/extension-comments';
 
+import Paragraph from '@tiptap/extension-paragraph';
+import { Pagination } from 'tiptap-pagination-breaks';
+
+
 const colors = [
     '#958DF1', '#F98181', '#FBBC88', '#FAF594', '#70CFF8',
     '#94FADB', '#B9F18D', '#C3E2C2', '#EAECCC', '#AFC8AD',
@@ -70,6 +74,27 @@ const defaultContent = `
     <p>Hi Welcome To Document Editor</p>
     <p>Start your document editing</p>
   `;
+
+const CustomParagraph = Paragraph.extend({
+    addAttributes() {
+        return {
+            ...this.parent?.(),
+
+            role: {
+                default: null,
+                parseHTML: element => element.getAttribute('data-role'),
+                renderHTML: attributes => {
+                    if (!attributes.role) {
+                        return {};
+                    }
+                    return {
+                        'data-role': attributes.role,
+                    };
+                },
+            },
+        };
+    },
+});
 
 const getRandomElement = list => list[Math.floor(Math.random() * list.length)];
 
@@ -114,7 +139,8 @@ const Editor = ({ ydoc, provider, room }) => {
         room,
         extensions: [
 
-            StarterKit.configure({ history: false }),
+            StarterKit.configure({ history: false, paragraph: false }),
+            CustomParagraph,
 
             Import.configure({
 
@@ -164,6 +190,13 @@ const Editor = ({ ydoc, provider, room }) => {
 
                 },
 
+            }),
+
+             Pagination.configure({
+                pageHeight: 1056, // default height of the page
+                pageWidth: 816,   // default width of the page
+                pageMargin: 96,   // default margin of the page
+                breaks: ['page-break']
             }),
 
             CommentsKit.configure({
@@ -302,9 +335,8 @@ const Editor = ({ ydoc, provider, room }) => {
     });
 
     useEffect(() => {
-        if (!editionId || webIORef.current) return;
+        // if (!editionId || webIORef.current) return;
         const ws = new WebSocket("ws://localhost:5000/ws/" + editionId);
-
 
         ws.onopen = () => {
             console.log("✅ WebSocket connected");
@@ -381,7 +413,7 @@ const Editor = ({ ydoc, provider, room }) => {
             ws.close();
             webIORef.current = null;
         };
-    }, [editionId]);
+    }, []);
 
     useEffect(() => {
         const statusHandler = event => setStatus(event.status);
@@ -609,7 +641,7 @@ const Editor = ({ ydoc, provider, room }) => {
                                     </div>
                                     <div className="editor-container">
                                         <div className="editor-page">
-                                            <EditorContent editor={editor}  />
+                                            <EditorContent editor={editor} />
                                             <div className="collab-status-group"
                                                 data-state={status === 'connected' ? 'online' : 'offline'}>
                                                 {/* <label>

@@ -15,6 +15,7 @@ import AssetsLibrary from 'pages/assetslib/assetslib';
 import ProjectsRepo from 'pages/projects/projects';
 import AddProjectForm from 'pages/projects/addproject';
 import ViewBook from 'pages/projects/viewproject';
+import ViewAsBook from 'pages/projects/viewAsBook';
 import GoldRepo from 'pages/goldrepo/projects';
 import ViewGoldBook from 'pages/goldrepo/viewproject';
 import EditionDetails from 'pages/projects/editiondetails';
@@ -109,9 +110,14 @@ const MainRoutes = {
         {
           path: 'edit',
           element: <AddProjectForm />
-        }, {
+        }, 
+        {
           path: 'editions/:editionId/:projectId',
           element: <EditionDetails />
+        },
+        {
+          path: 'viewAsBook',
+          element: <ViewAsBook />
         },
       ]
     },
@@ -144,7 +150,7 @@ const MainRoutes = {
             element: <PublishBook />
           }
         ]
-      }
+    }
       
 
     // {

@@ -1425,3 +1425,10 @@ body {
 .tiptap-thread--selected{
   background-color: #ffe066 !important;
 }
+
+.page-break {
+  height: 20px;
+  width: 100%;
+  border-top: 1px dashed #ccc;
+  margin: 10px 0;
+}

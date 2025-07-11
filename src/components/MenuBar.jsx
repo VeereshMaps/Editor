@@ -17,10 +17,13 @@ import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
 import TitleIcon from '@mui/icons-material/Title';
 import ClearAllIcon from '@mui/icons-material/ClearAll';
 import SaveIcon from '@mui/icons-material/Save';
+import MenuBookIcon from '@mui/icons-material/MenuBook'
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { CheckCircleOutline, CheckCircleOutlineOutlined, DeleteOutline, UploadFile } from '@mui/icons-material';
+import { useNavigate } from 'react-router';
 
 export const MenuBar = ({ editor, handleImageUpload, handleImportClick, handleImportFilePick, importRef, aiLoading, loadAiSuggestions }) => {
+    const navigate = useNavigate();
     if (!editor) return null;
 
     return (
@@ -293,6 +296,26 @@ export const MenuBar = ({ editor, handleImageUpload, handleImportClick, handleIm
                     <SaveIcon />
                 </IconButton>
             </Tooltip>
+            {/* View as Book */}
+            <Tooltip title="View as Book">
+                <IconButton
+                    onClick={() => {
+                        // replace with your view as book logic
+
+                        const content = editor.getJSON(); // or editor.getHTML()
+                        const currentHash = window.location.hash;
+                        console.log("Viewing as book...", content);
+                        if (!currentHash.endsWith('/viewAsBook')) {
+                            // window.location.hash = currentHash + '/viewAsBook';
+                            navigate('/projects/viewAsBook', { state: { jsonContent: content } });
+                        }
+                    }}
+                // color="primary"
+                >
+                    <MenuBookIcon />
+                </IconButton>
+            </Tooltip>
+
         </Box>
     );
 };
