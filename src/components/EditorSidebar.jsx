@@ -13,7 +13,7 @@ import { getHTMLFromFragment } from '@tiptap/core'
 
 export function AISuggestionsSidebar({ editor, aiLoading }) {
     const suggestions = editor.extensionStorage.aiSuggestion?.getSuggestions() || []
-    console.log("aiLoading",aiLoading);
+    // console.log("aiLoading",aiLoading);
     
 
     const scrollToSuggestion = (suggestion) => {
