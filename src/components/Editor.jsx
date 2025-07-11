@@ -1,6 +1,7 @@
 import React, {
     useCallback,
     useEffect,
+    useMemo,
     useRef,
     useState,
 } from 'react';
@@ -61,6 +62,13 @@ import Comments from '@tiptap-pro/extension-comments';
 import Paragraph from '@tiptap/extension-paragraph';
 import { Pagination } from 'tiptap-pagination-breaks';
 
+
+
+import CollaborationHistory from '@tiptap-pro/extension-collaboration-history'
+import { VersioningModal } from './tiptop_version/VersioningModal';
+import { renderDate } from './tiptop_version/utils';
+// import { renderDate } from './tiptop_version./utils'
+import { InlineThread } from '@tiptap-pro/extension-comments'
 
 const colors = [
     '#958DF1', '#F98181', '#FBBC88', '#FAF594', '#70CFF8',
@@ -131,6 +139,17 @@ const Editor = ({ ydoc, provider, room }) => {
     const threadsRef = useRef([])
     const [selectedThread, setSelectedThread] = useState(null)
 
+    const [latestVersion, setLatestVersion] = React.useState(null)
+    const [currentVersion, setCurrentVersion] = React.useState(null)
+    const [versions, setVersions] = React.useState([])
+    const [isAutoVersioning, setIsAutoVersioning] = React.useState(false)
+    const [versioningModalOpen, setVersioningModalOpen] = React.useState(false)
+    const [hasChanges, setHasChanges] = React.useState(false)
+
+    const showVersioningModal = useCallback(() => {
+        setVersioningModalOpen(true)
+    }, [])
+
     // console.log("editionId", editionId);
 
 
@@ -192,7 +211,7 @@ const Editor = ({ ydoc, provider, room }) => {
 
             }),
 
-             Pagination.configure({
+            Pagination.configure({
                 pageHeight: 1056, // default height of the page
                 pageWidth: 816,   // default width of the page
                 pageMargin: 96,   // default margin of the page
@@ -234,7 +253,7 @@ const Editor = ({ ydoc, provider, room }) => {
             Table.configure({ resizable: true }),
 
             History,
-
+            InlineThread,
             TextStyle,
 
             Underline,
@@ -284,7 +303,15 @@ const Editor = ({ ydoc, provider, room }) => {
             // CharacterCount.extend().configure({ limit: 10000 }),
 
             Collaboration.configure({ document: ydoc }),
-
+            CollaborationHistory.configure({
+                provider,
+                onUpdate: data => {
+                    setVersions(data.versions)
+                    setIsAutoVersioning(data.versioningEnabled)
+                    setLatestVersion(data.version)
+                    setCurrentVersion(data.currentVersion)
+                },
+            }),
         ],
 
         // enableContentCheck: true,
@@ -333,11 +360,12 @@ const Editor = ({ ydoc, provider, room }) => {
 
         },
     });
+    const stableUser = useMemo(() => user, [user?._id]);
+
 
     useEffect(() => {
-        // if (!editionId || webIORef.current) return;
+        if (!editionId || !stableUser) return;
         const ws = new WebSocket("ws://localhost:5000/ws/" + editionId);
-
         ws.onopen = () => {
             console.log("✅ WebSocket connected");
             // alert("WebSocket URL: " + ws.url);
@@ -413,7 +441,7 @@ const Editor = ({ ydoc, provider, room }) => {
             ws.close();
             webIORef.current = null;
         };
-    }, []);
+    }, [editionId,stableUser]);
 
     useEffect(() => {
         const statusHandler = event => setStatus(event.status);
@@ -431,10 +459,6 @@ const Editor = ({ ydoc, provider, room }) => {
 
         return () => clearInterval(interval);
     }, [editor]);
-
-    useEffect(() => {
-        // editor.setOptions({editable: true});
-    }, []);
 
     useEffect(() => {
         if (editor && currentUser) {
@@ -493,7 +517,8 @@ const Editor = ({ ydoc, provider, room }) => {
                     // editor.commands.focus();
 
                     // await waitUntilEditorViewIsReady(editor);
-                    // const updatedContent = context.content;
+                    const updatedContent = context.content;
+                    // alert(mode)
                     if (mode == false) {
                         // alert("DJHDHHJ", webIORef.current.readyState)
 
@@ -594,8 +619,63 @@ const Editor = ({ ydoc, provider, room }) => {
         editor.chain().selectThread({ id: threadId }).run()
     }, [editor])
 
+
+
+    useEffect(() => {
+        const onUpdate = () => {
+            setHasChanges(true)
+        }
+
+        const onSynced = () => {
+            ydoc.on('update', onUpdate)
+        }
+
+        provider.on('synced', onSynced)
+
+        return () => {
+            provider.off('synced', onSynced)
+            ydoc.off('update', onUpdate)
+        }
+    }, [ydoc])
+
+    const [commitDescription, setCommitDescription] = React.useState('')
+
+    const handleCommitDescriptionChange = event => {
+        setCommitDescription(event.target.value)
+    }
+
+    const handleNewVersion = useCallback(e => {
+        e.preventDefault()
+        if (!commitDescription) {
+            return
+        }
+        editor.commands.saveVersion(commitDescription)
+        setCommitDescription('')
+        alert(`Version ${commitDescription} created! Open the version history to see all versions.`)
+        setHasChanges(false)
+    }, [editor, commitDescription])
+
+    const handleVersioningClose = useCallback(() => {
+        setVersioningModalOpen(false)
+    }, [])
+
+    const handleRevert = useCallback((version, versionData) => {
+        const versionTitle = versionData ? versionData.name || renderDate(versionData.date) : version
+        editor.commands.revertToVersion(version, `Revert to ${versionTitle}`, `Unsaved changes before revert to ${versionTitle}`)
+    }, [editor])
+
+
     return (
         <>
+            <VersioningModal
+                versions={versions}
+                isOpen={versioningModalOpen}
+                onClose={handleVersioningClose}
+                onRevert={handleRevert}
+                currentVersion={currentVersion}
+                latestVersion={latestVersion}
+                provider={provider}
+            />
             <RulesModal
                 rules={rules}
                 isOpen={isModalOpen}
@@ -632,7 +712,7 @@ const Editor = ({ ydoc, provider, room }) => {
                             threads={threads}
                         >
                             <div className="col-group">
-                                <div className="main" style={{ width: "80%" }}>
+                                <div className="main" style={{ width: "70%" }}>
                                     <div className="control-group">
                                         <div className="button-group">
                                             <button onClick={createThread} disabled={editor.state.selection.empty}>Add comment</button>
@@ -657,9 +737,9 @@ const Editor = ({ ydoc, provider, room }) => {
                                         </div>
                                     </div>
                                 </div>
-                                <div style={{ width: '20%' }}>
+                                <div style={{ width: '30%' }}>
                                     {/* Tab Buttons */}
-                                    <div className="tab-header">
+                                    <div className="tab-header" style={{ width: '100%', overflowX: 'auto' }}>
                                         <button
                                             className={activeTab === 'ai' ? 'active' : ''}
                                             onClick={() => setActiveTab('ai')}
@@ -671,6 +751,12 @@ const Editor = ({ ydoc, provider, room }) => {
                                             onClick={() => setActiveTab('comments')}
                                         >
                                             Comments
+                                        </button>
+                                        <button
+                                            className={activeTab === "version" ? "active" : ""}
+                                            onClick={() => setActiveTab("version")}
+                                        >
+                                            Version History
                                         </button>
                                     </div>
 
@@ -706,6 +792,65 @@ const Editor = ({ ydoc, provider, room }) => {
                                                     </div>
                                                 </div>
                                                 <ThreadsList className="tiptap" provider={provider} threads={filteredThreads} WebSocket={webIORef} />
+                                            </div>
+                                        )}
+                                        {activeTab === "version" && (
+                                            <div className="sidebar-options">
+                                                <div className="option-group">
+                                                    <div className="label-large">Auto versioning</div>
+                                                    <div className="switch-group">
+                                                        <label>
+                                                            <input
+                                                                type="radio"
+                                                                name="auto-versioning"
+                                                                onChange={() =>
+                                                                    !isAutoVersioning && editor.commands.toggleVersioning()
+                                                                }
+                                                                checked={isAutoVersioning}
+                                                            />
+                                                            Enable
+                                                        </label>
+                                                        <label>
+                                                            <input
+                                                                type="radio"
+                                                                name="auto-versioning"
+                                                                onChange={() =>
+                                                                    isAutoVersioning && editor.commands.toggleVersioning()
+                                                                }
+                                                                checked={!isAutoVersioning}
+                                                            />
+                                                            Disable
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                {/* <hr /> */}
+                                                <div className="option-group" >
+                                                    <div className="label-large">Manual versioning</div>
+                                                    <div className="label-small">
+                                                        Make adjustments to the document to manually save a new version.
+                                                    </div>
+                                                    <form className="commit-panel" onSubmit={handleNewVersion}>
+                                                        <input
+                                                            disabled={!hasChanges}
+                                                            type="text"
+                                                            placeholder="Version name"
+                                                            value={commitDescription}
+                                                            onChange={handleCommitDescriptionChange}
+                                                        />
+                                                        <button style={{ marginTop: '5px', padding: '4px 8px', borderRadius: '5px', cursor: 'pointer' }}
+                                                            disabled={!hasChanges || commitDescription.length === 0}
+                                                            type="submit"
+                                                        >
+                                                            Create
+                                                        </button>
+                                                    </form>
+                                                </div>
+
+                                                <hr />
+
+                                                <button style={{ cursor: 'pointer' }} className="primary" type="button" onClick={showVersioningModal}>
+                                                    Show history
+                                                </button>
                                             </div>
                                         )}
                                     </div>

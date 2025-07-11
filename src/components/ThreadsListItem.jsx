@@ -34,7 +34,7 @@ export const ThreadsListItem = ({ thread, provider, active, open, WebSocket }) =
   } = useThreadsState();
 
   const classNames = ['threadsList--item'];
-  console.log(active + "   uu " + open);
+  // console.log(active + "   uu " + open);
   (active, open)
   if (active || open) classNames.push('threadsList--item--active');
 
