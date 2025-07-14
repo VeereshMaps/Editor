@@ -67,7 +67,6 @@ import { Pagination } from 'tiptap-pagination-breaks';
 import CollaborationHistory from '@tiptap-pro/extension-collaboration-history'
 import { VersioningModal } from './tiptop_version/VersioningModal';
 import { renderDate } from './tiptop_version/utils';
-// import { renderDate } from './tiptop_version./utils'
 import { InlineThread } from '@tiptap-pro/extension-comments'
 
 const colors = [
@@ -123,7 +122,6 @@ const Editor = ({ ydoc, provider, room }) => {
     const [currentUser, setCurrentUser] = useState(getInitialUser());
     const [isLoading, setIsLoading] = useState(false);
     const [aiLoading, setAiLoading] = useState(false);
-    const [error, setError] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [rules, setRules] = useState(initialRules);
     const [tooltipElement, setTooltipElement] = useState(null);
@@ -131,7 +129,7 @@ const Editor = ({ ydoc, provider, room }) => {
     const APP_ID = "pkry8p7m";
 
 
-    const [editionId, setEditionId] = useState(room);
+    const [editionId] = useState(room);
     const webIORef = useRef(null);
     const [getThreds, setThreads] = useState([]);
     const [mode, setMode] = useState(false);
@@ -441,7 +439,7 @@ const Editor = ({ ydoc, provider, room }) => {
             ws.close();
             webIORef.current = null;
         };
-    }, [editionId,stableUser]);
+    }, [editionId, stableUser]);
 
     useEffect(() => {
         const statusHandler = event => setStatus(event.status);
@@ -878,4 +876,4 @@ const Editor = ({ ydoc, provider, room }) => {
 
 };
 
-export default Editor;  
+export default Editor;

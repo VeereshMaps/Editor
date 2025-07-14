@@ -22,14 +22,14 @@ export const useThreads = (provider, editor, user, webIORef, getThreds = []) => 
     const input = window.prompt('Comment content');
     if (!input || !editor) return;
 
-    editor.chain().focus().setThread({
-      content: input,
-      commentData: {
-        userName: user.name,
-        userId: user._id,
-        color: user.color
-      },
-    }).run();
+    // editor.chain().focus().setThread({
+    //   content: input,
+    //   commentData: {
+    //     userName: user.name,
+    //     userId: user._id,
+    //     color: user.color
+    //   },
+    // }).run();
 
     const payload = {
       editionId,

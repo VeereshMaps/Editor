@@ -4,11 +4,12 @@ export const VersionItem = ({
   title,
   date,
   isActive,
+  isSelected,
   onClick,
 }) => {
   return (
-    <button onClick={onClick} className={isActive ? 'is-active' : ''}  style={{cursor:'pointer'}}>
-      {title || renderDate(date)}
+    <button onClick={onClick} className={isActive ? 'is-active' : ''}>
+      {isSelected ? '> ' : ''}{title || renderDate(date)}
       {title ? <span>{renderDate(date)}</span> : null}
     </button>
   )
