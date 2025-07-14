@@ -30,6 +30,7 @@ import IconButton from '@mui/material/IconButton';
 import { SnapshotCompare } from '@tiptap-pro/extension-snapshot-compare'
 import { useUser } from 'components/hooks/useUser'
 import "../../styles/tiptap.css";
+import "../../styles/version-histoty.scss";
 import { Heading } from './DiffHeading'
 
 const getVersionName = version => {
@@ -274,7 +275,7 @@ export const VersioningModal = memo(({
   const handleClose = useCallback(() => {
     onClose()
     setCurrentVersionId(null)
-    editorHistory.commands.clearContent()
+    // editorHistory.commands.clearContent()
   }, [onClose, editorHistory])
 
 
@@ -299,8 +300,8 @@ export const VersioningModal = memo(({
             <CloseIcon />
           </IconButton>
         </div>
-          <div className=' col-group'>
-            <div className="main">
+          <div className=' col-group-history'>
+            <div className="main_history">
               {errorMessage}
               {isDiffing && (
                 <div className="diff-users">

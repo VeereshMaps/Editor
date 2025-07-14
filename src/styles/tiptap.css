@@ -1432,10 +1432,4 @@ body {
   border-top: 1px dashed #ccc;
   margin: 10px 0;
 }
-.highlight {
-  font-weight: bold;
-  color: #2b6cb0; /* or your theme color */
-  background-color: #e6f0ff;
-  padding: 2px 4px;
-  border-radius: 4px;
-}
+
