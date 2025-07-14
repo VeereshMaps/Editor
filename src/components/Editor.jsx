@@ -378,6 +378,9 @@ const Editor = ({ ydoc, provider, room }) => {
             ws.send(JSON.stringify({ type: "get-all-documents", editionId }));
             ws.send(JSON.stringify({ type: "all-comments", editionId }));
         };
+        getReRender(ws)
+    }, [editionId, stableUser]);
+    const getReRender = async (ws) => {
 
         ws.onmessage = async (event) => {
             const message = JSON.parse(event.data);
@@ -439,7 +442,7 @@ const Editor = ({ ydoc, provider, room }) => {
             ws.close();
             webIORef.current = null;
         };
-    }, [editionId, stableUser]);
+    }
 
     useEffect(() => {
         const statusHandler = event => setStatus(event.status);
@@ -654,7 +657,7 @@ const Editor = ({ ydoc, provider, room }) => {
     }, [editor, commitDescription])
 
     const handleVersioningClose = useCallback(() => {
-        setVersioningModalOpen(false)
+        setVersioningModalOpen(false);
     }, [])
 
     const handleRevert = useCallback((version, versionData) => {
@@ -821,7 +824,6 @@ const Editor = ({ ydoc, provider, room }) => {
                                                         </label>
                                                     </div>
                                                 </div>
-                                                {/* <hr /> */}
                                                 <div className="option-group" >
                                                     <div className="label-large">Manual versioning</div>
                                                     <div className="label-small">

@@ -64,8 +64,7 @@ export const VersioningModal = memo(({
   versions, isOpen, onClose, onRevert, provider,
 }) => {
   const [currentVersionId, setCurrentVersionId] = useState(null)
-  const isCurrentVersion = versions && versions.length > 0 ? currentVersionId === versions.at(-1).version : false;
-  const doc = provider.configuration.document;
+  // const doc = provider.configuration.document;
   const [isLoading, setIsLoading] = useState(false);
   const [versionName, setVersionName] = useState(null);
   const [inisialEnter, setIsInitial] = useState(true)
@@ -73,7 +72,7 @@ export const VersioningModal = memo(({
   const [errorMessage, setErrorMessage] = useState(null)
   const user = useUser();
   if (!colorMapping.has(user._id)) {
-    // colorMapping.set(user._id, colors[(user._id || '').length % colors.length])
+    colorMapping.set(user._id, colors[(user._id || '').length % colors.length])
   }
   const buttonStyle = {
     padding: '6px 6px',
@@ -97,8 +96,8 @@ export const VersioningModal = memo(({
     extensions: [
       Heading,
       StarterKit.configure({ history: false }),
-      Collaboration.configure({ document: doc }),
-      CollaborationCursor.configure({ provider }),
+      // Collaboration.configure({ document: doc }),
+      // CollaborationCursor.configure({ provider }),
       CustomHighlight,
       InlineThread,
       Table.configure({ resizable: true }),
@@ -231,7 +230,6 @@ export const VersioningModal = memo(({
             }
 
             editorHistory.commands.showDiff(ctx.tr)
-
           },
         })
         .run()
@@ -275,7 +273,7 @@ export const VersioningModal = memo(({
   const handleClose = useCallback(() => {
     onClose()
     setCurrentVersionId(null)
-    // editorHistory.commands.clearContent()
+    editorHistory.commands.clearContent()
   }, [onClose, editorHistory])
 
 
@@ -290,7 +288,7 @@ export const VersioningModal = memo(({
       aria-describedby="parent-modal-description"
     >
 
-      <div style={{ display: 'flex' }}>
+      <div style={{ display: 'flex' }} >
 
 
 
@@ -357,29 +355,20 @@ export const VersioningModal = memo(({
                   </div>
                 )}
                 <div className="button-group">
-                  <button type="button" style={cancelButtonStyle} onClick={handleClose}>
-                    Close
-                  </button>
                   <button
-                    className="primary"
-                    type="button"
-                    disabled={!versionData || isCurrentVersion}
-                    style={cancelButtonStyle} onClick={handleRevert}
-                  >
-                    Restore
-                  </button>
-                  {/* <button
                     type="button"
                     onClick={() => {
                       editorHistory.chain().hideDiff().run()
                       handleClose()
                     }}
+                    style={cancelButtonStyle}
                   >
                     Close
                   </button>
 
                   <button
                     className="primary"
+                    style={cancelButtonStyle}
                     type="button"
                     disabled={!versions.length || currentVersionId === versions.at(-1).version}
                     onClick={() => {
@@ -396,7 +385,7 @@ export const VersioningModal = memo(({
                     }}
                   >
                     Restore
-                  </button> */}
+                  </button>
                 </div>
               </div>
             </div>
