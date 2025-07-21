@@ -148,7 +148,7 @@ const BooksRepo = () => {
             <Grid container justifyContent="flex-end" sx={{ marginBottom: 2 }}>
                 {formattedUserRole.includes(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase()) &&
                     (loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === superAccess ||
-                        loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === "author") && (
+                        loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === "project manager") && (
                         <Button endIcon={<AddCircleOutline />} variant="contained" color="primary" onClick={handleAddBook}>
                             Add Book/Project
                         </Button>

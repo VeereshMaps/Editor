@@ -44,13 +44,13 @@ import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
 
 import "../styles/collab-cursor.css";
 import "../styles/tiptap.css";
-import "../styles/comment.css";
+// import "../styles/comment.css";
 import "../styles/style.scss";
 import { CircularProgress } from "@mui/material";
 import { CustomHighlight } from "./CustomHighlight";
 import { AISuggestionsSidebar } from "./EditorSidebar";
 import { CommentsSidebar } from "./CommentsSidebar";
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { EditorContent, useEditor } from '@tiptap/react';
 import CharacterCount from '@tiptap/extension-character-count';
 import TaskList from '@tiptap/extension-task-list';
@@ -68,6 +68,8 @@ import CollaborationHistory from '@tiptap-pro/extension-collaboration-history'
 import { VersioningModal } from './tiptop_version/VersioningModal';
 import { renderDate } from './tiptop_version/utils';
 import { InlineThread } from '@tiptap-pro/extension-comments'
+import { getEditionsById } from 'redux/Slices/editionByIdSlice';
+import { updateEdition } from 'redux/Slices/updateEditionSlice';
 
 const colors = [
     '#958DF1', '#F98181', '#FBBC88', '#FAF594', '#70CFF8',
@@ -117,6 +119,9 @@ const getInitialUser = () => {
 };
 
 const Editor = ({ ydoc, provider, room }) => {
+    const dispatch = useDispatch();
+    const editionsById = useSelector((state) => state.editionsById);
+    const loginDetails = useSelector((state) => state.auth);
     const { contentAIToken, documentToken } = useSelector((state) => state.tiptapToken);
     const [status, setStatus] = useState('connecting');
     const [currentUser, setCurrentUser] = useState(getInitialUser());
@@ -127,6 +132,7 @@ const Editor = ({ ydoc, provider, room }) => {
     const [tooltipElement, setTooltipElement] = useState(null);
     const importRef = useRef(null);
     const APP_ID = "pkry8p7m";
+    const roleName = loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase();
 
 
     const [editionId] = useState(room);
@@ -209,38 +215,17 @@ const Editor = ({ ydoc, provider, room }) => {
 
             }),
 
-            Pagination.configure({
-                pageHeight: 1056, // default height of the page
-                pageWidth: 816,   // default width of the page
-                pageMargin: 96,   // default margin of the page
-                breaks: ['page-break']
-            }),
+            // Pagination.configure({
+            //     pageHeight: 1056, // default height of the page
+            //     pageWidth: 716,   // default width of the page
+            //     pageMargin: 96,   // default margin of the page
+            //     breaks: ['page-break']
+            // }),
 
             CommentsKit.configure({
-
                 provider,
-
                 useLegacyWrapping: false,
                 deleteUnreferencedThreads: false,
-                onClickThread: (threadId) => {
-                    console.log("@#@@THREAD  " + JSON.stringify(threadId));
-                    const isResolved = threadsRef.current.find(t => t.id === threadId)?.resolvedAt;
-
-                    if (!threadId || isResolved) {
-
-                        setSelectedThread(null);
-
-                        editor?.chain().unselectThread().run();
-
-                    } else {
-
-                        setSelectedThread(threadId);
-
-                        editor?.chain().selectThread({ id: threadId, updateSelection: false }).run();
-
-                    }
-
-                },
             }),
 
 
@@ -270,7 +255,7 @@ const Editor = ({ ydoc, provider, room }) => {
 
             TableHeader,
 
-            PageBreak,
+            // PageBreak,
 
             // Markdown.configure({
 
@@ -335,10 +320,11 @@ const Editor = ({ ydoc, provider, room }) => {
         },
         onUpdate: ({ editor }) => {
             const json = editor.getJSON();
-            const updatedContent = injectPageBreaksIntoJSON(json.content);
+            // const updatedContent = injectPageBreaksIntoJSON(json.content);
+            const updatedContent = json.content;
 
             // ✅ Safe WebSocket send
-            console.log(updatedContent);
+            // console.log(updatedContent);
 
             const payload = {
                 content: updatedContent,
@@ -359,6 +345,32 @@ const Editor = ({ ydoc, provider, room }) => {
         },
     });
     const stableUser = useMemo(() => user, [user?._id]);
+
+    useEffect(() => {
+        dispatch(getEditionsById(editionId));
+    }, []);
+    useEffect(() => {
+        const editorPage = document.querySelector('.editor-page');
+
+        const isApproved =
+            (roleName === "author" && editionsById?.editions?.isAuthorApproved) ||
+            (roleName === "editor" && editionsById?.editions?.isEditorApproved);
+
+        if (isApproved) {
+            editor.setEditable(false);
+            if (editorPage) {
+                editorPage.style.pointerEvents = 'none';
+                editorPage.style.userSelect = 'none';
+            }
+        } else {
+            editor.setEditable(true);
+            if (editorPage) {
+                editorPage.style.pointerEvents = 'auto';
+                editorPage.style.userSelect = 'auto';
+            }
+        }
+    }, [editionsById, roleName, editor]);
+
 
 
     useEffect(() => {
@@ -384,7 +396,7 @@ const Editor = ({ ydoc, provider, room }) => {
 
         ws.onmessage = async (event) => {
             const message = JSON.parse(event.data);
-
+            console.log("WebSocket message received:", message);
             // alert("fhjhjh" + message.type)
             switch (message.type) {
                 case "user-joined":
@@ -451,7 +463,7 @@ const Editor = ({ ydoc, provider, room }) => {
     }, [provider]);
 
     useEffect(() => {
-        if (!editor) return;
+        if (!editor && roleName != "editor") return;
 
         const interval = setInterval(() => {
             const storage = editor.extensionStorage.aiSuggestion;
@@ -576,7 +588,7 @@ const Editor = ({ ydoc, provider, room }) => {
     }
 
     const [showUnresolved, setShowUnresolved] = useState(true)
-    const [activeTab, setActiveTab] = useState('ai'); // 'ai' or 'comments'
+    const [activeTab, setActiveTab] = useState(roleName === "editor" ? 'ai' : 'comments'); // 'ai' or 'comments'
     const { threads, createThread } = useThreads(provider, editor, user, webIORef, getThreds || []);
     const filteredThreads = Array.isArray(threads)
         ? threads.filter(t => (showUnresolved ? !t.resolvedAt : !!t.resolvedAt))
@@ -600,11 +612,9 @@ const Editor = ({ ydoc, provider, room }) => {
         editor.commands.unresolveThread({ id: threadId })
     }, [editor]);
     const onHoverThread = useCallback(threadId => {
-        console.log("@##ThraedID" + threadId)
-        console.log(editor.commands);
-
-        hoverThread(editor, [threadId])
+        hoverThread(editor, [threadId]);
     }, [editor]);
+
 
     const onLeaveThread = useCallback(() => {
         hoverOffThread(editor)
@@ -617,7 +627,7 @@ const Editor = ({ ydoc, provider, room }) => {
 
     const selectThreadInEditor = useCallback(threadId => {
         console.log("selectThreadInEditor" + threadId);
-        editor.chain().selectThread({ id: threadId }).run()
+        editor.chain().selectThread({ id: threadId }).run();
     }, [editor])
 
 
@@ -663,7 +673,36 @@ const Editor = ({ ydoc, provider, room }) => {
     const handleRevert = useCallback((version, versionData) => {
         const versionTitle = versionData ? versionData.name || renderDate(versionData.date) : version
         editor.commands.revertToVersion(version, `Revert to ${versionTitle}`, `Unsaved changes before revert to ${versionTitle}`)
-    }, [editor])
+    }, [editor]);
+
+    const handleApprovalClick = async () => {
+        try {
+            const updatedData = {};
+
+            if (roleName === "author") {
+                updatedData.isAuthorApproved = true;
+                 updatedData.status = "Gold";
+                updatedData.editorContent = editor?.getJSON(); // ✅ move into updatedData
+            } else if (roleName === "editor") {
+                updatedData.isEditorApproved = true;
+            }
+
+            if (Object.keys(updatedData).length > 0) {
+                const result = await dispatch(updateEdition({ id: editionId, updatedData }));
+
+                if (updateEdition.fulfilled.match(result)) {
+                    console.log("✅ Edition updated successfully");
+                    dispatch(getEditionsById(editionId)); // 🔄 Refetch
+                }
+            } else {
+                console.warn("⚠️ Role is neither author nor editor. Skipping update.");
+            }
+        } catch (error) {
+            console.error("❌ Error updating edition:", error);
+        }
+    };
+
+
 
 
     return (
@@ -690,11 +729,15 @@ const Editor = ({ ydoc, provider, room }) => {
             <div style={{ width: "100%" }}>
                 <MenuBar
                     editor={editor}
+                    createThread={createThread}
                     handleImportClick={handleImportClick}
                     importRef={importRef}
                     handleImportFilePick={handleImportFilePick}
                     aiLoading={aiLoading}
-                    loadAiSuggestions={loadSuggestions}
+                    loadAiSuggestions={roleName != "editor" && loadSuggestions}
+                    user={user}
+                    editionsById={editionsById}
+                    handleApprovalClick={handleApprovalClick}
                 />
 
                 {!isLoading ? (
@@ -714,14 +757,13 @@ const Editor = ({ ydoc, provider, room }) => {
                         >
                             <div className="col-group">
                                 <div className="main" style={{ width: "70%" }}>
-                                    <div className="control-group">
+                                    {/* <div className="control-group">
                                         <div className="button-group">
                                             <button onClick={createThread} disabled={editor.state.selection.empty}>Add comment</button>
-                                            {/* <button onClick={() => editor.chain().focus().setImage({ src: 'https://placehold.co/800x500' }).run()}>Add image</button> */}
                                         </div>
-                                    </div>
+                                    </div> */}
                                     <div className="editor-container">
-                                        <div className="editor-page">
+                                        <div className="editor-page" data-viewmode={showUnresolved ? 'open' : 'resolved'}>
                                             <EditorContent editor={editor} />
                                             <div className="collab-status-group"
                                                 data-state={status === 'connected' ? 'online' : 'offline'}>
@@ -741,12 +783,14 @@ const Editor = ({ ydoc, provider, room }) => {
                                 <div style={{ width: '30%' }}>
                                     {/* Tab Buttons */}
                                     <div className="tab-header" style={{ width: '100%', overflowX: 'auto' }}>
-                                        <button
-                                            className={activeTab === 'ai' ? 'active' : ''}
-                                            onClick={() => setActiveTab('ai')}
-                                        >
-                                            AI Suggestions
-                                        </button>
+                                        {roleName === "editor" && (
+                                            <button
+                                                className={activeTab === 'ai' ? 'active' : ''}
+                                                onClick={() => setActiveTab('ai')}
+                                            >
+                                                AI Suggestions
+                                            </button>
+                                        )}
                                         <button
                                             className={activeTab === 'comments' ? 'active' : ''}
                                             onClick={() => setActiveTab('comments')}

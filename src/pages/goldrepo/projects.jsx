@@ -16,19 +16,47 @@ const GoldRepo = () => {
     const [selectedRow, setSelectedRow] = useState(null);
     const allGoldProjects = useSelector((state) => state.goldProjects);
     const loginDetails = useSelector((state) => state.auth);
-
+    const userId = loginDetails.user._id.toString();
     useEffect(() => {
         getEditionFunc();
     }, []);
 
-    const filteredGoldEditions = allGoldProjects.projects.filter(item => {
-        const projectValues = Object.values(item.projectID || {});
-        const hasMatchingId = projectValues.some(value =>
-            value?.toString() === loginDetails.user._id.toString()
-        );
+    const filteredGoldEditions = allGoldProjects.projects.filter((edition) => {
+        const project = edition.project;
 
-        return hasMatchingId;
+        if (!project) return false;
+
+        const {
+            author,
+            editor,
+            projectManager,
+            proofReader,
+            designer,
+            teamLead,
+            createdBy,
+            lastEditedBy,
+            Admin,
+        } = project;
+
+        const matchDirect =
+            author?._id?.toString() === userId ||
+            editor?._id?.toString() === userId ||
+            projectManager?._id?.toString() === userId ||
+            proofReader?._id?.toString() === userId ||
+            designer?._id?.toString() === userId ||
+            createdBy?._id?.toString() === userId ||
+            lastEditedBy?._id?.toString() === userId ||
+            Admin?._id?.toString() === userId;
+
+        const matchTeamLead = Array.isArray(teamLead)
+            ? teamLead.some((lead) => lead?._id?.toString() === userId)
+            : false;
+
+        return matchDirect || matchTeamLead;
     });
+
+
+    console.log("filteredGoldEditions", filteredGoldEditions);
 
     const getEditionFunc = async () => {
         try {
@@ -84,7 +112,10 @@ const GoldRepo = () => {
                 // };
                 const handleview = () => {
                     setSelectedRow(params.row);
-                    navigate('/goldprojects/view', { state: { bookData: params.row } });
+                    navigate('/projects/viewAsBook', { state: { jsonContent: params.row.editorContent } });
+
+                    //old flow redirection
+                    // navigate('/goldprojects/view', { state: { bookData: params.row } });
                 };
 
                 return (
@@ -111,17 +142,23 @@ const GoldRepo = () => {
 
     const isAdminOrPM = loginDetails?.user?.role === "Admin" || loginDetails?.user?.role === "Project Manager";
     const dataSource = isAdminOrPM ? allGoldProjects : filteredGoldEditions;
+    const normalizedProjects = isAdminOrPM
+  ? dataSource?.projects || [] // `allGoldProjects.projects`
+  : dataSource || [];          // `filteredGoldEditions` is already an array
 
-    const rows = dataSource?.projects?.map((item, index) => {
+    
+
+    const rows = normalizedProjects.map((item, index) => {
         return {
-        id: index + 1,
-        title: item.project.title,
-        versionTitle: item.title,
-        publisher: item.publisher,
-        subject: item.subject,
-        publicationDate: moment(item.publicationDate).format("DD-MM-YYYY"),
-        versions: item.versions,
-        versionId: item._id
+            id: index + 1,
+            title: item.project.title,
+            versionTitle: item.title,
+            publisher: item.publisher,
+            subject: item.subject,
+            publicationDate: moment(item.publicationDate).format("DD-MM-YYYY"),
+            versions: item.versions,
+            versionId: item._id,
+            editorContent:item.editorContent
         }
     });
 

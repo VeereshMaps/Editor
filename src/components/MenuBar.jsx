@@ -16,14 +16,19 @@ import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
 import TitleIcon from '@mui/icons-material/Title';
 import ClearAllIcon from '@mui/icons-material/ClearAll';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import SaveIcon from '@mui/icons-material/Save';
-import MenuBookIcon from '@mui/icons-material/MenuBook'
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import CommentIcon from '@mui/icons-material/Comment';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { CheckCircleOutline, CheckCircleOutlineOutlined, DeleteOutline, UploadFile } from '@mui/icons-material';
 import { useNavigate } from 'react-router';
+import { useSelector } from 'react-redux';
 
-export const MenuBar = ({ editor, handleImageUpload, handleImportClick, handleImportFilePick, importRef, aiLoading, loadAiSuggestions }) => {
+export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportClick, handleImportFilePick, importRef, aiLoading, loadAiSuggestions, editionsById, handleApprovalClick }) => {
     const navigate = useNavigate();
+    const loginDetails = useSelector((state) => state.auth);
+
     if (!editor) return null;
 
     return (
@@ -37,50 +42,58 @@ export const MenuBar = ({ editor, handleImageUpload, handleImportClick, handleIm
                 px: 1,
                 py: 0.5,
                 borderRadius: '8px 8px 0 0',
+                pointerEvents: editor?.isEditable ? 'auto' : 'none',
+                opacity: editor?.isEditable ? 1 : 0.5,
             }}
         >
 
             {/* Upload DOCX */}
-            <Tooltip title="Upload DOCX">
-                <Button
-                    variant="outlined"
-                    startIcon={<UploadFile />}
-                    onClick={handleImportClick}
-                    size="small"
-                    sx={{
-                        marginRight: 1,
-                        minWidth: 'auto', // ensure width is only based on content
-                        px: 1.5, // optional: adjust horizontal padding if too narrow or wide
-                    }}
-                >
-                    Upload Docx
-                </Button>
-                <input
-                    type="file"
-                    ref={importRef}
-                    onChange={handleImportFilePick}
-                    style={{ display: "none" }}
-                />
-            </Tooltip>
-            {/* Proof Read */}
-            <Tooltip title="Proof">
-                <span>
-                    <Button
-                        variant="outlined"
-                        startIcon={aiLoading ? <CircularProgress size={16} /> : <CheckCircleOutline style={{ color: "green" }} />}
-                        onClick={loadAiSuggestions}
-                        size="small"
-                        disabled={aiLoading}
-                        sx={{
-                            minWidth: 'auto',
-                            px: 1.5,
-                        }}
-                    >
-                        {aiLoading ? 'Loading...' : 'Proof Read with AI'}
-                    </Button>
-                </span>
-            </Tooltip>
+            {(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === "editor") &&
+                (
+                    <>
+                        <Tooltip title="Upload DOCX">
+                            <Button
+                                variant="outlined"
+                                startIcon={<UploadFile />}
+                                onClick={handleImportClick}
+                                size="small"
+                                sx={{
+                                    marginRight: 1,
+                                    minWidth: 'auto', // ensure width is only based on content
+                                    px: 1.5, // optional: adjust horizontal padding if too narrow or wide
+                                }}
+                            >
+                                Upload Docx
+                            </Button>
+                            <input
+                                type="file"
+                                ref={importRef}
+                                onChange={handleImportFilePick}
+                                style={{ display: "none" }}
+                            />
+                        </Tooltip>
 
+                        {/* Proof Read */}
+                        <Tooltip title="Proof">
+                            <div>
+                                <Button
+                                    variant="outlined"
+                                    startIcon={aiLoading ? <CircularProgress size={16} /> : <CheckCircleOutline style={{ color: "green" }} />}
+                                    onClick={loadAiSuggestions}
+                                    size="small"
+                                    disabled={aiLoading}
+                                    sx={{
+                                        minWidth: 'auto',
+                                        px: 1.5,
+                                    }}
+                                >
+                                    {aiLoading ? 'Loading...' : 'Proof Read with AI'}
+                                </Button>
+                            </div>
+                        </Tooltip>
+                    </>
+                )
+            }
 
 
             {/* Apply All Suggestions */}
@@ -271,19 +284,22 @@ export const MenuBar = ({ editor, handleImageUpload, handleImportClick, handleIm
             </Tooltip>
             {/* Insert Image */}
             <Tooltip title="Insert Image">
-                <IconButton onClick={() => document.getElementById("image-upload-input").click()}>
-                    <ImageIcon />
-                </IconButton>
-                <input
-                    type="file"
-                    id="image-upload-input"
-                    accept="image/*"
-                    style={{ display: "none" }}
-                    onChange={handleImageUpload}
-                />
+                <span>
+                    <IconButton onClick={() => document.getElementById("image-upload-input").click()}>
+                        <ImageIcon />
+                    </IconButton>
+                    <input
+                        type="file"
+                        id="image-upload-input"
+                        accept="image/*"
+                        style={{ display: "none" }}
+                        onChange={handleImageUpload}
+                    />
+                </span>
             </Tooltip>
 
-            <Tooltip title="Save">
+
+            {/* <Tooltip title="Save">
                 <IconButton
                     onClick={() => {
                         // replace with your save logic
@@ -295,27 +311,69 @@ export const MenuBar = ({ editor, handleImageUpload, handleImportClick, handleIm
                 >
                     <SaveIcon />
                 </IconButton>
+            </Tooltip> */}
+
+            {/* 📝 New Add Comment Button */}
+            <Tooltip title="Add Comment">
+                <div>
+                    <IconButton
+                        onClick={createThread}
+                        disabled={editor.state.selection.empty}
+                    >
+                        <CommentIcon />
+                    </IconButton>
+                </div>
             </Tooltip>
+            {loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === "author" ? (
+                editionsById?.editions?.isEditorApproved && (
+                <Tooltip title="Approve as Author">
+                    <div>
+                        <IconButton
+                            onClick={handleApprovalClick}
+                            color={editionsById?.editions?.isAuthorApproved ? "success" : "default"}
+                            sx={editionsById?.editions?.isAuthorApproved ? { pointerEvents: "none" } : {}}
+                        >
+                            <CheckCircleIcon />
+                        </IconButton>
+                    </div>
+                </Tooltip>
+                )
+            ) : (
+                <Tooltip title="Approve as Editor">
+                    <div>
+                        <IconButton
+                            onClick={handleApprovalClick}
+                            color={editionsById?.editions?.isEditorApproved ? "success" : "default"}
+                            sx={editionsById?.editions?.isEditorApproved ? { pointerEvents: "none" } : {}}
+                        >
+                            <CheckCircleIcon />
+                        </IconButton>
+                    </div>
+                </Tooltip>
+            )}
+
+
             {/* View as Book */}
-            <Tooltip title="View as Book">
-                <IconButton
-                    onClick={() => {
-                        // replace with your view as book logic
+            {/* {(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === "editor") &&
+                <Tooltip title="View as Book">
+                    <IconButton
+                        onClick={() => {
+                            // replace with your view as book logic
 
-                        const content = editor.getJSON(); // or editor.getHTML()
-                        const currentHash = window.location.hash;
-                        console.log("Viewing as book...", content);
-                        if (!currentHash.endsWith('/viewAsBook')) {
-                            // window.location.hash = currentHash + '/viewAsBook';
-                            navigate('/projects/viewAsBook', { state: { jsonContent: content } });
-                        }
-                    }}
-                // color="primary"
-                >
-                    <MenuBookIcon />
-                </IconButton>
-            </Tooltip>
-
+                            const content = editor.getJSON(); // or editor.getHTML()
+                            const currentHash = window.location.hash;
+                            console.log("Viewing as book...", content);
+                            if (!currentHash.endsWith('/viewAsBook')) {
+                                // window.location.hash = currentHash + '/viewAsBook';
+                                navigate('/projects/viewAsBook', { state: { jsonContent: content } });
+                            }
+                        }}
+                    // color="primary"
+                    >
+                        <MenuBookIcon />
+                    </IconButton>
+                </Tooltip>
+            } */}
         </Box>
     );
 };

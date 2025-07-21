@@ -205,7 +205,7 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
         <>
             <Grid container spacing={2} alignItems="stretch">
                 {/* Add New Edition Card */}
-                {formattedUserRole.includes(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase()) && (loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === superAccess || loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === "author") &&
+                {formattedUserRole.includes(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase()) && (loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === superAccess || loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === "editor") &&
                     <Grid item xs={12} sm={4}>
                         <Card sx={{ textAlign: "center", height: "100%" }}>
                             <CardActionArea onClick={handleAddEdition}>
@@ -260,7 +260,7 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
                                 <Button variant="outlined" color="primary" size="small" onClick={() => navigate(`/projects/editions/${edition._id}/${edition.projectID._id}`)}>
                                     View
                                 </Button>
-                                {(!edition.status || edition.status === "WIP") && formattedUserRole.includes(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase()) && (loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === superAccess || loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === elevatedAccess) && (edition?.isCoverDesignedApproved && edition?.isTypesettingApproved) && (
+                                {(!edition.status || edition.status === "WIP") && formattedUserRole.includes(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase()) &&(edition.isAuthorApproved) && (loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === superAccess || loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === elevatedAccess) && (
                                     <Button variant="outlined" color="primary" size="small" onClick={() => handleMoveToGold(edition)}>
                                         Move to GOLD
                                     </Button>

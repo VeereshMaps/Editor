@@ -243,6 +243,7 @@ export const VersioningModal = memo(({
       console.log(inisialEnter);
       if (inisialEnter == true) {
         const version = versions[0];
+        const newVersion = version?.version || 0;
         setVersionName(version?.name || `Version ${newVersion}`);
       }
       setCurrentVersionId(initialVersion)

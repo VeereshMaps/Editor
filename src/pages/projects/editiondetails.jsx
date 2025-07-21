@@ -12,7 +12,7 @@ import { getVersionsById } from "redux/Slices/versionByIdSlice";
 import { createComment, fetchCommentsByVersionId } from "redux/Slices/commentSlice";
 import moment from "moment-timezone";
 import { uploadProjectFile } from "redux/Slices/uploadProjectInputFileSlice";
-import { approveVersionById } from "redux/Slices/versionApproveSlice";
+// import { approveVersionById } from "redux/Slices/versionApproveSlice";
 import { getProjectDetailsById } from "redux/Slices/projectDetailsByIdSlice";
 import { getEditionsById } from "redux/Slices/editionByIdSlice";
 import Notification from "../../components/Notification";
@@ -76,8 +76,7 @@ const EditionDetails = () => {
         (
             isAdminOrPM ||
             categoryRoleMap[selectedCategory] === role
-        ) &&
-        !editionDetailsById?.editions?.isCoverDesignedApproved && !editionDetailsById?.editions?.isTypesettingApproved;
+        )
 
     useEffect(() => {
         if (tabData[selectedCategory]) {
@@ -86,11 +85,6 @@ const EditionDetails = () => {
             setSubTabArray([]);
         }
     }, [tabData, selectedCategory]);
-
-    useEffect(() => {
-        console.log("selectedFile", editionDetailsById.editions.isCoverDesignedApproved);
-
-    }, [editionDetailsById]);
 
     useEffect(() => {
         if (!notification.open && notification.severity === "success") {
@@ -376,21 +370,21 @@ const EditionDetails = () => {
 
 
 
-    const handleApprove = (version) => {
-        if (version) {
-            try {
-                dispatch(approveVersionById(version?._id)).then((response) => {
-                    setNotification({ open: true, message: response?.payload?.message, severity: "success" });
-                    // alert('Version approved successfully!');
-                    getVersionDetails(editionId);
-                });
+    // const handleApprove = (version) => {
+    //     if (version) {
+    //         try {
+    //             dispatch(approveVersionById(version?._id)).then((response) => {
+    //                 setNotification({ open: true, message: response?.payload?.message, severity: "success" });
+    //                 // alert('Version approved successfully!');
+    //                 getVersionDetails(editionId);
+    //             });
 
-            } catch (error) {
-                console.log("error in approving version", error);
-                setNotification({ open: true, message: "Failed to create round", severity: "failed" });
-            }
-        }
-    }
+    //         } catch (error) {
+    //             console.log("error in approving version", error);
+    //             setNotification({ open: true, message: "Failed to create round", severity: "failed" });
+    //         }
+    //     }
+    // }
 
     const getProjectDetails = async (id) => {
         try {
@@ -537,7 +531,7 @@ const EditionDetails = () => {
                                     minHeight: "500px"
                                 }}
                             >
-                                {tabData[selectedCategory]?.[subTab] &&
+                                {/* {tabData[selectedCategory]?.[subTab] &&
                                     selectedCategory !== "Inputs" &&
                                     canShowButton &&
                                     (!approvedCategories?.TypeSetting ||
@@ -553,7 +547,7 @@ const EditionDetails = () => {
                                         >
                                             Approve
                                         </Button>
-                                    )}
+                                    )} */}
                                 {tabData[selectedCategory]?.[subTab] ? (() => {
                                     const fileObj = tabData[selectedCategory][subTab];
                                     const fileUrl = selectedCategory === "Inputs" ? fileObj.filePath : fileObj.fileStorageUrl;

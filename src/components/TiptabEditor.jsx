@@ -12,16 +12,22 @@ const TiptapEditor = () => {
   const { editionId } = useParams();
   const { contentAIToken, documentToken } = useSelector((state) => state.tiptapToken);
 
-  console.log("@#$#$editionId", editionId);
-
   const ydoc = useMemo(() => new Y.Doc(), [editionId]);
 
-  const provider = useMemo(() => new TiptapCollabProvider({
-    appId,
-    name: editionId,  // 🧠 room name
-    document: ydoc,   // ✅ fresh Y.Doc for each editionId
-    token: documentToken,
-  }), [editionId, ydoc, documentToken]);
+  const provider = useMemo(() => {
+    if (!editionId || !documentToken) return null;
+
+    return new TiptapCollabProvider({
+      appId,
+      name: editionId,
+      document: ydoc,
+      token: documentToken,
+    });
+  }, [editionId, ydoc, documentToken]);
+
+  if (!provider) {
+    return <div>Loading editor...</div>;
+  }
 
   return (
     <div className="col-group">

@@ -1,6 +1,8 @@
 import React, { useState, useLayoutEffect, useRef } from 'react';
 import '../../styles/ViewAsBook.css';
 import { useLocation } from 'react-router';
+import { flushSync } from 'react-dom';
+import * as ReactDOM from 'react-dom/client';
 
 const ViewAsBook = () => {
     const location = useLocation();
@@ -29,6 +31,11 @@ const ViewAsBook = () => {
 
         return text;
     };
+
+    const isEmptyParagraph = (node) =>
+        node?.type === 'paragraph' &&
+        (!node.content || node.content.every(c => c.text?.trim() === ''));
+
 
     // ✅ Renders each node as JSX
     const renderNode = (node, index) => {
@@ -61,6 +68,8 @@ const ViewAsBook = () => {
                     {text}
                 </p>
             );
+        } else if (node.type === 'table') {
+            return <table key={index}>{/* render rows and cells */}</table>;
         }
 
         return null;
@@ -69,13 +78,16 @@ const ViewAsBook = () => {
     // ✅ Converts a React element to DOM element for measurement
     const renderToElement = (element) => {
         const container = document.createElement('div');
-        const temp = document.createElement('div');
-        container.appendChild(temp);
-        import('react-dom').then(ReactDOM => {
-            ReactDOM.render(element, temp);
+        container.style.visibility = 'hidden';
+        document.body.appendChild(container);
+
+        flushSync(() => {
+            ReactDOM.createRoot(container).render(element);
         });
+
         return container;
     };
+
 
     // ✅ Height-based pagination logic
     useLayoutEffect(() => {
@@ -85,7 +97,8 @@ const ViewAsBook = () => {
         const verticalPaddingPx = mmToPx(50); // 25mm top + 25mm bottom
         const pageContentHeightPx = totalPageHeightPx - verticalPaddingPx;
 
-        const nodeElements = jsonContent.content.map((node, i) => renderNode(node, i));
+        const meaningfulNodes = jsonContent.content.filter(node => !isEmptyParagraph(node));
+        const nodeElements = meaningfulNodes.map((node, i) => renderNode(node, i));
 
         // ✅ STEP 1: Extract heading + author as first page
         const firstPage = [];
@@ -96,6 +109,8 @@ const ViewAsBook = () => {
             jsonContent.content[1].type === 'paragraph') {
             firstPage.push(nodeElements[0], nodeElements[1]);
             remainingNodes = remainingNodes.slice(2);
+        } else {
+            remainingNodes = nodeElements; // no split
         }
 
         // ✅ STEP 2: Continue normal pagination with remaining nodes
