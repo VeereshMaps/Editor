@@ -20,7 +20,7 @@
           overflowY: 'auto',
           padding: '10px',
           // borderRadius: '8px',
-          background: '#fdfdfd',
+          // background: '#fdfdfd',
           // border: '1px solid #e2e2e2',
           // boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
         }}
