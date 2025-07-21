@@ -421,7 +421,8 @@ const EditionDetails = () => {
 
     return (
         <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100px" }}>
-            <Card sx={{ p: 2, width: "100%", minHeight: "80px" }}>
+
+            {/*  <Card sx={{ p: 2, width: "100%", minHeight: "80px" }}>
                 <CardContent sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <Box>
                         <Typography variant="h6">Edition Details</Typography>
@@ -440,10 +441,15 @@ const EditionDetails = () => {
                     )}
 
                 </CardContent>
-            </Card>
+            </Card> */}
 
             <Box sx={{ display: "flex", flexDirection: "column", flex: 1 }}>
                 {/* Main Tabs */}
+                <Box style={{display:'flex',flexDirection:'row',alignItems:'center'}}>
+                    <Typography variant="h6" >  Edition : </Typography>
+                    <Typography variant="h5" style={{ fontWeight:'bold' }}> {editionDetailsById && editionDetailsById?.editions?.title || 'NA'}</Typography>
+                   
+                </Box>
                 <Tabs value={mainTab} onChange={handleMainTabChange} sx={{ borderBottom: 1, borderColor: "divider" }}>
                     {mainTabs.map((tab, index) => (
                         <Tab key={index} label={tab.charAt(0).toUpperCase() + tab.slice(1)} />
@@ -496,7 +502,7 @@ const EditionDetails = () => {
                                         key={index}
                                         label={
                                             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
-                                                <Typography sx={{ flexGrow: 1 }}>{'File '+(index+1)}</Typography>
+                                                <Typography sx={{ flexGrow: 1 }}>{'File ' + (index + 1)}</Typography>
                                             </Box>
                                         }
                                     />

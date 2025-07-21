@@ -288,7 +288,6 @@ export const VersioningModal = memo(({
       aria-labelledby="parent-modal-title"
       aria-describedby="parent-modal-description"
     >
-
       <div style={{ display: 'flex' }} >
 
 

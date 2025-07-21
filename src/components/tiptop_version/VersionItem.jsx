@@ -8,7 +8,7 @@ export const VersionItem = ({
   onClick,
 }) => {
   return (
-    <button onClick={onClick} className={isActive ? 'is-active' : ''}>
+    <button style={{cursor:'pointer',border:!isActive ? '1px solid gray':'none',borderRadius:'5px'}} onClick={onClick} className={isActive ? 'is-active' : ''}>
       {isSelected ? '> ' : ''}{title || renderDate(date)}
       {title ? <span>{renderDate(date)}</span> : null}
     </button>

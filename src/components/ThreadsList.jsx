@@ -16,7 +16,7 @@
       <div
         className="threads-group"
         style={{
-          height: '35vh',
+          height: '45vh',
           overflowY: 'auto',
           padding: '10px',
           // borderRadius: '8px',
