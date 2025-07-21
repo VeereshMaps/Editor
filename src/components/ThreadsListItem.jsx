@@ -11,7 +11,8 @@ const buttonStyle = {
     marginRight: '8px',
     borderRadius: '6px',
     border: '1px solid #ccc',
-    backgroundColor: '#f1f1f1',
+    backgroundColor:'#ffffff',
+    // backgroundColor: '#f1f1f1',
     cursor: 'pointer',
     fontSize: '0.7rem',
 };
@@ -19,7 +20,7 @@ const buttonStyle = {
 
 const cancelButtonStyle = {
     ...buttonStyle,
-    backgroundColor: '#e0e0e0',
+    // backgroundColor: '#e0e0e0',
     color: '#333',
 };
 
@@ -135,11 +136,13 @@ export const ThreadsListItem = ({ thread, provider, active, open, WebSocket }) =
             style={{
                 marginBottom: '10px',
                 borderRadius: '8px',
-                border: active ? '2px solid #5c9ded' : '1px solid #ccc',
+                border: active ? '2px solid #5c9ded' : '1px solid #edf2fa',
                 padding: '10px',
-                backgroundColor: open ? '#f8f9fa' : '#fff',
+                backgroundColor: open ?  '#edf2fa':'#f8f9fa',
                 boxShadow: active ? '0 2px 5px rgba(0,0,0,0.1)' : 'none',
                 transition: 'all 0.3s ease',
+                cursor:'pointer'
+
             }}
         >
             <ThreadCard
@@ -157,25 +160,27 @@ export const ThreadsListItem = ({ thread, provider, active, open, WebSocket }) =
                                 marginBottom: '8px',
                             }}
                         >
+
                             {!thread.resolvedAt ? (
                                 <button onClick={handleResolveClick} style={cancelButtonStyle}>
                                     ✓ Resolve
                                 </button>
                             ) : (
+                                <div style={{display:'flex',gap:'10px',alignItems:'center'}}>
+                                <div style={{ fontSize: '0.8em', color: '#1677ffa8' }}>
+                                  Resolved at {new Date(thread.resolvedAt).toLocaleString()}
+                                </div>
                                 <button onClick={handleUnresolveClick} style={cancelButtonStyle}>
-                                    ⟲ Unresolve
+                                  ⟲ Unresolve
                                 </button>
+                              </div>
                             )}
                             <button onClick={handleDeleteClick} style={cancelButtonStyle}>
                                 × Delete
                             </button>
                         </div>
 
-                        {thread.resolvedAt && (
-                            <div style={{ fontSize: '0.9em', color: '#666' }}>
-                                💡 Resolved at {new Date(thread.resolvedAt).toLocaleString()}
-                            </div>
-                        )}
+                       
 
                         <div style={{ marginTop: '12px' }}>
                             {comments.map((comment) => (

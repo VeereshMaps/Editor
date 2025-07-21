@@ -70,6 +70,7 @@ import { renderDate } from './tiptop_version/utils';
 import { InlineThread } from '@tiptap-pro/extension-comments'
 import { getEditionsById } from 'redux/Slices/editionByIdSlice';
 import { updateEdition } from 'redux/Slices/updateEditionSlice';
+import { TextField, Button, Box } from '@mui/material';
 
 const colors = [
     '#958DF1', '#F98181', '#FBBC88', '#FAF594', '#70CFF8',
@@ -681,7 +682,7 @@ const Editor = ({ ydoc, provider, room }) => {
 
             if (roleName === "author") {
                 updatedData.isAuthorApproved = true;
-                 updatedData.status = "Gold";
+                updatedData.status = "Gold";
                 updatedData.editorContent = editor?.getJSON(); // ✅ move into updatedData
             } else if (roleName === "editor") {
                 updatedData.isEditorApproved = true;
@@ -840,7 +841,7 @@ const Editor = ({ ydoc, provider, room }) => {
                                             </div>
                                         )}
                                         {activeTab === "version" && (
-                                            <div className="sidebar-options">
+                                            <div className="sidebar-options" style={{alignItems:'center'}}>
                                                 <div className="option-group">
                                                     <div className="label-large">Auto versioning</div>
                                                     <div className="switch-group">
@@ -874,27 +875,41 @@ const Editor = ({ ydoc, provider, room }) => {
                                                         Make adjustments to the document to manually save a new version.
                                                     </div>
                                                     <form className="commit-panel" onSubmit={handleNewVersion}>
-                                                        <input
-                                                            disabled={!hasChanges}
-                                                            type="text"
-                                                            placeholder="Version name"
-                                                            value={commitDescription}
-                                                            onChange={handleCommitDescriptionChange}
-                                                        />
-                                                        <button style={{ marginTop: '5px', padding: '4px 8px', borderRadius: '5px', cursor: 'pointer' }}
-                                                            disabled={!hasChanges || commitDescription.length === 0}
-                                                            type="submit"
-                                                        >
-                                                            Create
-                                                        </button>
+                                                        <Box display="flex" flexDirection="column" gap={1}>
+                                                            <TextField
+                                                                disabled={!hasChanges}
+                                                                placeholder="Version name"
+                                                                value={commitDescription}
+                                                                onChange={handleCommitDescriptionChange}
+                                                                variant="outlined"
+                                                                size="small"
+                                                                fullWidth
+                                                            />
+                                                            <Button
+                                                                variant="contained"
+                                                                color="primary"
+                                                                type="submit"
+                                                                disabled={!hasChanges || commitDescription.length === 0}
+                                                            >
+                                                                Create
+                                                            </Button>
+                                                        </Box>
                                                     </form>
                                                 </div>
 
-                                                <hr />
+                                                {/* <hr /> */}
+                                                <Box display="flex" justifyContent="center">
+                                                    <Button
+                                                        style={{ cursor: 'pointer' }}
+                                                        variant="outlined"
+                                                        color="primary"
+                                                        type="submit"
+                                                        onClick={showVersioningModal}
+                                                    >
+                                                        Show history
+                                                    </Button>
+                                                </Box>
 
-                                                <button style={{ cursor: 'pointer' }} className="primary" type="button" onClick={showVersioningModal}>
-                                                    Show history
-                                                </button>
                                             </div>
                                         )}
                                     </div>

@@ -16,13 +16,13 @@
       <div
         className="threads-group"
         style={{
-          height: '40vh',
+          height: '35vh',
           overflowY: 'auto',
           padding: '10px',
           // borderRadius: '8px',
           background: '#fdfdfd',
           // border: '1px solid #e2e2e2',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+          // boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
         }}
       >
         {threads.map((thread) => (

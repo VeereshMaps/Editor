@@ -32,7 +32,8 @@ export const CommentCard = ({
     marginRight: '8px',
     borderRadius: '6px',
     border: '1px solid #ccc',
-    backgroundColor: '#f1f1f1',
+    // backgroundColor: '#f1f1f1',
+    backgroundColor:'#ffffff',
     cursor: 'pointer',
     fontSize: '0.7rem',
   };
@@ -46,7 +47,7 @@ export const CommentCard = ({
 
   const cancelButtonStyle = {
     ...buttonStyle,
-    backgroundColor: '#e0e0e0',
+    // backgroundColor: '#e0e0e0',
     color: '#333',
   };
 
@@ -54,7 +55,7 @@ export const CommentCard = ({
     <div className={commentWrapperClass.join(' ')}>
       <div className="label-group">
         <label><strong>{name}</strong></label>
-        <label style={{ color: '#666', fontSize: '0.85em' }}>
+        <label style={{ color: '#666', fontSize: '0.85em',marginLeft:'auto' }}>
           {new Date(createdAt).toLocaleTimeString()}
         </label>
       </div>
