@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { IconButton, Tooltip, Box, Button, CircularProgress, Menu, MenuItem, Typography, Switch } from '@mui/material';
 import UndoIcon from '@mui/icons-material/Undo';
 import RedoIcon from '@mui/icons-material/Redo';
@@ -33,16 +33,29 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
     const navigate = useNavigate();
     const loginDetails = useSelector((state) => state.auth);
     const [anchorEl, setAnchorEl] = useState(null);
-    const [mode, setMode] = useState('Editing');
+    const [mode, setMode] = useState('');
     const label = { inputProps: { 'aria-label': 'Menu' } };
     const [toggleAction, setToggleAction] = useState(false);
-
-    const modeIconMap = {
-        Editing: <EditIcon fontSize="small" sx={{ mr: 1 }} />,
-        History: <HistoryIcon fontSize="small" sx={{ mr: 1 }} />,
-        View: <VisibilityIcon fontSize="small" sx={{ mr: 1 }} />,
-    };
-
+    const roleName = loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase();
+    const isEditor = ((roleName === "author" || roleName === "editor"));
+    const modeOptions = [
+        {
+            label: 'Editing',
+            icon: <EditIcon fontSize="small" />,
+        },
+        {
+            label: 'History',
+            icon: <HistoryIcon fontSize="small" sx={{ mr: 1 }} />,
+        },
+        {
+            label: 'Suggesting',
+            icon: <EditIcon fontSize="small" />,
+        },
+        {
+            label: 'View',
+            icon: <VisibilityIcon fontSize="small" />,
+        },
+    ];
 
     const handleMenuClick = (event) => {
         setAnchorEl(event.currentTarget);
@@ -59,9 +72,19 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
     };
 
 
-    if (!editor) return null;
 
-    
+    if (!editor) return null;
+    useEffect(() => {
+
+        console.log("AJDHHDHDH", isEditor, editionsById?.editions?.isAuthorApproved);
+
+        if (isEditor) {
+            setMode("Editing")
+        } else {
+            setMode("View")
+        }
+    }, [editionsById, roleName, editor]);
+
 
     return (
         <Box
@@ -80,7 +103,7 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
             }}
         >
             {mode === 'Editing' && (
-                <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1}}>
+                <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
                     {/* Upload DOCX */}
                     {(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === "editor") &&
                         (
@@ -409,7 +432,7 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
                 </Tooltip>
             } */}
 
-                    <Tooltip style={{marginLeft:"auto"}} title={toggleAction ? "Sidebar: On" : "Sidebar: Off"}>
+                    <Tooltip style={{ marginLeft: "auto" }} title={toggleAction ? "Sidebar: On" : "Sidebar: Off"}>
                         <Switch
                             {...label}
                             onChange={(e) => {
@@ -424,6 +447,7 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
             )}
             <Box sx={{ ml: 'auto' }}>
                 <Button
+                    disabled={!isEditor}
                     onClick={handleMenuClick}
                     variant="outlined"
                     endIcon={<ArrowDropDownIcon />}
@@ -442,7 +466,7 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
 
                 >
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        {modeIconMap[mode]}
+                        {modeOptions[mode]}
                         {mode}
                     </Box>
                 </Button>
@@ -456,45 +480,29 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
                         sx: { mt: 1 },
                     }}
                 >
-                    <MenuItem
-                        selected={mode === 'Editing'}
-                        onClick={() => handleMenuSelect('Editing')}
-                        sx={{
-                            fontWeight: 500,
-                            backgroundColor: mode === 'Editing' ? '#e0e0e0' : 'transparent',
-                            '&:hover': { backgroundColor: '#f5f5f5' },
-                            gap: 1,
-                        }}
-                    >
-                        <EditIcon fontSize="small" />
-                        Editing
-                    </MenuItem>
-                    <MenuItem
-                        selected={mode === 'History'}
-                        onClick={() => handleMenuSelect('History')}
-                        sx={{
-                            fontWeight: 500,
-                            backgroundColor: mode === 'History' ? '#e0e0e0' : 'transparent',
-                            '&:hover': { backgroundColor: '#f5f5f5' },
-                            gap: 1,
-                        }}
-                    >
-                        <HistoryIcon fontSize="small" />
-                        History
-                    </MenuItem>
-                    <MenuItem
-                        selected={mode === 'View'}
-                        onClick={() => handleMenuSelect('View')}
-                        sx={{
-                            fontWeight: 500,
-                            backgroundColor: mode === 'View' ? '#e0e0e0' : 'transparent',
-                            '&:hover': { backgroundColor: '#f5f5f5' },
-                            gap: 1,
-                        }}
-                    >
-                        <VisibilityIcon fontSize="small" />
-                        View
-                    </MenuItem>
+                    {modeOptions.map((option) => (
+                        <MenuItem
+                            key={option.label}
+                            selected={mode === option.label}
+                            onClick={() => handleMenuSelect(option.label)}
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                px: 2,
+                                py: 1,
+                                fontWeight: 500,
+                                color: '#333',
+                                backgroundColor: mode === option.label ? '#f0f0f0' : 'transparent',
+                                '&:hover': {
+                                    backgroundColor: '#f5f5f5',
+                                },
+                            }}
+                        >
+                            {option.icon}
+                            {option.label}
+                        </MenuItem>
+                    ))}
                 </Menu>
             </Box>
 

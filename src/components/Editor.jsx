@@ -128,7 +128,6 @@ const Editor = ({ ydoc, provider, room }) => {
     const [currentUser, setCurrentUser] = useState(getInitialUser());
     const [isLoading, setIsLoading] = useState(false);
     const [aiLoading, setAiLoading] = useState(false);
-    const [action, setAction] = useState('Editing'); // 'Editing' or 'History'
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [sideBarMenu, setSideBarMenu] = useState(false);
     const [rules, setRules] = useState(initialRules);
@@ -136,6 +135,7 @@ const Editor = ({ ydoc, provider, room }) => {
     const importRef = useRef(null);
     const APP_ID = "pkry8p7m";
     const roleName = loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase();
+    const [action, setAction] = useState((((roleName === "author" || roleName === "editor") && editionsById?.editions?.isAuthorApproved)) ? "Editing" : 'View'); // 'Editing' or 'History'
     const [isEditable, setIsEditable] = useState(false);
 
 
@@ -357,31 +357,16 @@ const Editor = ({ ydoc, provider, room }) => {
         const editorPage = document.querySelector('.editor-page');
 
         const isApproved =
-            (roleName === "author" && editionsById?.editions?.isAuthorApproved) ||
-            (roleName === "editor" && editionsById?.editions?.isEditorApproved);
-        console.log(roleName,editionsById?.editions?.isAuthorApproved, editionsById?.editions?.isEditorApproved, isApproved);
-        
-            setIsEditable(isApproved);
+            ((roleName === "author" || roleName === "editor") && editionsById?.editions?.isAuthorApproved);
+        console.log(roleName, editionsById?.editions?.isAuthorApproved, editionsById?.editions?.isEditorApproved, isApproved);
 
-        // if (isApproved) {
-        //     editor.setEditable(false);
-        //     if (editorPage) {
-        //         editorPage.style.pointerEvents = 'none';
-        //         editorPage.style.userSelect = 'none';
-        //     }
-        // } else {
-        //     editor.setEditable(true);
-        //     if (editorPage) {
-        //         editorPage.style.pointerEvents = 'auto';
-        //         editorPage.style.userSelect = 'auto';
-        //     }
-        // }
+        setIsEditable(isApproved);
+        if (((roleName === "author" || roleName === "editor"))) {
+            editor.setEditable(true);
+        } else {
+            editor.setEditable(false);
+        }
     }, [editionsById, roleName, editor]);
-
-
-    useEffect(() => {
-        editor.setEditable(isEditable);
-    },[isEditable]);
 
     useEffect(() => {
         if (!editionId || !stableUser) return;
@@ -509,11 +494,11 @@ const Editor = ({ ydoc, provider, room }) => {
         }
     };
 
-    const setName = useCallback(() => {
-        const name = (window.prompt('Name', currentUser.name) || '').trim().substring(0, 32);
-        if (name) setCurrentUser({ ...currentUser, name });
-    }, [currentUser]);
-
+    /*     const setName = useCallback(() => {
+            const name = (window.prompt('Name', currentUser.name) || '').trim().substring(0, 32);
+            if (name) setCurrentUser({ ...currentUser, name });
+        }, [currentUser]);
+     */
     const handleImportClick = useCallback(() => {
         importRef.current.click();
     }, []);
@@ -572,31 +557,31 @@ const Editor = ({ ydoc, provider, room }) => {
             },
         }).run();
     }, [editor]);
-
-    function injectPageBreaksIntoJSON(content, blocksPerPage = 10) {
-        if (!content || !content.content) return content;
-
-        const result = [];
-        let count = 0;
-
-        content.content.forEach((node, index) => {
-            result.push(node);
-            count++;
-
-            if (count >= blocksPerPage) {
-                result.push({
-                    type: 'pageBreak',
-                });
-                count = 0;
-            }
-        });
-
-        return {
-            ...content,
-            content: result,
-        };
-    }
-
+    /* 
+        function injectPageBreaksIntoJSON(content, blocksPerPage = 10) {
+            if (!content || !content.content) return content;
+    
+            const result = [];
+            let count = 0;
+    
+            content.content.forEach((node, index) => {
+                result.push(node);
+                count++;
+    
+                if (count >= blocksPerPage) {
+                    result.push({
+                        type: 'pageBreak',
+                    });
+                    count = 0;
+                }
+            });
+    
+            return {
+                ...content,
+                content: result,
+            };
+        }
+     */
     const [showUnresolved, setShowUnresolved] = useState(true)
     const [activeTab, setActiveTab] = useState(roleName === "editor" ? 'ai' : 'comments'); // 'ai' or 'comments'
     const { threads, createThread } = useThreads(provider, editor, user, webIORef, getThreds || []);
@@ -712,15 +697,26 @@ const Editor = ({ ydoc, provider, room }) => {
         }
     };
 
-    
+
     const setActionType = (data) => {
         setAction(data);
-        if(data === "History") {
-            setVersioningModalOpen(true)
-        }else{
-            setVersioningModalOpen(false)
+        console.log("DATA", data);
+
+        switch (data) {
+            case "History":
+                setVersioningModalOpen(true);
+                editor.setEditable(false);
+                break;
+            case "Editing":
+                setVersioningModalOpen(false);
+                editor.setEditable(true);
+                break;
+            default:
+                setVersioningModalOpen(false);
+                editor.setEditable(false);
         }
-    }
+    };
+
 
     return (
         <>
@@ -749,7 +745,7 @@ const Editor = ({ ydoc, provider, room }) => {
                     actionType={setActionType}
                     sideBarMenu={setSideBarMenu}
                 />
-                
+
                 {action === "History" ? (
                     <VersioningModal
                         versions={versions}
@@ -760,7 +756,7 @@ const Editor = ({ ydoc, provider, room }) => {
                         latestVersion={latestVersion}
                         provider={provider}
                     />
-                ) : ((action === "Editing" || action === "View")?<>
+                ) : ((action === "Editing" || action === "View") ? <>
                     {!isLoading ? (
                         <>
                             <ThreadsProvider
@@ -777,7 +773,7 @@ const Editor = ({ ydoc, provider, room }) => {
                                 threads={threads}
                             >
                                 <div className="col-group">
-                                    <div className="main" style={{ width: sideBarMenu ? "70%" :"100%" }}>
+                                    <div className="main" style={{ width: sideBarMenu ? "70%" : "100%" }}>
                                         {/* <div className="control-group">
                                         <div className="button-group">
                                             <button onClick={createThread} disabled={editor.state.selection.empty}>Add comment</button>
@@ -802,139 +798,139 @@ const Editor = ({ ydoc, provider, room }) => {
                                         </div>
                                     </div>
                                     {sideBarMenu &&
-                                    <div style={{ width: '30%' }}>
-                                        {/* Tab Buttons */}
-                                        <div className="tab-header" style={{ width: '100%', overflowX: 'auto' }}>
-                                            {roleName === "editor" && (
+                                        <div style={{ width: '30%' }}>
+                                            {/* Tab Buttons */}
+                                            <div className="tab-header" style={{ width: '100%', overflowX: 'auto' }}>
+                                                {roleName === "editor" && (
+                                                    <button
+                                                        className={activeTab === 'ai' ? 'active' : ''}
+                                                        onClick={() => setActiveTab('ai')}
+                                                    >
+                                                        AI Suggestions
+                                                    </button>
+                                                )}
                                                 <button
-                                                    className={activeTab === 'ai' ? 'active' : ''}
-                                                    onClick={() => setActiveTab('ai')}
+                                                    className={activeTab === 'comments' ? 'active' : ''}
+                                                    onClick={() => setActiveTab('comments')}
                                                 >
-                                                    AI Suggestions
+                                                    Comments
                                                 </button>
-                                            )}
-                                            <button
-                                                className={activeTab === 'comments' ? 'active' : ''}
-                                                onClick={() => setActiveTab('comments')}
-                                            >
-                                                Comments
-                                            </button>
-                                            <button
-                                                className={activeTab === "version" ? "active" : ""}
-                                                onClick={() => setActiveTab("version")}
-                                            >
-                                                Version History
-                                            </button>
-                                        </div>
+                                                <button
+                                                    className={activeTab === "version" ? "active" : ""}
+                                                    onClick={() => setActiveTab("version")}
+                                                >
+                                                    Version History
+                                                </button>
+                                            </div>
 
-                                        {/* Tab Content */}
-                                        <div className="tab-content">
-                                            {activeTab === 'ai' && (
-                                                <AISuggestionsSidebar editor={editor} aiLoading={aiLoading} />
-                                            )}
+                                            {/* Tab Content */}
+                                            <div className="tab-content">
+                                                {activeTab === 'ai' && (
+                                                    <AISuggestionsSidebar editor={editor} aiLoading={aiLoading} />
+                                                )}
 
-                                            {activeTab === 'comments' && (
-                                                <div className="sidebar-options sidebar" style={{ background: '#fdfdfd', width: '100%', padding: '10px' }}>
-                                                    <div className="option-group">
-                                                        <div className="label-large">Comments</div>
-                                                        <div className="switch-group">
-                                                            <label>
-                                                                <input
-                                                                    type="radio"
-                                                                    name="thread-state"
-                                                                    onChange={() => setShowUnresolved(true)}
-                                                                    checked={showUnresolved}
-                                                                />
-                                                                Open
-                                                            </label>
-                                                            <label>
-                                                                <input
-                                                                    type="radio"
-                                                                    name="thread-state"
-                                                                    onChange={() => setShowUnresolved(false)}
-                                                                    checked={!showUnresolved}
-                                                                />
-                                                                Resolved
-                                                            </label>
+                                                {activeTab === 'comments' && (
+                                                    <div className="sidebar-options sidebar" style={{ background: '#fdfdfd', width: '100%', padding: '10px' }}>
+                                                        <div className="option-group">
+                                                            <div className="label-large">Comments</div>
+                                                            <div className="switch-group">
+                                                                <label>
+                                                                    <input
+                                                                        type="radio"
+                                                                        name="thread-state"
+                                                                        onChange={() => setShowUnresolved(true)}
+                                                                        checked={showUnresolved}
+                                                                    />
+                                                                    Open
+                                                                </label>
+                                                                <label>
+                                                                    <input
+                                                                        type="radio"
+                                                                        name="thread-state"
+                                                                        onChange={() => setShowUnresolved(false)}
+                                                                        checked={!showUnresolved}
+                                                                    />
+                                                                    Resolved
+                                                                </label>
+                                                            </div>
                                                         </div>
+                                                        <ThreadsList className="tiptap" provider={provider} threads={filteredThreads} WebSocket={webIORef} />
                                                     </div>
-                                                    <ThreadsList className="tiptap" provider={provider} threads={filteredThreads} WebSocket={webIORef} />
-                                                </div>
-                                            )}
-                                            {activeTab === "version" && (
-                                                <div className="sidebar-options" style={{ alignItems: 'center' }}>
-                                                    <div className="option-group">
-                                                        <div className="label-large">Auto versioning</div>
-                                                        <div className="switch-group">
-                                                            <label>
-                                                                <input
-                                                                    type="radio"
-                                                                    name="auto-versioning"
-                                                                    onChange={() =>
-                                                                        !isAutoVersioning && editor.commands.toggleVersioning()
-                                                                    }
-                                                                    checked={isAutoVersioning}
-                                                                />
-                                                                Enable
-                                                            </label>
-                                                            <label>
-                                                                <input
-                                                                    type="radio"
-                                                                    name="auto-versioning"
-                                                                    onChange={() =>
-                                                                        isAutoVersioning && editor.commands.toggleVersioning()
-                                                                    }
-                                                                    checked={!isAutoVersioning}
-                                                                />
-                                                                Disable
-                                                            </label>
+                                                )}
+                                                {activeTab === "version" && (
+                                                    <div className="sidebar-options" style={{ alignItems: 'center' }}>
+                                                        <div className="option-group">
+                                                            <div className="label-large">Auto versioning</div>
+                                                            <div className="switch-group">
+                                                                <label>
+                                                                    <input
+                                                                        type="radio"
+                                                                        name="auto-versioning"
+                                                                        onChange={() =>
+                                                                            !isAutoVersioning && editor.commands.toggleVersioning()
+                                                                        }
+                                                                        checked={isAutoVersioning}
+                                                                    />
+                                                                    Enable
+                                                                </label>
+                                                                <label>
+                                                                    <input
+                                                                        type="radio"
+                                                                        name="auto-versioning"
+                                                                        onChange={() =>
+                                                                            isAutoVersioning && editor.commands.toggleVersioning()
+                                                                        }
+                                                                        checked={!isAutoVersioning}
+                                                                    />
+                                                                    Disable
+                                                                </label>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                    <div className="option-group" >
-                                                        <div className="label-large">Manual versioning</div>
-                                                        <div className="label-small">
-                                                            Make adjustments to the document to manually save a new version.
+                                                        <div className="option-group" >
+                                                            <div className="label-large">Manual versioning</div>
+                                                            <div className="label-small">
+                                                                Make adjustments to the document to manually save a new version.
+                                                            </div>
+                                                            <form className="commit-panel" onSubmit={handleNewVersion}>
+                                                                <Box display="flex" flexDirection="column" gap={1}>
+                                                                    <TextField
+                                                                        disabled={!hasChanges}
+                                                                        placeholder="Version name"
+                                                                        value={commitDescription}
+                                                                        onChange={handleCommitDescriptionChange}
+                                                                        variant="outlined"
+                                                                        size="small"
+                                                                        fullWidth
+                                                                    />
+                                                                    <Button
+                                                                        variant="contained"
+                                                                        color="primary"
+                                                                        type="submit"
+                                                                        disabled={!hasChanges || commitDescription.length === 0}
+                                                                    >
+                                                                        Create
+                                                                    </Button>
+                                                                </Box>
+                                                            </form>
                                                         </div>
-                                                        <form className="commit-panel" onSubmit={handleNewVersion}>
-                                                            <Box display="flex" flexDirection="column" gap={1}>
-                                                                <TextField
-                                                                    disabled={!hasChanges}
-                                                                    placeholder="Version name"
-                                                                    value={commitDescription}
-                                                                    onChange={handleCommitDescriptionChange}
-                                                                    variant="outlined"
-                                                                    size="small"
-                                                                    fullWidth
-                                                                />
-                                                                <Button
-                                                                    variant="contained"
-                                                                    color="primary"
-                                                                    type="submit"
-                                                                    disabled={!hasChanges || commitDescription.length === 0}
-                                                                >
-                                                                    Create
-                                                                </Button>
-                                                            </Box>
-                                                        </form>
+
+                                                        {/* <hr /> */}
+                                                        <Box display="flex" justifyContent="center">
+                                                            <Button
+                                                                style={{ cursor: 'pointer' }}
+                                                                variant="outlined"
+                                                                color="primary"
+                                                                type="submit"
+                                                                onClick={showVersioningModal}
+                                                            >
+                                                                Show history
+                                                            </Button>
+                                                        </Box>
+
                                                     </div>
-
-                                                    {/* <hr /> */}
-                                                    <Box display="flex" justifyContent="center">
-                                                        <Button
-                                                            style={{ cursor: 'pointer' }}
-                                                            variant="outlined"
-                                                            color="primary"
-                                                            type="submit"
-                                                            onClick={showVersioningModal}
-                                                        >
-                                                            Show history
-                                                        </Button>
-                                                    </Box>
-
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>}
+                                                )}
+                                            </div>
+                                        </div>}
                                 </div>
                             </ThreadsProvider>
                         </>) : (
@@ -951,7 +947,7 @@ const Editor = ({ ydoc, provider, room }) => {
                             </div>
                         )
                     )}
-                </>:(<></>))}
+                </> : (<></>))}
 
                 <SuggestionTooltip element={tooltipElement} editor={editor} />
             </div >
