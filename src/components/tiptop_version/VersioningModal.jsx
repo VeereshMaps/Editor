@@ -282,21 +282,18 @@ export const VersioningModal = memo(({
     return null
   }
   return (
-    <Modal
-      open={open}
-      onClose={handleClose}
-      aria-labelledby="parent-modal-title"
-      aria-describedby="parent-modal-description"
-    >
+    // <Modal
+    //   open={open}
+    //   onClose={handleClose}
+    //   aria-labelledby="parent-modal-title"
+    //   aria-describedby="parent-modal-description"
+    // >
       <div style={{ display: 'flex' }} >
-
-
-
-        <div className="dialog-content " style={{ width: '80%' }}> <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-          <h2 style={{ color: 'gray' }}>{versionName}</h2>
-          <IconButton style={{ marginLeft: 'auto' }} onClick={handleClose} aria-label="close">
+        <div style={{ width: '100%' }}> <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+          {/* <h2 style={{ color: 'gray' }}>{versionName}</h2> */}
+          {/* <IconButton style={{ marginLeft: 'auto' }} onClick={handleClose} aria-label="close">
             <CloseIcon />
-          </IconButton>
+          </IconButton> */}
         </div>
           <div className=' col-group-history'>
             <div className="main_history">
@@ -336,6 +333,12 @@ export const VersioningModal = memo(({
             <div className="sidebarHistory">
               <div className="sidebar-options">
                 <div className="label-large">History ({reversedVersions.length} versions)</div>
+                 {editorHistory.can().hideDiff() && (
+                  <div className="hint">
+                    Comparing <span className="highlight">{versions.find(v => v.version === currentVersionId)?.name}</span> with{' '}
+                    <span className="highlight">{versions.find(v => v.version === currentVersionId - 1)?.name}</span>
+                  </div>
+                )}
                 <div className="versions-group">
                   {reversedVersions.map(v => (
                     <VersionItem
@@ -348,14 +351,9 @@ export const VersioningModal = memo(({
                     />
                   ))}
                 </div>
-                {editorHistory.can().hideDiff() && (
-                  <div className="hint">
-                    Comparing <span className="highlight">{versions.find(v => v.version === currentVersionId)?.name}</span> with{' '}
-                    <span className="highlight">{versions.find(v => v.version === currentVersionId - 1)?.name}</span>
-                  </div>
-                )}
+               
                 <div className="button-group">
-                  <button
+                  {/* <button
                     type="button"
                     onClick={() => {
                       editorHistory.chain().hideDiff().run()
@@ -364,7 +362,7 @@ export const VersioningModal = memo(({
                     style={cancelButtonStyle}
                   >
                     Close
-                  </button>
+                  </button> */}
 
                   <button
                     className="primary"
@@ -393,7 +391,7 @@ export const VersioningModal = memo(({
         </div>
       </div>
 
-    </Modal>
+    // </Modal>
   )
 });
 VersioningModal.displayName = 'VersioningModal'
