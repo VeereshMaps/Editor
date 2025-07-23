@@ -371,16 +371,7 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
             </Tooltip> */}
 
                     {/* 📝 New Add Comment Button */}
-                    <Tooltip title="Add Comment">
-                        <div>
-                            <IconButton
-                                onClick={createThread}
-                                disabled={editor.state.selection.empty}
-                            >
-                                <CommentIcon />
-                            </IconButton>
-                        </div>
-                    </Tooltip>
+                 
                     {loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === "author" ? (
                         editionsById?.editions?.isEditorApproved && (
                             <Tooltip title="Approve as Author">

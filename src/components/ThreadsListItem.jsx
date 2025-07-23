@@ -11,7 +11,7 @@ const buttonStyle = {
     marginRight: '8px',
     borderRadius: '6px',
     border: '1px solid #ccc',
-    backgroundColor:'#ffffff',
+    backgroundColor: '#ffffff',
     // backgroundColor: '#f1f1f1',
     cursor: 'pointer',
     fontSize: '0.7rem',
@@ -63,6 +63,7 @@ export const ThreadsListItem = ({ thread, provider, active, open, WebSocket }) =
     }, [thread.id, deleteThread, WebSocket, editionId]);
 
     const handleResolveClick = useCallback(() => {
+        // alert("@## ",WebSocket.current?.readyState)
         resolveThread(thread.id);
         if (WebSocket.current?.readyState === 1) {
             WebSocket.current.send(
@@ -112,7 +113,7 @@ export const ThreadsListItem = ({ thread, provider, active, open, WebSocket }) =
     const deleteComment = useCallback(
         (commentId) => {
             console.log("delete comment", thread.id, commentId);
-            provider.deleteComment(thread.id, commentId, { deleteContent: true });
+            // provider.deleteComment(thread.id, commentId, { deleteContent: true });
             if (WebSocket.current?.readyState === 1) {
                 WebSocket.current.send(
                     JSON.stringify({
@@ -138,10 +139,10 @@ export const ThreadsListItem = ({ thread, provider, active, open, WebSocket }) =
                 borderRadius: '8px',
                 border: active ? '2px solid #5c9ded' : '1px solid #edf2fa',
                 padding: '10px',
-                backgroundColor: open ?  '#edf2fa':'#f8f9fa',
+                backgroundColor: open ? '#edf2fa' : '#f8f9fa',
                 boxShadow: active ? '0 2px 5px rgba(0,0,0,0.1)' : 'none',
                 transition: 'all 0.3s ease',
-                cursor:'pointer'
+                cursor: 'pointer'
 
             }}
         >
@@ -149,8 +150,9 @@ export const ThreadsListItem = ({ thread, provider, active, open, WebSocket }) =
                 id={thread.id}
                 active={active}
                 open={open}
-                onClick={() => onClickThread(thread.id)} 
-            >
+                onClick={() => {
+                    if (!open) onClickThread(thread.id);
+                }}            >
                 {open && (
                     <>
                         <div
@@ -166,21 +168,21 @@ export const ThreadsListItem = ({ thread, provider, active, open, WebSocket }) =
                                     ✓ Resolve
                                 </button>
                             ) : (
-                                <div style={{display:'flex',gap:'10px',alignItems:'center'}}>
-                                <div style={{ fontSize: '0.8em', color: '#1677ffa8' }}>
-                                  Resolved at {new Date(thread.resolvedAt).toLocaleString()}
+                                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                    <div style={{ fontSize: '0.8em', color: '#1677ffa8' }}>
+                                        Resolved at {new Date(thread.resolvedAt).toLocaleString()}
+                                    </div>
+                                    <button onClick={handleUnresolveClick} style={cancelButtonStyle}>
+                                        ⟲ Unresolve
+                                    </button>
                                 </div>
-                                <button onClick={handleUnresolveClick} style={cancelButtonStyle}>
-                                  ⟲ Unresolve
-                                </button>
-                              </div>
                             )}
                             <button onClick={handleDeleteClick} style={cancelButtonStyle}>
                                 × Delete
                             </button>
                         </div>
 
-                       
+
 
                         <div style={{ marginTop: '12px' }}>
                             {comments.map((comment) => (

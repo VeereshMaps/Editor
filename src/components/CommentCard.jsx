@@ -52,7 +52,7 @@ export const CommentCard = ({
   };
 
   return (
-    <div className={commentWrapperClass.join(' ')}>
+    <div className={commentWrapperClass.join(' ')} style={{marginTop:'10px',padding:'5px'}}>
       <div className="label-group">
         <label><strong>{name}</strong></label>
         <label style={{ color: '#666', fontSize: '0.85em',marginLeft:'auto' }}>
