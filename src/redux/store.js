@@ -29,6 +29,7 @@ import updateVersionReducer from'./Slices/updateVersionSlice';
 import docxParserReducer from'./Slices/docxParserSlice';
 import tiptapTokenReducer from'./Slices/tiptapTokenSlice';
 import proofreadReducer from "./Slices/proofreadSlice";
+import suggestionReducer from "./Slices/suggestionSlice";
 
   const rootReducer = combineReducers({
         auth: authReducer,
@@ -57,6 +58,7 @@ import proofreadReducer from "./Slices/proofreadSlice";
         docxParser:docxParserReducer,
         tiptapToken:tiptapTokenReducer,
         proofread: proofreadReducer,
+        suggestion: suggestionReducer,
 });
 
 // const persistedReducer = persistReducer(persistConfig, rootReducer);

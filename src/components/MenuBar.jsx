@@ -71,19 +71,15 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
         actionType(option); // optionally trigger versioning modal
     };
 
-
+    useEffect(() => {
+        if (isEditor) {
+            setMode("Editing");
+        } else {
+            setMode("View");
+        }
+    }, [isEditor]);
 
     if (!editor) return null;
-    useEffect(() => {
-
-        console.log("AJDHHDHDH", isEditor, editionsById?.editions?.isAuthorApproved);
-
-        if (isEditor) {
-            setMode("Editing")
-        } else {
-            setMode("View")
-        }
-    }, [editionsById, roleName, editor]);
 
 
     return (
@@ -102,10 +98,10 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
                 // opacity: editor?.isEditable ? 1 : 0.5,
             }}
         >
-            {mode === 'Editing' && (
+            {(mode === 'Editing' || mode === 'Suggesting') && (
                 <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
                     {/* Upload DOCX */}
-                    {(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === "editor") &&
+                    {(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === "editor") && (mode != 'Suggesting') &&
                         (
                             <>
                                 <Tooltip title="Upload DOCX">
@@ -151,7 +147,6 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
                             </>
                         )
                     }
-
 
                     {/* Apply All Suggestions */}
                     {/* <Tooltip title="Apply All Suggestions">
@@ -371,7 +366,7 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
             </Tooltip> */}
 
                     {/* 📝 New Add Comment Button */}
-                 
+
                     {loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === "author" ? (
                         editionsById?.editions?.isEditorApproved && (
                             <Tooltip title="Approve as Author">
@@ -496,7 +491,6 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
                     ))}
                 </Menu>
             </Box>
-
         </Box>
     );
 };

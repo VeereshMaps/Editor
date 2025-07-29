@@ -13,7 +13,7 @@ import {
 } from '@mui/material'
 
 export function SuggestionTooltip({ element, editor }) {
-    const suggestion = editor.extensionStorage.aiSuggestion.getSelectedSuggestion()
+    const suggestion = editor?.extensionStorage?.aiSuggestion?.getSelectedSuggestion()
     const isOpen = Boolean(element && suggestion)
 
     const { refs, floatingStyles } = useFloating({
