@@ -13,6 +13,17 @@ export const updateEdition = createAsyncThunk(
         }
     }
 );
+export const getEditionById = createAsyncThunk(
+    "edition/getEditionById",
+    async (id , { rejectWithValue }) => {
+        try {
+            const response = await axiosInstance.get(`/api/editions/${id}`);
+            return response.data;
+        } catch (error) {
+            return rejectWithValue(error.response?.data || error.message);
+        }
+    }
+);
 
 const editionSlice = createSlice({
     name: "editionUpdate",
