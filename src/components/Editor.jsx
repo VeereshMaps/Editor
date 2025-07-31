@@ -1543,13 +1543,6 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                                 <div className="font-medium text-sm">{username}</div>
                                 <div className="text-xs text-gray-500">{moment(timestamp).format("hh:mm A MMM DD")}</div>
                             </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", }}>
-                        <div style={{ display: "flex", gap: "10px" }}>
-                            <Avatar src={avatarUrl} alt={username} sx={{ width: 32, height: 32 }} />
-                            <div className="flex flex-col justify-center">
-                                <div className="font-medium text-sm">{username}</div>
-                                <div className="text-xs text-gray-500">{moment(timestamp).format("hh:mm A MMM DD")}</div>
-                            </div>
                         </div>
                         {/* Approve / Reject Buttons */}
                         <div>
