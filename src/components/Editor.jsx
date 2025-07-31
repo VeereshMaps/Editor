@@ -150,30 +150,17 @@ const EditorComponent = ({ ydoc, provider, room }) => {
     const APP_ID = "pkry8p7m";
     const roleName = loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase();
     const user = useUser();
-    // const isAuthorOrEditor = ['author', 'editor'].includes(roleName?.trim().toLowerCase());
-    // const isApproved = editionsById?.editions?.isAuthorApproved === false;
-    // const [action, setAction] = useState(
-    //     isAuthorOrEditor && isApproved ? 'Editing' : 'View'
-    // );
-    const normalizedRole = roleName?.trim().toLowerCase();
-
-    const isEditorApproved = editionsById?.editions?.isEditorApproved;
-    const isAuthorApproved = editionsById?.editions?.isAuthorApproved;
-
-    const isAuthor = normalizedRole === 'author';
-    const isEditor = normalizedRole === 'editor';
-
     const [action, setAction] = useState(() => {
-        if (isAuthor) {
+        if (roleName === "author" && editionsById?.editions?.isAuthorApproved === false) {
             return 'Editing';
         }
-        if (isEditor) {
-            if (isEditorApproved === true) {
+        if (roleName === "editor") {
+            if (editionsById?.editions?.isEditorApproved === true) {
                 return 'View';
             }
             return 'Editing';
         }
-        if (isAuthorApproved === true) {
+        if (editionsById?.editions?.isAuthorApproved === true) {
             return 'View';
         }
         return 'View';
@@ -444,6 +431,8 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                     }));
                 }
                 updateFocusedSuggestion(editor);
+                console.log("@#$$$",editor.isEditable);
+                
             },
             onSelectionUpdate({ editor }) {
                 const { from } = editor.state.selection;
@@ -620,15 +609,24 @@ const EditorComponent = ({ ydoc, provider, room }) => {
     }, [currentUser, editor]);
 
     useEffect(() => {
-        const editorPage = document.querySelector('.editor-page');
-
-        const isApproved =
-            ((roleName === "author" || roleName === "editor") && editionsById?.editions?.isAuthorApproved);
-        console.log(roleName, editionsById?.editions?.isAuthorApproved, editionsById?.editions?.isEditorApproved, isApproved);
-
-        if (((roleName === "author" || roleName === "editor"))) {
+        if (roleName === "author" && editionsById?.editions?.isAuthorApproved === false) {
             editor && editor.setEditable(true);
+            setMode("Editing");
+        } else if (roleName === "editor") {
+            // If editor and NOT approved yet, view mode + editor enabled
+            if (editionsById?.editions?.isEditorApproved === true) {
+                setMode("View");
+                editor && editor.setEditable(false);
+            } else {
+                // Editor and approved (or any other case)
+                setMode("Editing");
+                editor && editor.setEditable(true);
+            }
+        } else if (editionsById?.editions?.isAuthorApproved === true) {
+            setMode("View");
+            editor && editor.setEditable(false);
         } else {
+            setMode("View");
             editor && editor.setEditable(false);
         }
     }, [editionsById, roleName, editor]);
@@ -950,29 +948,35 @@ const EditorComponent = ({ ydoc, provider, room }) => {
         }
     };
 
-    const setActionType = (data) => {
+    const setActionType =(data) => {
         if (data !== "Suggesting") {
             saveCurrentSuggestion(); // <- Flush current suggestion before mode change
         }
         setAction(data);
         setTooltipElement(null);
-        console.log("DATA", data);
-        switch (data) {
+        
+        switch (data.trim()) {
             case "History":
                 setVersioningModalOpen(true);
-                editor.setEditable(false);
+                editor && editor.setEditable(false);
                 break;
-            case "Editing":
-            case "Suggesting":
-                setVersioningModalOpen(false);
-                editor.setEditable(true);
-                break;
+                case "Editing":
+                    case "Suggesting":
+                        setVersioningModalOpen(false);
+                        editor && editor.setEditable(true);
+                        break;
+                        case "View":
+                            editor && editor.setEditable(false);
+                            setVersioningModalOpen(false);
+                            break;
             default:
                 setVersioningModalOpen(false);
-                editor.setEditable(false);
-        }
-    };
-
+                editor && editor.setEditable(false);
+            }
+            console.log("DATA", data," Action ",action);
+        };
+        
+        
     useEffect(() => {
         if (!editor || editor.state.selection.empty) {
             setTooltipPosition(null);
@@ -1047,7 +1051,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
 
         // Traverse upward or inward to find suggestion element
         let suggestionEl = domNode?.closest?.('.suggestion') || domNode?.querySelector?.('.suggestion');
-        
+
         if (!suggestionEl) {
             // ❗ No suggestion element — clear focused and tempSuggestion
             editor.view.dom.querySelectorAll('.suggestion.focused').forEach(el =>
@@ -1543,13 +1547,6 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                                 <div className="font-medium text-sm">{username}</div>
                                 <div className="text-xs text-gray-500">{moment(timestamp).format("hh:mm A MMM DD")}</div>
                             </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", }}>
-                        <div style={{ display: "flex", gap: "10px" }}>
-                            <Avatar src={avatarUrl} alt={username} sx={{ width: 32, height: 32 }} />
-                            <div className="flex flex-col justify-center">
-                                <div className="font-medium text-sm">{username}</div>
-                                <div className="text-xs text-gray-500">{moment(timestamp).format("hh:mm A MMM DD")}</div>
-                            </div>
                         </div>
                         {/* Approve / Reject Buttons */}
                         <div>
@@ -1581,10 +1578,6 @@ const EditorComponent = ({ ydoc, provider, room }) => {
             </div>
         );
     };
-
-
-
-
     return (
         <>
             <RulesModal
