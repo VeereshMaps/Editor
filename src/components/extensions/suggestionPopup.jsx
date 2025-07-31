@@ -67,7 +67,7 @@ const SuggestionPopup = ({
         </div>
         <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
           <button
-            onClick={onApprove}
+            onClick={(event)=>onApprove(event)}
             style={{
               padding: '4px 8px',
               fontSize: 13,

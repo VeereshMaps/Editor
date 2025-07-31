@@ -119,7 +119,7 @@ const suggestionSlice = createSlice({
 
       // DELETE
       .addCase(deleteSuggestion.fulfilled, (state, action) => {
-        state.suggestions = state.suggestions.filter(s => s._id !== action.meta.arg);
+        state.suggestions = state.suggestions.filter(s => s.suggestionId !== action.meta.arg);
       });
   },
 });

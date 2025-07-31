@@ -76,13 +76,12 @@ import Avatar from '@mui/material/Avatar';
 
 
 //API's for suggestions
-import { createSuggestion, fetchSuggestions } from '../redux/Slices/suggestionSlice'
+import { createSuggestion, deleteSuggestion, fetchSuggestions } from '../redux/Slices/suggestionSlice'
 
 //track-changes or suggestion imports
 import { Extension, Editor, Mark } from '@tiptap/core';
 import { Plugin, PluginKey, TextSelection } from 'prosemirror-state';
 import { Fragment } from 'prosemirror-model';
-import SuggestionPopup from './extensions/suggestionPopup';
 import moment from 'moment-timezone';
 
 const colors = [
@@ -188,6 +187,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
     let tempDeletion = null;
     let currentSuggestionId = null;
     const prevLineTopRef = useRef(null);
+    const editorWrapperRef = useRef(null);
 
 
     const showVersioningModal = useCallback(() => {
@@ -442,12 +442,12 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                 updateFocusedSuggestion(editor);
             },
             onBlur() {
+                console.log("-------------")
                 if (tempSuggestion) {
                     setActiveSuggestion({ ...tempSuggestion }); // Show popup
-                    tempSuggestion = null; // Reset after activation
                 }
 
-            }
+            },
         });
         setEditor(newEditor);
 
@@ -829,6 +829,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
     }, [ydoc]);
 
     useEffect(() => {
+        console.log("activeSuggestion", activeSuggestion);
         if (!activeSuggestion) return;
         const { user, domNode, text, timestamp, suggestionId, view, from } = activeSuggestion;
 
@@ -856,6 +857,25 @@ const EditorComponent = ({ ydoc, provider, room }) => {
             onReject: () => rejectSuggestionAt(editorView, activeDeleteSelection.from),
         });
     }, [activeDeleteSelection]);
+
+    //removing suggestion popups 
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            const proseMirrorDom = document.querySelector('.ProseMirror');
+
+            if (proseMirrorDom && proseMirrorDom.contains(event.target)) {
+                saveCurrentSuggestion(); // your backend call here
+                document.querySelectorAll('.suggestion-popup').forEach(el => el.remove());
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+
 
     const handleCommitDescriptionChange = event => {
         setCommitDescription(event.target.value)
@@ -1003,7 +1023,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
 
         // Traverse upward or inward to find suggestion element
         let suggestionEl = domNode?.closest?.('.suggestion') || domNode?.querySelector?.('.suggestion');
-
+        
         if (!suggestionEl) {
             // ❗ No suggestion element — clear focused and tempSuggestion
             editor.view.dom.querySelectorAll('.suggestion.focused').forEach(el =>
@@ -1054,9 +1074,31 @@ const EditorComponent = ({ ydoc, provider, room }) => {
 
         if (hasChange) {
             dispatch(tr);
-            setActiveSuggestion(null); // Remove the popup
         }
     };
+
+    const onCardApprove = (event) => {
+        console.log("event", event);
+    }
+    const onCardReject = (event) => {
+        const mainParent = event.target.closest('.sidebar-card');
+        const classNames = mainParent.classList; // returns the full class string
+        const suggestionId = classNames[0];
+        const matchingElement = document.querySelector(`[data-suggestion-id="${suggestionId}"]`);
+        console.log("matchingElement", matchingElement);
+
+        if (matchingElement) {
+            matchingElement.remove(); // This will delete it from the DOM
+
+            try {
+                dispatch(deleteSuggestion(suggestionId));
+                dispatch(fetchSuggestions(editionId));
+            } catch (error) {
+                console.log("error in deleting suggestion");
+
+            }
+        }
+    }
 
 
 
@@ -1100,6 +1142,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
 
 
     function showSuggestionPopup({ target, username, timestamp, text = '', isDeletion, onApprove, onReject }) {
+        document.querySelectorAll('.suggestion-popup').forEach(popup => popup.remove());
         const container = document.createElement('div');
         container.className = 'suggestion-popup';
         container.style.position = 'absolute';
@@ -1174,6 +1217,8 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                     if (existingSuggestionMark && (!tempSuggestion || tempSuggestion.suggestionId !== existingSuggestionMark.attrs.suggestionId)) {
                         const tr = state.tr.insertText(text, from, to);
                         dispatch(tr);
+                        console.log("not own user");
+
                         return true;
                     }
 
@@ -1208,6 +1253,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                             domNode,
                             view
                         };
+                        console.log("asjhHJAS");
 
                         currentSuggestionId = suggestionId; // 🟢 Track the suggestion id
                         setActiveSuggestion({ ...tempSuggestion }); // 🟢 Show popup once
@@ -1224,8 +1270,9 @@ const EditorComponent = ({ ydoc, provider, room }) => {
 
                     tempSuggestion.to = tempSuggestion.from + newText.length;
                     tempSuggestion.text = newText;
+                    console.log("continous");
 
-                    // ❌ DO NOT call setActiveSuggestion() again
+                    setActiveSuggestion({ ...tempSuggestion });
                     return true;
                 },
 
@@ -1416,25 +1463,12 @@ const EditorComponent = ({ ydoc, provider, room }) => {
 
                     return false;
                 },
-                handleClick(view, pos, event) {
-                    // Save current suggestion if clicking elsewhere
-                    if (
-                        getMode() === "Suggesting" &&
-                        currentSuggestionId &&
-                        !event.target.closest(".suggestion-popup")
-                    ) {
-                        // saveSuggestionToBackend(tempSuggestion); // Send to backend
-                        setActiveSuggestion(null); // Hide popup
-                        tempSuggestion = null;
-                        currentSuggestionId = null;
-                    }
-                    return false;
-                },
             },
         });
     };
 
     function saveCurrentSuggestion() {
+        console.log("activeSuggestion", activeSuggestion);
         if (!activeSuggestion || !activeSuggestion?.text?.trim()) return;
 
         const { suggestionId, from, to, text, user } = activeSuggestion;
@@ -1451,12 +1485,13 @@ const EditorComponent = ({ ydoc, provider, room }) => {
         try {
             dispatch(createSuggestion(payload)); // redux-thunk
             // document.querySelector(".suggestion-popup")?.remove();
+            tempSuggestion = null; // ✅ Clear only after save
+            setActiveSuggestion(null); // Optionally reset React state
+
 
         } catch (error) {
             console.log("Create suggestion", error)
         }
-        setActiveSuggestion(null);
-
     }
 
     const SuggestionCard = ({
@@ -1464,25 +1499,26 @@ const EditorComponent = ({ ydoc, provider, room }) => {
         username,
         timestamp,
         suggestionText,
+        suggestionId,
         isActive,
         onApprove,
         onReject,
     }) => {
         return (
             <div
-                className={`sidebar-card rounded-md shadow-sm w-full max-w-md transition-all duration-200 ${isActive ? 'highlighted' : ''
+                className={`${suggestionId} sidebar-card rounded-md shadow-sm w-full max-w-md transition-all duration-200 ${isActive ? 'highlighted' : ''
                     }`}
             >
                 {/* Header Row */}
                 <div className="flex items-start justify-between gap-3">
                     {/* Avatar + Info */}
-                    <div style={{ display: "flex", justifyContent:"space-between",}}>
-                        <div style={{display:"flex",  gap: "10px" }}>
-                        <Avatar src={avatarUrl} alt={username} sx={{ width: 32, height: 32 }} />
-                        <div className="flex flex-col justify-center">
-                            <div className="font-medium text-sm">{username}</div>
-                            <div className="text-xs text-gray-500">{moment(timestamp).format("hh:mm A MMM DD")}</div>
-                        </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", }}>
+                        <div style={{ display: "flex", gap: "10px" }}>
+                            <Avatar src={avatarUrl} alt={username} sx={{ width: 32, height: 32 }} />
+                            <div className="flex flex-col justify-center">
+                                <div className="font-medium text-sm">{username}</div>
+                                <div className="text-xs text-gray-500">{moment(timestamp).format("hh:mm A MMM DD")}</div>
+                            </div>
                         </div>
                         {/* Approve / Reject Buttons */}
                         <div>
@@ -1574,7 +1610,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                                 <div className="col-group">
                                     <div className="main" style={{ width: sideBarMenu ? "70%" : "100%" }}>
                                         <div className="editor-container">
-                                            <div className="editor-page" data-viewmode={showUnresolved ? 'open' : 'resolved'}>
+                                            <div className="editor-page" ref={editorWrapperRef} data-viewmode={showUnresolved ? 'open' : 'resolved'}>
                                                 <EditorContent editor={editor} className={action + ' mode'} />
                                                 <div className="collab-status-group"
                                                     data-state={status === 'connected' ? 'online' : 'offline'}>
@@ -1754,16 +1790,17 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                                                 )}
                                                 {activeTab === "Suggesting" && (
                                                     <div style={{ display: "flex", flexDirection: "column", rowGap: 10 }}>
-                                                        {trackChangeDetails.status === "succeeded" && trackChangeDetails.suggestions.map((sugg, index) => (
+                                                        {trackChangeDetails.status === "succeeded" && trackChangeDetails.suggestions.length > 0 && trackChangeDetails.suggestions.map((sugg, index) => (
                                                             <SuggestionCard
                                                                 key={index}
                                                                 avatarUrl="https://example.com/avatar.jpg"
-                                                                username={sugg.userId.email}
-                                                                timestamp={sugg.createdAt}
+                                                                username={sugg?.userId?.email}
+                                                                timestamp={sugg?.createdAt}
                                                                 suggestionText={sugg.text}
-                                                                isActive={activeSuggestion?.suggestionId === sugg.suggestionId}
-                                                                onApprove={() => console.log("Approved")}
-                                                                onReject={() => console.log("Rejected")}
+                                                                suggestionId={sugg?.suggestionId}
+                                                                isActive={activeSuggestion?.suggestionId === sugg?.suggestionId}
+                                                                onApprove={(e) => onCardApprove(e)}
+                                                                onReject={(e) => onCardReject(e)}
                                                             />
                                                         ))}
                                                     </div>
