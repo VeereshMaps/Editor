@@ -150,11 +150,35 @@ const EditorComponent = ({ ydoc, provider, room }) => {
     const APP_ID = "pkry8p7m";
     const roleName = loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase();
     const user = useUser();
-    const isAuthorOrEditor = ['author', 'editor'].includes(roleName?.trim().toLowerCase());
-    const isApproved = editionsById?.editions?.isAuthorApproved === false;
-    const [action, setAction] = useState(
-        isAuthorOrEditor && isApproved ? 'Editing' : 'View'
-    );
+    // const isAuthorOrEditor = ['author', 'editor'].includes(roleName?.trim().toLowerCase());
+    // const isApproved = editionsById?.editions?.isAuthorApproved === false;
+    // const [action, setAction] = useState(
+    //     isAuthorOrEditor && isApproved ? 'Editing' : 'View'
+    // );
+    const normalizedRole = roleName?.trim().toLowerCase();
+
+    const isEditorApproved = editionsById?.editions?.isEditorApproved;
+    const isAuthorApproved = editionsById?.editions?.isAuthorApproved;
+
+    const isAuthor = normalizedRole === 'author';
+    const isEditor = normalizedRole === 'editor';
+
+    const [action, setAction] = useState(() => {
+        if (isAuthor) {
+            return 'Editing';
+        }
+        if (isEditor) {
+            if (isEditorApproved === true) {
+                return 'View';
+            }
+            return 'Editing';
+        }
+        if (isAuthorApproved === true) {
+            return 'View';
+        }
+        return 'View';
+    });
+
     const [editionId] = useState(room);
     const webIORef = useRef(null);
     const [getThreds, setThreads] = useState([]);
@@ -1519,6 +1543,13 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                                 <div className="font-medium text-sm">{username}</div>
                                 <div className="text-xs text-gray-500">{moment(timestamp).format("hh:mm A MMM DD")}</div>
                             </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", }}>
+                        <div style={{ display: "flex", gap: "10px" }}>
+                            <Avatar src={avatarUrl} alt={username} sx={{ width: 32, height: 32 }} />
+                            <div className="flex flex-col justify-center">
+                                <div className="font-medium text-sm">{username}</div>
+                                <div className="text-xs text-gray-500">{moment(timestamp).format("hh:mm A MMM DD")}</div>
+                            </div>
                         </div>
                         {/* Approve / Reject Buttons */}
                         <div>
@@ -1580,6 +1611,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                     handleApprovalClick={handleApprovalClick}
                     actionType={setActionType}
                     sideBarMenu={setSideBarMenu}
+                    suggestionLength={trackChangeDetails.suggestions.length}
                 />
                 {action === "History" ? (
                     <VersioningModal

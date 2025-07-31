@@ -29,7 +29,7 @@ import { CheckCircleOutline, CheckCircleOutlineOutlined, DeleteOutline, UploadFi
 import { useNavigate } from 'react-router';
 import { useSelector } from 'react-redux';
 
-export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportClick, handleImportFilePick, importRef, aiLoading, loadAiSuggestions, editionsById, handleApprovalClick, actionType, sideBarMenu }) => {
+export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportClick, handleImportFilePick, importRef, aiLoading, loadAiSuggestions, editionsById, handleApprovalClick, actionType, sideBarMenu, suggestionLength }) => {
     const navigate = useNavigate();
     const loginDetails = useSelector((state) => state.auth);
     const [anchorEl, setAnchorEl] = useState(null);
@@ -37,7 +37,8 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
     const label = { inputProps: { 'aria-label': 'Menu' } };
     const [toggleAction, setToggleAction] = useState(false);
     const roleName = loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase();
-    const isEditor = ((roleName === "author" || roleName === "editor"));
+    // const isEditor = ((roleName === "author" || roleName === "editor"));
+    const [isEditor,setIsEditor]=useState(false);
     const modeOptions = [
         {
             label: 'Editing',
@@ -56,6 +57,8 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
             icon: <VisibilityIcon fontSize="small" />,
         },
     ];
+    // console.log("EEEEEEEEsuggestionLength "+suggestionLength);
+
 
     const handleMenuClick = (event) => {
         setAnchorEl(event.currentTarget);
@@ -71,13 +74,51 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
         actionType(option); // optionally trigger versioning modal
     };
 
+    // useEffect(() => {
+    //     console.log("fnfnfn_",editionsById?.editions);
+        
+    //     if ((roleName === "author" || roleName === "editor")) {
+    //         alert("fnfjn")
+    //         setIsEditor(false)
+    //         setMode("Editing");
+    //     } else if (roleName === "editor" && editionsById?.editions?.isEditorApproved == false) {
+    //         setMode("View");
+    //         setIsEditor(true)
+    //     }
+    //     else if (editionsById?.editions?.isAuthorApproved==true) {
+    //         setMode("View");
+    //         setIsEditor(true)
+    //     }
+    //     else {
+    //         setMode("View");
+    //         setIsEditor(true)
+    //     }
+    // }, [isEditor]);
     useEffect(() => {
-        if (isEditor) {
-            setMode("Editing");
-        } else {
+        console.log("fnfnfn_", editionsById?.editions);
+      
+        if (roleName === "author") {
+          setIsEditor(true);
+          setMode("Editing");
+        } else if (roleName === "editor") {
+          // If editor and NOT approved yet, view mode + editor enabled
+          if (editionsById?.editions?.isEditorApproved === true) {
             setMode("View");
+            setIsEditor(false);
+          } else {
+            // Editor and approved (or any other case)
+            setMode("Editing");
+            setIsEditor(true);
+          }
+        } else if (editionsById?.editions?.isAuthorApproved === true) {
+          setMode("View");
+          setIsEditor(false);
+        } else {
+          setMode("View");
+          setIsEditor(false);
         }
-    }, [isEditor]);
+      }, [roleName, editionsById]);
+      
 
     if (!editor) return null;
 
@@ -366,35 +407,41 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
             </Tooltip> */}
 
                     {/* 📝 New Add Comment Button */}
-
                     {loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === "author" ? (
-                        editionsById?.editions?.isEditorApproved && (
+                        editionsById?.editions?.isEditorApproved && suggestionLength === 0 ? (
                             <Tooltip title="Approve as Author">
                                 <div>
                                     <IconButton
                                         onClick={handleApprovalClick}
                                         color={editionsById?.editions?.isAuthorApproved ? "success" : "default"}
-                                        sx={editionsById?.editions?.isAuthorApproved ? { pointerEvents: "none" } : {}}
+                                        sx={
+                                            editionsById?.editions?.isAuthorApproved
+                                                ? { pointerEvents: "none" }
+                                                : {}
+                                        }
                                     >
                                         <CheckCircleIcon />
                                     </IconButton>
                                 </div>
                             </Tooltip>
-                        )
-                    ) : (
+                        ) : null
+                    ) : suggestionLength === 0 ? (
                         <Tooltip title="Approve as Editor">
                             <div>
                                 <IconButton
                                     onClick={handleApprovalClick}
                                     color={editionsById?.editions?.isEditorApproved ? "success" : "default"}
-                                    sx={editionsById?.editions?.isEditorApproved ? { pointerEvents: "none" } : {}}
+                                    sx={
+                                        editionsById?.editions?.isEditorApproved
+                                            ? { pointerEvents: "none" }
+                                            : {}
+                                    }
                                 >
                                     <CheckCircleIcon />
                                 </IconButton>
                             </div>
                         </Tooltip>
-                    )}
-
+                    ) : null}
 
                     {/* View as Book */}
                     {/* {(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === "editor") &&

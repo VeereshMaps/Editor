@@ -19,6 +19,7 @@ import Notification from "../../components/Notification";
 import CollabEditor from "components/CollabEditor";
 import { fetchContentAIToken, fetchTiptapToken } from "redux/Slices/tiptapTokenSlice";
 import TiptapEditor from "components/TiptabEditor";
+import ProofReaderEditorProvider from "components/ProofReader";
 
 const EditionDetails = () => {
     const dispatch = useDispatch();
@@ -42,7 +43,25 @@ const EditionDetails = () => {
     const [tabData, setTabData] = useState({});
     const [formErrors, setFormErrors] = useState({});
     const [subTabArray, setSubTabArray] = useState([]);
-    const fixedTabs = ["Inputs", "editor", "coverdesign", "TypeSetting",];
+    
+    const editionsById = useSelector((state) => state.editionsById);
+    
+    const role = loginDetails?.user?.role;
+    
+    const categoryRoleMap = {
+        editorial: "editor",
+        coverdesign: "designer",
+        TypeSetting: "proofReader",
+    };
+    
+    // , "coverdesign", "TypeSetting"
+    const isAdminOrPM = role === "Admin" || role === "Project Manager" || role === "author";
+    const isProofReader = role === "proofReader" || role === "editor";
+    const fixedTabs = [
+        "Inputs",
+        "editor",
+        ...((editionsById?.editions?.isAuthorApproved === true &&isProofReader) ? ["Proof Read"] : []),
+    ];
     const mainTabs = fixedTabs; // Ensure it’s always an array
     const selectedCategory = mainTabs[mainTab] || ""; // Avoid undefined index errors
     const pdfLinks = selectedCategory ? tabData[selectedCategory] : []; // Ensure it's always an array
@@ -62,16 +81,8 @@ const EditionDetails = () => {
         createdBy: loginDetails?.user?._id,
     });
 
-    const role = loginDetails?.user?.role;
 
-    const categoryRoleMap = {
-        editorial: "editor",
-        coverdesign: "designer",
-        TypeSetting: "proofReader",
-    };
-
-    const isAdminOrPM = role === "Admin" || role === "Project Manager" || role === "author";
-
+   
     const canShowButton =
         (
             isAdminOrPM ||
@@ -445,10 +456,10 @@ const EditionDetails = () => {
 
             <Box sx={{ display: "flex", flexDirection: "column", flex: 1 }}>
                 {/* Main Tabs */}
-                <Box style={{display:'flex',flexDirection:'row',alignItems:'center'}}>
+                <Box style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
                     <Typography variant="h6" >  Edition : </Typography>
-                    <Typography variant="h5" style={{ fontWeight:'bold' }}> {editionDetailsById && editionDetailsById?.editions?.title || 'NA'}</Typography>
-                   
+                    <Typography variant="h5" style={{ fontWeight: 'bold' }}> {editionDetailsById && editionDetailsById?.editions?.title || 'NA'}</Typography>
+
                 </Box>
                 <Tabs value={mainTab} onChange={handleMainTabChange} sx={{ borderBottom: 1, borderColor: "divider" }}>
                     {mainTabs.map((tab, index) => (
@@ -524,20 +535,24 @@ const EditionDetails = () => {
                         {selectedCategory === "editor" ? (
                             // <CollabEditor />
                             <TiptapEditor />
-                        ) : (
+                        ) :
+                            selectedCategory === "Proof Read" ? (
+                                <ProofReaderEditorProvider />
+                            ) :
+                                (
 
-                            <Box
-                                sx={{
-                                    flex: 1,
-                                    p: 1,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    flexDirection: "column",
-                                    minHeight: "500px"
-                                }}
-                            >
-                                {/* {tabData[selectedCategory]?.[subTab] &&
+                                    <Box
+                                        sx={{
+                                            flex: 1,
+                                            p: 1,
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            flexDirection: "column",
+                                            minHeight: "500px"
+                                        }}
+                                    >
+                                        {/* {tabData[selectedCategory]?.[subTab] &&
                                     selectedCategory !== "Inputs" &&
                                     canShowButton &&
                                     (!approvedCategories?.TypeSetting ||
@@ -554,40 +569,40 @@ const EditionDetails = () => {
                                             Approve
                                         </Button>
                                     )} */}
-                                {tabData[selectedCategory]?.[subTab] ? (() => {
-                                    const fileObj = tabData[selectedCategory][subTab];
-                                    const fileUrl = selectedCategory === "Inputs" ? fileObj.filePath : fileObj.fileStorageUrl;
-                                    const cleanUrl = fileUrl.split("?")[0];
-                                    const extension = cleanUrl.substring(cleanUrl.lastIndexOf(".") + 1).toLowerCase();
+                                        {tabData[selectedCategory]?.[subTab] ? (() => {
+                                            const fileObj = tabData[selectedCategory][subTab];
+                                            const fileUrl = selectedCategory === "Inputs" ? fileObj.filePath : fileObj.fileStorageUrl;
+                                            const cleanUrl = fileUrl.split("?")[0];
+                                            const extension = cleanUrl.substring(cleanUrl.lastIndexOf(".") + 1).toLowerCase();
 
-                                    const supportedExtensions = ["pdf", "jpg", "jpeg", "png", "gif", "webp", "svg"];
+                                            const supportedExtensions = ["pdf", "jpg", "jpeg", "png", "gif", "webp", "svg"];
 
-                                    if (!supportedExtensions.includes(extension)) {
-                                        return (
+                                            if (!supportedExtensions.includes(extension)) {
+                                                return (
+                                                    <Typography variant="h6" color="textSecondary">
+                                                        This document type ({extension}) is not supported for preview.
+                                                    </Typography>
+                                                );
+                                            }
+
+                                            return (
+                                                <iframe
+                                                    src={fileUrl}
+                                                    width="100%"
+                                                    height="100%"
+                                                    style={{ border: "none", minHeight: "500px" }}
+                                                    title={`File ${subTab + 1}`}
+                                                    onError={(e) => console.error("Failed to load file:", e)}
+                                                ></iframe>
+                                            );
+                                        })() : (
                                             <Typography variant="h6" color="textSecondary">
-                                                This document type ({extension}) is not supported for preview.
+                                                No data found
                                             </Typography>
-                                        );
-                                    }
+                                        )}
 
-                                    return (
-                                        <iframe
-                                            src={fileUrl}
-                                            width="100%"
-                                            height="100%"
-                                            style={{ border: "none", minHeight: "500px" }}
-                                            title={`File ${subTab + 1}`}
-                                            onError={(e) => console.error("Failed to load file:", e)}
-                                        ></iframe>
-                                    );
-                                })() : (
-                                    <Typography variant="h6" color="textSecondary">
-                                        No data found
-                                    </Typography>
+                                    </Box>
                                 )}
-
-                            </Box>
-                        )}
                     </Box>
                 </Box>
             </Box>
