@@ -163,9 +163,13 @@ export default function CollabEditor({ ydoc, provider, room }) {
 
     const handleMoveToGold = async () => {
         try {
-            const updatedEdition = { status: "Gold", editorContent: editor?.getJSON() };
-            await dispatch(updateEdition({ id: editionId, updatedData: updatedEdition }));
-            navigate(`/projects`);
+            const updatedEdition = { status: "Gold", editorContent: editor?.getJSON().toString() };
+            const response=await dispatch(updateEdition({ id: editionId, updatedData: updatedEdition })).unwrap();
+            console.log("!@##response ",response);
+            
+            if(response){
+                navigate(`/projects`);
+            }
         } catch (error) {
             console.error("Error updating edition status to Gold:", error);
         }

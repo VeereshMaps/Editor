@@ -97,7 +97,7 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
     useEffect(() => {
         console.log("fnfnfn_", editionsById?.editions);
       
-        if (roleName === "author") {
+        if (roleName === "author" && editionsById?.editions?.isAuthorApproved === false) {
           setIsEditor(true);
           setMode("Editing");
         } else if (roleName === "editor") {
