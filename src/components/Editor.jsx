@@ -147,7 +147,8 @@ const EditorComponent = ({ ydoc, provider, room }) => {
     const [tooltipElement, setTooltipElement] = useState(null);
     const [editor, setEditor] = useState(null);
     const importRef = useRef(null);
-    const APP_ID = "pkry8p7m";
+    const APP_ID = "8mzjy21k";
+
     const roleName = loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase();
     const user = useUser();
     const [action, setAction] = useState(() => {
@@ -421,18 +422,31 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                     content: updatedContent,
                     type: "doc"
                 }
-                if (webIORef.current && webIORef.current.readyState === 1) {
-                    webIORef.current.send(JSON.stringify({
-                        type: "update-document",
-                        userId: user._id,
-                        username: user.name,
-                        editionId: editionId,
-                        content: payload,
-                    }));
+                if (mode == false) {
+                    if (webIORef.current && webIORef.current.readyState === 1) {
+                        webIORef.current.send(JSON.stringify({
+                            type: "create-document", // or "update-document"
+                            userId: user._id,
+                            username: user.name,
+                            editionId:editionId,
+                            content: payload,
+                        }));
+                    }
+                } else {
+                    if (webIORef.current && webIORef.current.readyState === 1) {
+                        webIORef.current.send(JSON.stringify({
+                            type: "update-document",
+                            userId: user._id,
+                            username: user.name,
+                            editionId: editionId,
+                            content: payload,
+                        }));
+                    }
                 }
+
                 updateFocusedSuggestion(editor);
-                console.log("@#$$$",editor.isEditable);
-                
+                console.log("@#$$$ isEditable", editor.isEditable, " Mode ", action);
+
             },
             onSelectionUpdate({ editor }) {
                 const { from } = editor.state.selection;
@@ -948,35 +962,35 @@ const EditorComponent = ({ ydoc, provider, room }) => {
         }
     };
 
-    const setActionType =(data) => {
+    const setActionType = (data) => {
         if (data !== "Suggesting") {
             saveCurrentSuggestion(); // <- Flush current suggestion before mode change
         }
         setAction(data);
         setTooltipElement(null);
-        
+
         switch (data.trim()) {
             case "History":
                 setVersioningModalOpen(true);
                 editor && editor.setEditable(false);
                 break;
-                case "Editing":
-                    case "Suggesting":
-                        setVersioningModalOpen(false);
-                        editor && editor.setEditable(true);
-                        break;
-                        case "View":
-                            editor && editor.setEditable(false);
-                            setVersioningModalOpen(false);
-                            break;
+            case "Editing":
+            case "Suggesting":
+                setVersioningModalOpen(false);
+                editor && editor.setEditable(true);
+                break;
+            case "View":
+                editor && editor.setEditable(false);
+                setVersioningModalOpen(false);
+                break;
             default:
                 setVersioningModalOpen(false);
                 editor && editor.setEditable(false);
-            }
-            console.log("DATA", data," Action ",action);
-        };
-        
-        
+        }
+        console.log("DATA", data, " Action ", action);
+    };
+
+
     useEffect(() => {
         if (!editor || editor.state.selection.empty) {
             setTooltipPosition(null);
@@ -1799,7 +1813,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                                                         </div>
 
                                                         {/* <hr /> */}
-                                                        <Box display="flex" justifyContent="center">
+                                                        {/* <Box display="flex" justifyContent="center">
                                                             <Button
                                                                 style={{ cursor: 'pointer' }}
                                                                 variant="outlined"
@@ -1809,7 +1823,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                                                             >
                                                                 Show history
                                                             </Button>
-                                                        </Box>
+                                                        </Box> */}
 
                                                     </div>
                                                 )}
