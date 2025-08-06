@@ -1112,19 +1112,24 @@ body {
     margin-top: 8px;
 }
 
-/* suggestion or track changes css start */
-/* Show border only when the suggestion is focused/selected */
-.suggestion-own.focused,
-.suggestion-other.focused {
-    border: 1px solid currentColor;
-    border-radius: 2px;
-    background-color: #f5faff;
+.no-suggestions-message {
+  padding: 1rem;
+  text-align: center;
+  color: #666;
+  font-style: italic;
 }
 
-/* Default suggestion has no border */
-.suggestion {
-    border: none;
-    transition: all 0.2s ease;
+
+/* suggestion or track changes css start */
+/* Show border only when the suggestion is focused/selected */
+.suggestion-own {
+  border: 1px solid #008000 !important;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+.focused {
+  outline: 2px solid #008000;
 }
 
 /* suggestion or track changes css end */
@@ -1138,9 +1143,16 @@ body {
 }
 
 .sidebar-card.highlighted {
-    background-color: #eef6ff;
-    border-left-color: #007bff;
+  background-color: #fff;
+  border-left: 6px solid #007bff; /* Make border more prominent */
+  padding-left: 12px; /* Optional: spacing after border */
+  max-width: 100%; /* Or a fixed width like 400px if needed */
+  width: auto;
+  box-shadow: 0 0 8px rgba(0, 123, 255, 0.2); /* Optional: subtle glow */
+  transition: all 0.2s ease-in-out;
 }
+
+
 
 
 /* suggestion or track changes sidebar card end */

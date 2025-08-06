@@ -10,7 +10,7 @@ import { MenuBar } from "./MenuBar";
 import { RulesModal } from "./RulesModal";
 import { SuggestionTooltip } from "./SuggestionTooltip";
 import { initialRules } from "../constants/initial-rules";
-import { Decoration } from "@tiptap/pm/view";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
 
 import StarterKit from "@tiptap/starter-kit";
 import Underline from '@tiptap/extension-underline'
@@ -76,21 +76,13 @@ import Avatar from '@mui/material/Avatar';
 
 
 //API's for suggestions
-import { createSuggestion, deleteSuggestion, fetchSuggestions } from '../redux/Slices/suggestionSlice'
+import { createSuggestion, deleteSuggestion, fetchSuggestions, updateSuggestion } from '../redux/Slices/suggestionSlice'
 
 //track-changes or suggestion imports
 import { Extension, Editor, Mark } from '@tiptap/core';
 import { Plugin, PluginKey, TextSelection } from 'prosemirror-state';
 import { Fragment } from 'prosemirror-model';
 import moment from 'moment-timezone';
-
-const colors = [
-    '#958DF1', '#F98181', '#FBBC88', '#FAF594', '#70CFF8',
-    '#94FADB', '#B9F18D', '#C3E2C2', '#EAECCC', '#AFC8AD',
-    '#EEC759', '#9BB8CD', '#FF90BC', '#FFC0D9', '#DC8686',
-    '#7ED7C1', '#F3EEEA', '#89B9AD', '#D0BFFF', '#FFF8C9',
-    '#CBFFA9', '#9BABB8', '#E3F4F4',
-];
 
 const defaultContent = `
     <p>Hi Welcome To Document Editor</p>
@@ -117,9 +109,6 @@ const CustomParagraph = Paragraph.extend({
     },
 });
 
-const getRandomElement = list => list[Math.floor(Math.random() * list.length)];
-const getRandomColor = () => getRandomElement(colors);
-
 
 const getInitialUser = () => {
     const storedUser = JSON.parse(localStorage.getItem('user')) || {};
@@ -127,7 +116,7 @@ const getInitialUser = () => {
     return {
         name: userName || 'Anonymous',
         id: storedUser._id || null,
-        color: getRandomColor(),
+        color: storedUser.color,
     };
 };
 
@@ -189,22 +178,16 @@ const EditorComponent = ({ ydoc, provider, room }) => {
     const editorModeRef = useRef(action);
     const currentUserRef = useRef(currentUser);
     const [activeSuggestion, setActiveSuggestion] = useState(null);
-    const [activeDeleteSelection, setActiveDeleteSelection] = useState(null);
-    let deletionBuffer = {
-        from: null,
-        to: null,
-        text: '',
-    };
+    const [activeSuggestionId, setActiveSuggestionId] = useState(null);
+    const [suggestionPopupVisible, setSuggestionPopupVisible] = useState(false);
+    const [highlightedSuggestionId, setHighlightedSuggestionId] = useState(null);
+    const popupRef = useRef(null);
+    const [popupCoords, setPopupCoords] = useState({ top: 0, left: 0 });
     let tempSuggestion = null;
-    let tempDeletion = null;
+    let lastCursorPos = null;
     let currentSuggestionId = null;
     const prevLineTopRef = useRef(null);
     const editorWrapperRef = useRef(null);
-
-
-    const showVersioningModal = useCallback(() => {
-        setVersioningModalOpen(true)
-    }, []);
 
     const SuggestionDeletionMark = Mark.create({
         name: 'suggestion-deletion',
@@ -316,6 +299,10 @@ const EditorComponent = ({ ydoc, provider, room }) => {
     });
 
 
+    const showVersioningModal = useCallback(() => {
+        setVersioningModalOpen(true)
+    }, []);
+
     //Main Editor Initialization
     useEffect(() => {
         if (!action) return;
@@ -403,7 +390,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                     getMode: () => editorModeRef.current,
                     getUser: () => currentUserRef.current,
                 }),
-
+                SuggestionFinalizer,
             ],
             onCreate: ({ editor: currentEditor }) => {
                 provider.on('synced', () => {
@@ -428,7 +415,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                             type: "create-document", // or "update-document"
                             userId: user._id,
                             username: user.name,
-                            editionId:editionId,
+                            editionId: editionId,
                             content: payload,
                         }));
                     }
@@ -443,9 +430,6 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                         }));
                     }
                 }
-
-                updateFocusedSuggestion(editor);
-                console.log("@#$$$ isEditable", editor.isEditable, " Mode ", action);
 
             },
             onSelectionUpdate({ editor }) {
@@ -466,14 +450,6 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                 } else {
                     setShowInputBox(false);
                 }
-                updateFocusedSuggestion(editor);
-            },
-            onBlur() {
-                console.log("-------------")
-                if (tempSuggestion) {
-                    setActiveSuggestion({ ...tempSuggestion }); // Show popup
-                }
-
             },
         });
         setEditor(newEditor);
@@ -482,121 +458,6 @@ const EditorComponent = ({ ydoc, provider, room }) => {
         return () => newEditor.destroy(); // cleanup on action change
     }, [action]);
 
-    // const editor = useEditor({
-    //     extensions: [
-    //         StarterKit.configure({ history: false, paragraph: false }),
-    //         CustomParagraph,
-    //         Import.configure({
-    //             appId: APP_ID,
-    //             token: documentToken,
-    //             endpoint: "https://api.tiptap.dev/v1/convert",
-    //             experimentalDocxImport: true,
-    //         }),
-    //         CollaborationCursor.configure({ provider }),
-    //         AiSuggestion.configure({
-    //             rules,
-    //             appId: APP_ID,
-    //             token: contentAIToken,
-    //             getCustomSuggestionDecoration({ suggestion, isSelected, getDefaultDecorations }) {
-    //                 const decorations = getDefaultDecorations();
-    //                 if (isSelected && !suggestion.isRejected) {
-    //                     decorations.push(
-    //                         Decoration.widget(suggestion.deleteRange.to, () => {
-    //                             const element = document.createElement('span');
-    //                             setTooltipElement(element);
-    //                             return element;
-    //                         }),
-    //                     );
-    //                 }
-    //                 return decorations;
-    //             },
-    //         }),
-    //         CommentsKit.configure({
-    //             provider,
-    //             useLegacyWrapping: false,
-    //             deleteUnreferencedThreads: false,
-    //         }),
-    //         CustomHighlight,
-    //         Image.configure({ inline: true, allowBase64: true }),
-    //         Table.configure({ resizable: true }),
-    //         History,
-    //         InlineThread,
-    //         TextStyle,
-    //         Underline,
-    //         Highlight,
-    //         Strike,
-    //         Link,
-    //         TableRow,
-    //         TableCell,
-    //         TableHeader,
-    //         TextAlign.configure({ types: ['heading', 'paragraph', 'orderedList'] }),
-    //         /* TaskList,
-    //            TaskItem,
-    //             Markdown.configure({
-    //                html: true,                  // Allow HTML input/output
-    //                tightLists: true,            // No <p> inside <li> in markdown output
-    //                tightListClass: 'tight',     // Add class to <ul> allowing you to remove <p> margins when tight
-    //                bulletListMarker: '-',       // <li> prefix in markdown output
-    //                linkify: false,              // Create links from "https://..." text
-    //                breaks: false,               // New lines (\n) in markdown input are converted to <br>
-    //                transformPastedText: false,  // Allow to paste markdown text in the editor
-    //                transformCopiedText: false,  // Copied text is transformed to markdown
-    //            }),
-    //            CharacterCount.extend().configure({ limit: 10000 }), */
-    //         Collaboration.configure({ document: ydoc }),
-    //         CollaborationHistory.configure({
-    //             provider,
-    //             onUpdate: data => {
-    //                 setVersions(data.versions)
-    //                 setIsAutoVersioning(data.versioningEnabled)
-    //                 setLatestVersion(data.version)
-    //                 setCurrentVersion(data.currentVersion)
-    //             },
-    //         }),
-    //     ],
-    //     onCreate: ({ editor: currentEditor }) => {
-    //         provider.on('synced', () => {
-    //             if (currentEditor.isEmpty) {
-    //                 currentEditor.commands.setContent(defaultContent);
-    //             }
-    //         });
-
-    //     },
-    //     onUpdate: ({ editor }) => {
-    //         const json = editor.getJSON();
-    //         // const updatedContent = injectPageBreaksIntoJSON(json.content);
-    //         const updatedContent = json.content;
-    //         // ✅ Safe WebSocket send
-    //         const payload = {
-    //             content: updatedContent,
-    //             type: "doc"
-    //         }
-    //         if (webIORef.current && webIORef.current.readyState === 1) {
-    //             webIORef.current.send(JSON.stringify({
-    //                 type: "update-document",
-    //                 userId: user._id,
-    //                 username: user.name,
-    //                 editionId: editionId,
-    //                 content: payload,
-    //             }));
-    //         }
-    //     },
-    //     onSelectionUpdate({ editor }) {
-    //         const selection = editor.state.selection;
-    //         console.log(selection);
-    //         const isEmpty = selection.empty;
-    //         const from = selection.from;
-    //         const to = selection.to;
-    //         if (!isEmpty && from !== to) {
-    //             const selectedText = editor.state.doc.textBetween(from, to, ' ');
-    //             console.log('📝 Selected text:', selectedText);
-    //         } else {
-    //             setShowInputBox(false)
-    //         }
-    //     },
-    // });
-
-    // Ensure editor is initialized before using it
     const stableUser = useMemo(() => user, [user?._id]);
     const { threads, createThread } = useThreads(provider, editor, user, webIORef, getThreds || []);
     const filteredThreads = Array.isArray(threads)
@@ -835,7 +696,6 @@ const EditorComponent = ({ ydoc, provider, room }) => {
         hoverThread(editor, [threadId]);
     }, [editor]);
 
-
     const onLeaveThread = useCallback(() => {
         hoverOffThread(editor)
     }, [editor]);
@@ -848,7 +708,6 @@ const EditorComponent = ({ ydoc, provider, room }) => {
     const selectThreadInEditor = useCallback(threadId => {
         editor.chain().selectThread({ id: threadId }).run();
     }, [editor]);
-
 
     useEffect(() => {
         const onUpdate = () => {
@@ -863,54 +722,6 @@ const EditorComponent = ({ ydoc, provider, room }) => {
             ydoc.off('update', onUpdate)
         }
     }, [ydoc]);
-
-    useEffect(() => {
-        console.log("activeSuggestion", activeSuggestion);
-        if (!activeSuggestion) return;
-        const { user, domNode, text, timestamp, suggestionId, view, from } = activeSuggestion;
-
-        showSuggestionPopup({
-            target: domNode,
-            username: user.name,
-            timestamp,
-            text,
-            isDeletion: false,
-            onApprove: () => approveSuggestionAt(view, suggestionId),
-            onReject: () => rejectSuggestionAt(activeSuggestion?.view, from),
-        });
-    }, [activeSuggestion]);
-
-    useEffect(() => {
-        if (!activeDeleteSelection || !activeDeleteSelection.domNode) return;
-
-        showSuggestionPopup({
-            target: activeDeleteSelection.domNode,
-            username: activeDeleteSelection.user.name,
-            timestamp: activeDeleteSelection.timestamp,
-            text: `Delete: "${activeDeleteSelection.text}"`,
-            isDeletion: true,
-            onApprove: () => approveSuggestionAt(editorView, activeDeleteSelection.from),
-            onReject: () => rejectSuggestionAt(editorView, activeDeleteSelection.from),
-        });
-    }, [activeDeleteSelection]);
-
-    //removing suggestion popups 
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            const proseMirrorDom = document.querySelector('.ProseMirror');
-
-            if (proseMirrorDom && proseMirrorDom.contains(event.target)) {
-                saveCurrentSuggestion(); // your backend call here
-                document.querySelectorAll('.suggestion-popup').forEach(el => el.remove());
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, []);
-
 
 
     const handleCommitDescriptionChange = event => {
@@ -963,9 +774,6 @@ const EditorComponent = ({ ydoc, provider, room }) => {
     };
 
     const setActionType = (data) => {
-        if (data !== "Suggesting") {
-            saveCurrentSuggestion(); // <- Flush current suggestion before mode change
-        }
         setAction(data);
         setTooltipElement(null);
 
@@ -990,7 +798,6 @@ const EditorComponent = ({ ydoc, provider, room }) => {
         console.log("DATA", data, " Action ", action);
     };
 
-
     useEffect(() => {
         if (!editor || editor.state.selection.empty) {
             setTooltipPosition(null);
@@ -1007,6 +814,18 @@ const EditorComponent = ({ ydoc, provider, room }) => {
             left: start.left - editorEl.left,
         });
     }, [editor?.state.selection]);
+
+    //s
+    useEffect(() => {
+        console.log("activeSuggestion", activeSuggestion, suggestionPopupVisible);
+
+        if (!suggestionPopupVisible && activeSuggestion) {
+            saveCurrentSuggestion(activeSuggestion);
+        }
+    }, [suggestionPopupVisible])
+    useEffect(() => {
+        console.log("activeSuggestion", activeSuggestion);
+    }, [activeSuggestion]);
 
     const handleSubmit = () => {
         if (!commentText || !editor || !user) return;
@@ -1053,190 +872,72 @@ const EditorComponent = ({ ydoc, provider, room }) => {
         setShowInputBox(false);
     };
 
-    const updateFocusedSuggestion = (editor) => {
-        const { from } = editor.state.selection;
-        const domAt = editor.view.domAtPos(from);
-        let domNode =
-            domAt.node?.nodeType === 3
-                ? domAt.node.parentElement
-                : domAt.node instanceof HTMLElement
-                    ? domAt.node
-                    : null;
-
-        // Traverse upward or inward to find suggestion element
-        let suggestionEl = domNode?.closest?.('.suggestion') || domNode?.querySelector?.('.suggestion');
-
-        if (!suggestionEl) {
-            // ❗ No suggestion element — clear focused and tempSuggestion
-            editor.view.dom.querySelectorAll('.suggestion.focused').forEach(el =>
-                el.classList.remove('focused')
-            );
-
-            tempSuggestion = null; // ✅ Clear suggestion mode
-            return;
-        }
-
-        const suggestionId = suggestionEl.getAttribute('data-suggestion-id');
-        if (!suggestionId) return;
-
-        // ✅ If cursor moved to a different suggestion, clear tempSuggestion
-        if (tempSuggestion?.suggestionId !== suggestionId) {
-            tempSuggestion = null;
-        }
-
-        // Update focus styles
-        editor.view.dom.querySelectorAll('.suggestion.focused').forEach(el =>
-            el.classList.remove('focused')
-        );
-
-        editor.view.dom.querySelectorAll(`[data-suggestion-id="${suggestionId}"]`)
-            .forEach(el => el.classList.add('focused'));
-    };
-
-    const approveSuggestionAt = (view, suggestionId) => {
-        if (!view || !suggestionId) return;
-
-        const { state, dispatch } = view;
-        const { doc, schema } = state;
-        const suggestionMark = schema.marks.suggestion;
-
-        let tr = state.tr;
-        let hasChange = false;
+    /* suggestion/track change code begins */
+    const findChildrenMarks = (doc, markType) => {
+        const results = [];
 
         doc.descendants((node, pos) => {
             if (!node.isText) return;
 
-            node.marks.forEach(mark => {
-                if (mark.type === suggestionMark && mark.attrs.suggestionId === suggestionId) {
-                    tr = tr.removeMark(pos, pos + node.nodeSize, suggestionMark);
-                    hasChange = true;
+            node.marks.forEach((mark) => {
+                if (mark.type === markType) {
+                    results.push({ node, mark, pos });
                 }
             });
         });
 
-        if (hasChange) {
-            dispatch(tr);
-        }
-    };
-
-    const onCardApprove = (event) => {
-        console.log("event", event);
+        return results;
     }
-    const onCardReject = (event) => {
-        const mainParent = event.target.closest('.sidebar-card');
-        const classNames = mainParent.classList; // returns the full class string
-        const suggestionId = classNames[0];
-        const matchingElement = document.querySelector(`[data-suggestion-id="${suggestionId}"]`);
-        console.log("matchingElement", matchingElement);
-
-        if (matchingElement) {
-            matchingElement.remove(); // This will delete it from the DOM
-
-            try {
-                dispatch(deleteSuggestion(suggestionId));
-                dispatch(fetchSuggestions(editionId));
-            } catch (error) {
-                console.log("error in deleting suggestion");
-
-            }
+    function getMarkAtPos(state, pos, markType) {
+        const $pos = state.doc.resolve(pos);
+        for (let i = 0; i < $pos.marks().length; i++) {
+            const mark = $pos.marks()[i];
+            if (mark.type.name === markType) return mark;
         }
+        return null;
     }
+    function findSuggestionRange(state, suggestionId) {
+        let start = -1;
+        let end = -1;
+        const { doc, schema } = state;
+        const suggestionMarkName = 'suggestion';
 
-
-
-
-
-    const rejectSuggestionAt = (view, from) => {
-        if (!view) return;
-        const { state, dispatch } = view;
-        const { tr, doc, schema } = state;
-
-        let found = false;
-
-        doc.nodesBetween(from, from + 1, (node, pos) => {
-            if (node.isText) {
-                const suggestionMark = node.marks.find(mark => mark.type.name === 'suggestion');
-                const deletionMark = node.marks.find(mark => mark.type.name === 'suggestion-deletion');
-
-                if (suggestionMark) {
-                    // Reject insertion (remove content)
-                    tr.delete(pos, pos + node.nodeSize);
-                    found = true;
-                    return false;
+        doc.descendants((node, pos) => {
+            if (!node.isText) return true; // continue
+            const hasMark = node.marks.some(
+                (m) => m.type.name === suggestionMarkName && m.attrs.suggestionId === suggestionId
+            );
+            if (hasMark) {
+                if (start === -1) {
+                    start = pos;
                 }
-
-                if (deletionMark) {
-                    // Reject deletion (keep content, remove deletion mark)
-                    const newMarks = node.marks.filter(m => m.type.name !== 'suggestion-deletion');
-                    const cleanNode = schema.text(node.text, newMarks);
-                    tr.replaceWith(pos, pos + node.nodeSize, cleanNode);
-                    found = true;
-                    return false;
-                }
+                end = pos + node.nodeSize; // nodeSize for text includes its length
             }
+            return true; // continue traversal
         });
 
-        if (found) {
-            dispatch(tr.setSelection(TextSelection.create(tr.doc, tr.selection.from)));
+        if (start === -1 || end === -1) {
+            return null; // not found
         }
-    };
 
-
-
-    function showSuggestionPopup({ target, username, timestamp, text = '', isDeletion, onApprove, onReject }) {
-        document.querySelectorAll('.suggestion-popup').forEach(popup => popup.remove());
-        const container = document.createElement('div');
-        container.className = 'suggestion-popup';
-        container.style.position = 'absolute';
-        container.style.zIndex = 9999;
-        container.style.width = '280px';
-        container.style.backgroundColor = 'rgb(248, 249, 250)';
-        container.style.border = '1px solid rgb(237, 242, 250)';
-        container.style.borderRadius = '8px';
-        container.style.padding = '10px';
-        container.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';
-        container.style.transition = '0.3s';
-        container.style.cursor = 'pointer';
-        container.style.fontSize = '14px';
-
-        container.innerHTML = `
-        <div class="thread">
-            <div>
-                <div class="comment" style="margin-top: 10px; padding: 5px;">
-                    <div class="label-group" style="display: flex; justify-content: space-between; align-items: center;">
-                        <label><strong>${username}</strong></label>
-                        <label style="color: rgb(102, 102, 102); font-size: 0.85em;">${new Date(timestamp).toLocaleTimeString()}</label>
-                    </div>
-                    <div class="comment-content" style="margin-top: 6px;">
-                        <p style="margin: 0;">${text || 'No content'}</p>
-                    </div>
-                </div>
-                <div style="display: flex; gap: 10px; margin-top: 10px;">
-                    <button class="suggestion-approve" style="padding: 4px 8px; font-size: 13px;">Approve</button>
-                    <button class="suggestion-reject" style="padding: 4px 8px; font-size: 13px;">Reject</button>
-                </div>
-                <div style="margin-top: 6px; font-size: 0.85em; color: rgb(136, 136, 136);">0 replies</div>
-            </div>
-        </div>
-    `;
-
-        document.body.appendChild(container);
-
-        // Position popup near target element
-        const rect = target.getBoundingClientRect();
-        container.style.top = `${rect.bottom + window.scrollY + 5}px`;
-        container.style.left = `${rect.left + window.scrollX}px`;
-
-        container.querySelector('.suggestion-approve')?.addEventListener('click', () => {
-            onApprove?.();
-            container.remove();
-        });
-
-        container.querySelector('.suggestion-reject')?.addEventListener('click', () => {
-            onReject?.();
-            container.remove();
-        });
+        // For textBetween we need the actual character positions; ProseMirror textBetween expects "from" inclusive, "to" exclusive in document positions.
+        return { from: start, to: end };
     }
+
+    function findPosForSuggestionId(doc, suggestionId) {
+        let foundPos = null;
+        doc.descendants((node, pos) => {
+            if (!node.isText) return true;
+            const mark = node.marks.find(m => m.type.name === 'suggestion' && m.attrs.suggestionId === suggestionId);
+            if (mark) {
+                foundPos = pos;
+                return false; // stop traversal
+            }
+            return true;
+        });
+        return foundPos;
+    }
+
 
 
     // 2. Suggestion Plugin: Intercepts insertions
@@ -1245,106 +946,100 @@ const EditorComponent = ({ ydoc, provider, room }) => {
             key: new PluginKey('suggestionPlugin'),
 
             props: {
-                handleTextInput(view, from, to, text) {
-                    if (getMode() !== 'Suggesting') return false;
-
-                    const { state, dispatch } = view;
-                    const { schema } = state;
-                    const user = getUser();
-
-                    const $from = state.doc.resolve(from);
-                    const existingSuggestionMark = $from.marks().find(mark => mark.type.name === 'suggestion');
-
-                    // CASE 1: Typing inside an existing suggestion not owned by user
-                    if (existingSuggestionMark && (!tempSuggestion || tempSuggestion.suggestionId !== existingSuggestionMark.attrs.suggestionId)) {
-                        const tr = state.tr.insertText(text, from, to);
-                        dispatch(tr);
-                        console.log("not own user");
-
-                        return true;
-                    }
-
-                    // CASE 2: New Suggestion Begins
-                    if (!tempSuggestion) {
-                        const suggestionId = `sugg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-                        const createdAt = new Date().toISOString();
-
-                        const mark = schema.marks.suggestion.create({
-                            suggestionId,
-                            username: user.name,
-                            userId: user.id,
-                            color: user.color,
-                            createdAt,
-                        });
-
-                        const node = schema.text(text, [mark]);
-                        const tr = state.tr.replaceWith(from, to, node);
-                        dispatch(tr);
-
-                        const domAt = view.domAtPos(from);
-                        const domNode = domAt.node.nodeType === 3 ? domAt.node.parentElement : domAt.node;
-
-                        tempSuggestion = {
-                            from,
-                            to: from + text.length,
-                            text,
-                            mark,
-                            suggestionId,
-                            user,
-                            timestamp: createdAt,
-                            domNode,
-                            view
-                        };
-                        console.log("asjhHJAS");
-
-                        currentSuggestionId = suggestionId; // 🟢 Track the suggestion id
-                        setActiveSuggestion({ ...tempSuggestion }); // 🟢 Show popup once
-
-                        return true;
-                    }
-
-                    // CASE 3: Continue current suggestion
-                    const newText = tempSuggestion.text + text;
-                    const node = schema.text(newText, [tempSuggestion.mark]);
-
-                    const tr = state.tr.replaceWith(tempSuggestion.from, tempSuggestion.to, node);
-                    dispatch(tr);
-
-                    tempSuggestion.to = tempSuggestion.from + newText.length;
-                    tempSuggestion.text = newText;
-                    console.log("continous");
-
-                    setActiveSuggestion({ ...tempSuggestion });
-                    return true;
-                },
-
                 // handleTextInput(view, from, to, text) {
-                //     if (getMode() !== 'Suggesting') return false;
-
                 //     const { state, dispatch } = view;
                 //     const { schema } = state;
-                //     const user = getUser();
-
-                //     const $from = state.doc.resolve(from);
-                //     const existingSuggestionMark = $from.marks().find(mark => mark.type.name === 'suggestion');
-
-                //     // Case 1: Typing inside existing suggestion (not our active one)
-                //     if (existingSuggestionMark && (!tempSuggestion || tempSuggestion.suggestionId !== existingSuggestionMark.attrs.suggestionId)) {
-                //         const tr = state.tr.insertText(text, from, to);
-                //         dispatch(tr);
+                //     if (getMode() !== 'Suggesting') {
+                //         const node = schema.text(text); // plain text without marks
+                //         dispatch(state.tr.replaceWith(from, to, node));
                 //         return true;
                 //     }
 
-                //     // Case 2: New suggestion begins
-                //     if (!tempSuggestion) {
+                //     const currentUser = getUser();
+                //     const createdAt = new Date().toISOString();
+
+                //     // ✅ 1. Extend existing suggestion if already typing
+                //     if (currentSuggestionId && tempSuggestion && tempSuggestion.view === view) {
+                //         // tempSuggestion.text += text;
+                //         // tempSuggestion.to += text.length;
+
+                //         // const mark = tempSuggestion.mark;
+                //         // const node = schema.text(text, [mark]);
+                //         // const tr = state.tr.replaceWith(from, to, node);
+                //         // dispatch(tr);
+
+                //         // setActiveSuggestion({ ...tempSuggestion });
+                //         // return true;
+                //         const mark = tempSuggestion.mark;
+
+                //         // Replace the slice with the new input (handles insertion / replacement)
+                //         const tr = state.tr.replaceWith(from, to, schema.text(text, [mark]));
+                //         dispatch(tr);
+
+                //         // After dispatch, get the updated state from view
+                //         const updatedState = view.state;
+                //         const range = findSuggestionRange(updatedState, currentSuggestionId);
+                //         if (range) {
+                //             const actualText = updatedState.doc.textBetween(range.from, range.to);
+                //             tempSuggestion.from = range.from;
+                //             tempSuggestion.to = range.to;
+                //             tempSuggestion.text = actualText;
+                //             tempSuggestion.mark = mark; // mark can remain; you might want to re-resolve it if needed
+                //             console.log("--",tempSuggestion)
+                //             setActiveSuggestion({ ...tempSuggestion });
+                //         } else {
+                //             // Fallback: reset or clear if something went wrong
+                //             console.warn('Could not locate suggestion range after edit', currentSuggestionId);
+                //         }
+
+                //         return true;
+
+                //     }
+
+                //     // ✅ 2. Proceed with suggestion creation if no existing suggestion
+                //     const markAtPos = getMarkAtPos(state, from, 'suggestion');
+
+                //     //popup top and left calculation
+                //     const coords = view.coordsAtPos(from);
+                //     const editorRect = view.dom.parentElement?.getBoundingClientRect?.() || { top: 0, left: 0 };
+                //     const top = coords.top - editorRect.top + 8;
+                //     const left = coords.left - editorRect.left;
+                //     // Same user's suggestion exists, rehydrate
+                //     if (markAtPos && markAtPos.attrs.userId === currentUser.id && !currentSuggestionId) {
+                //         currentSuggestionId = markAtPos.attrs.suggestionId;
+
+                //         tempSuggestion = {
+                //             from,
+                //             to: from + text.length,
+                //             text,
+                //             suggestionId: currentSuggestionId,
+                //             user: {
+                //                 id: markAtPos.attrs.userId,
+                //                 name: markAtPos.attrs.username,
+                //                 color: markAtPos.attrs.color,
+                //             },
+                //             createdAt: markAtPos.attrs.createdAt,
+                //             mark: markAtPos,
+                //             view,
+                //             type: 'insertion'
+                //         };
+
+                //         setActiveSuggestionId(currentSuggestionId);
+                //         setActiveSuggestion({ ...tempSuggestion });
+                //         setPopupCoords({ top, left });
+
+                //         console.log("✍️ Rehydrated current user's suggestion:", currentSuggestionId);
+
+                //     } else if (markAtPos && markAtPos.attrs.userId !== currentUser.id) {
+                //         // Different user's suggestion – start a new one
                 //         const suggestionId = `sugg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-                //         const createdAt = new Date().toISOString();
+                //         currentSuggestionId = suggestionId;
 
                 //         const mark = schema.marks.suggestion.create({
                 //             suggestionId,
-                //             username: user.name,
-                //             userId: user.id,
-                //             color: user.color,
+                //             username: currentUser.name,
+                //             userId: currentUser.id,
+                //             color: currentUser.color,
                 //             createdAt,
                 //         });
 
@@ -1352,169 +1047,536 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                 //         const tr = state.tr.replaceWith(from, to, node);
                 //         dispatch(tr);
 
-                //         const domAt = view.domAtPos(from);
-                //         const domNode = domAt.node.nodeType === 3 ? domAt.node.parentElement : domAt.node;
-
-                //         // Store in temporary variable
                 //         tempSuggestion = {
                 //             from,
                 //             to: from + text.length,
                 //             text,
-                //             mark,
                 //             suggestionId,
-                //             user,
-                //             timestamp: createdAt,
-                //             domNode,
-                //             view
+                //             user: currentUser,
+                //             createdAt,
+                //             mark,
+                //             view,
+                //             type: 'insertion'
                 //         };
 
-                //         // Set React state for popup rendering
-                //         // setActiveSuggestion({ ...tempSuggestion });
+                //         setActiveSuggestionId(suggestionId);
+                //         setActiveSuggestion({ ...tempSuggestion });
+                //         setPopupCoords({ top, left });
+                //         setSuggestionPopupVisible(true);
 
+                //         console.log("👤 Started new suggestion due to other user's mark:", suggestionId);
                 //         return true;
+
+                //     } else if (!markAtPos && !currentSuggestionId) {
+                //         // Plain area — start new suggestion
+                //         const suggestionId = `sugg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+                //         currentSuggestionId = suggestionId;
+
+                //         const mark = schema.marks.suggestion.create({
+                //             suggestionId,
+                //             username: currentUser.name,
+                //             userId: currentUser.id,
+                //             color: currentUser.color,
+                //             createdAt,
+                //         });
+
+                //         const node = schema.text(text, [mark]);
+                //         const tr = state.tr.replaceWith(from, to, node);
+                //         dispatch(tr);
+
+                //         tempSuggestion = {
+                //             from,
+                //             to: from + text.length,
+                //             text,
+                //             suggestionId,
+                //             user: currentUser,
+                //             createdAt,
+                //             mark,
+                //             view,
+                //             type: 'insertion'
+                //         };
+
+                //         setActiveSuggestionId(suggestionId);
+                //         setActiveSuggestion({ ...tempSuggestion });
+                //         setPopupCoords({ top, left });
+                //         setSuggestionPopupVisible(true);
+                //         console.log("🆕 New suggestion started in plain text:", suggestionId);
+                //         return true;
+                //     } else {
+                //         console.log("⚠️ Cursor moved mid-suggestion or inconsistent state:", {
+                //             currentSuggestionId,
+                //             markAtPos,
+                //             tempSuggestion,
+                //         });
+
+                //         // Optional: auto-rehydrate suggestion under cursor if it's user's
+                //         if (markAtPos && markAtPos.attrs.userId === currentUser.id) {
+                //             currentSuggestionId = markAtPos.attrs.suggestionId;
+                //             tempSuggestion = {
+                //                 from,
+                //                 to: from + text.length,
+                //                 text,
+                //                 suggestionId: currentSuggestionId,
+                //                 user: {
+                //                     id: markAtPos.attrs.userId,
+                //                     name: markAtPos.attrs.username,
+                //                     color: markAtPos.attrs.color,
+                //                 },
+                //                 createdAt: markAtPos.attrs.createdAt,
+                //                 mark: markAtPos,
+                //                 view,
+                //                 type: 'insertion'
+                //             };
+
+                //             setActiveSuggestionId(currentSuggestionId);
+                //             setActiveSuggestion({ ...tempSuggestion });
+                //             setPopupCoords({ top, left });
+
+                //             console.log("♻️ Rehydrated in fallback");
+                //         }
                 //     }
-
-                //     // Case 3: Continue the suggestion
-                //     const newText = tempSuggestion.text + text;
-                //     const node = schema.text(newText, [tempSuggestion.mark]);
-
-                //     const tr = state.tr.replaceWith(tempSuggestion.from, tempSuggestion.to, node);
-                //     dispatch(tr);
-
-                //     tempSuggestion.to = tempSuggestion.from + newText.length;
-                //     tempSuggestion.text = newText;
-
-                //     // Update React state (e.g., for popup display)
-                //     // setActiveSuggestion({ ...tempSuggestion });
-
-                //     return true;
                 // },
-                handleKeyDown(view, event) {
-                    if (getMode() !== 'Suggesting') return false;
-
+                handleTextInput(view, from, to, text) {
                     const { state, dispatch } = view;
-                    const { schema, selection } = state;
-                    const { from, to, empty } = selection;
-                    const user = getUser();
-                    const viewerId = user.id;
+                    const { schema } = state;
 
-                    // 🧠 CASE 1: Text is selected and user hits Delete or Backspace
-                    if ((event.key === 'Backspace' || event.key === 'Delete') && !empty) {
-                        const deletionMark = schema.marks['suggestion-deletion'].create({
-                            username: user.name,
-                            userId: user.id,
-                            createdAt: new Date().toISOString(),
-                        });
-
-                        const slice = state.doc.slice(from, to);
-                        const markedNodes = [];
-                        let deletedText = '';
-
-                        slice.content.forEach(node => {
-                            if (node.isText && node.text?.trim()) {
-                                const isOwnSuggestion = node.marks.some(mark =>
-                                    mark.type.name === 'suggestion' && mark.attrs.userId === viewerId
-                                );
-                                if (isOwnSuggestion) return;
-
-                                deletedText += node.text;
-
-                                const cleanedMarks = node.marks.filter(m => m.type.name !== 'suggestion');
-                                markedNodes.push(node.mark([...cleanedMarks, deletionMark]));
-                            } else {
-                                markedNodes.push(node);
-                            }
-                        });
-
-                        if (markedNodes.length > 0 && deletedText.trim()) {
-                            const tr = state.tr.delete(from, to).insert(from, Fragment.fromArray(markedNodes));
-                            dispatch(tr);
-
-                            const domAt = view.domAtPos(from);
-                            const domNode = domAt.node.nodeType === 3 ? domAt.node.parentElement : domAt.node;
-
-                            tempDeletion = {
-                                from,
-                                to,
-                                text: deletedText,
-                                mark: deletionMark,
-                                user,
-                                timestamp: deletionMark.attrs.createdAt,
-                                domNode,
-                                view
-                            };
-
-                            setActiveDeleteSelection({ ...tempDeletion });
-                            return true;
-                        }
-                    }
-
-                    // 🧠 CASE 2: No selection — single character backspace/delete
-                    if ((event.key === 'Backspace' || event.key === 'Delete') && empty) {
-                        const deleteFrom = event.key === 'Backspace' ? from - 1 : from;
-                        const deleteTo = event.key === 'Backspace' ? from : from + 1;
-
-                        if (deleteFrom < 0 || deleteTo > state.doc.content.size) return false;
-
-                        const slice = state.doc.slice(deleteFrom, deleteTo);
-                        const node = slice.content.firstChild;
-
-                        if (!node?.isText || !node.text) return false;
-
-                        const isOwnSuggestion = node.marks.some(mark =>
-                            mark.type.name === 'suggestion' && mark.attrs.userId === viewerId
-                        );
-                        if (isOwnSuggestion) return false;
-
-                        const deletionMark = schema.marks['suggestion-deletion'].create({
-                            username: user.name,
-                            userId: user.id,
-                            createdAt: new Date().toISOString(),
-                        });
-
-                        const markedTextNode = schema.text(node.text, [deletionMark]);
-                        let tr = state.tr.delete(deleteFrom, deleteTo).insert(deleteFrom, markedTextNode);
-                        tr = tr.setSelection(TextSelection.create(tr.doc, deleteFrom));
-                        dispatch(tr);
-
-                        // Merge with temp deletion if ongoing
-                        if (tempDeletion) {
-                            tempDeletion.from = Math.min(tempDeletion.from, deleteFrom);
-                            tempDeletion.to = Math.max(tempDeletion.to, deleteTo);
-                            tempDeletion.text = event.key === 'Backspace'
-                                ? node.text + tempDeletion.text
-                                : tempDeletion.text + node.text;
-                        } else {
-                            const domAt = view.domAtPos(deleteFrom);
-                            const domNode = domAt.node.nodeType === 3 ? domAt.node.parentElement : domAt.node;
-
-                            tempDeletion = {
-                                from: deleteFrom,
-                                to: deleteTo,
-                                text: node.text,
-                                mark: deletionMark,
-                                user,
-                                timestamp: deletionMark.attrs.createdAt,
-                                domNode,
-                            };
-                        }
-
-                        setActiveDeleteSelection({ ...tempDeletion });
+                    if (getMode() !== 'Suggesting') {
+                        const node = schema.text(text); // plain text without marks
+                        dispatch(state.tr.replaceWith(from, to, node));
                         return true;
                     }
 
+                    const currentUser = getUser();
+                    const createdAt = new Date().toISOString();
+                    // popup coords calculation
+                    const coords = view.coordsAtPos(from);
+                    const editorRect = view.dom.parentElement?.getBoundingClientRect?.() || { top: 0, left: 0 };
+                    const top = coords.top - editorRect.top + 8;
+                    const left = coords.left - editorRect.left;
+                    // ✅ 2. No active-in-progress extension — determine context
+                    const markAtPos = getMarkAtPos(state, from, 'suggestion');
+                    const isInsideSameSuggestion =
+                        markAtPos &&
+                        markAtPos.attrs.suggestionId === currentSuggestionId &&
+                        markAtPos.attrs.userId === currentUser.id;
+                    // ✅ 1. Extend existing suggestion if already typing in the same view
+                    if (isInsideSameSuggestion && tempSuggestion && tempSuggestion.view === view) {
+                        const mark = tempSuggestion.mark;
+
+                        // Replace the slice with the new input (handles insertion/replacement)
+                        const tr = state.tr.replaceWith(from, to, schema.text(text, [mark]));
+                        dispatch(tr);
+
+                        // After dispatch, the view.state reflects the updated document
+                        const updatedState = view.state;
+                        const range = findSuggestionRange(updatedState, currentSuggestionId);
+                        console.log("1st if", range)
+                        if (range) {
+                            const actualText = updatedState.doc.textBetween(range.from, range.to);
+                            tempSuggestion.from = range.from;
+                            tempSuggestion.to = range.to;
+                            tempSuggestion.text = actualText;
+                            // Optionally re-resolve the mark at the updated position if necessary:
+                            // const resolvedMark = getMarkAtPos(updatedState, range.from, 'suggestion');
+                            // tempSuggestion.mark = resolvedMark || mark;
+                            tempSuggestion.mark = mark;
+                            setActiveSuggestion({ ...tempSuggestion });
+                            updateSuggestionTextWithId(currentSuggestionId);
+                        } else {
+                            console.warn('Could not locate suggestion range after edit', currentSuggestionId);
+                            currentSuggestionId = null;
+                            tempSuggestion = null;
+                            return false;
+
+                        }
+
+                        return true;
+                    }
+
+                    // 2a. Rehydrate same user's existing suggestion (cursor entered it, but nothing is active yet)
+                    if (markAtPos && markAtPos.attrs.userId === currentUser.id && !currentSuggestionId) {
+                        currentSuggestionId = markAtPos.attrs.suggestionId;
+
+                        // After inserting the current character, we want to reflect actual doc state.
+                        // Create initial insertion for this keystroke:
+                        const mark = markAtPos;
+                        const tr = state.tr.replaceWith(from, to, schema.text(text, [mark]));
+                        dispatch(tr);
+
+                        const updatedState = view.state;
+                        const range = findSuggestionRange(updatedState, currentSuggestionId);
+                        const actualText = range
+                            ? updatedState.doc.textBetween(range.from, range.to)
+                            : text; // fallback to raw input
+
+                        tempSuggestion = {
+                            from: range?.from ?? from,
+                            to: range?.to ?? from + text.length,
+                            text: actualText,
+                            suggestionId: currentSuggestionId,
+                            user: {
+                                id: markAtPos.attrs.userId,
+                                name: markAtPos.attrs.username,
+                                color: markAtPos.attrs.color,
+                            },
+                            createdAt: markAtPos.attrs.createdAt,
+                            mark,
+                            view,
+                            type: 'insertion',
+                        };
+
+                        setActiveSuggestionId(currentSuggestionId);
+                        setActiveSuggestion({ ...tempSuggestion });
+                        setPopupCoords({ top, left });
+
+                        console.log('✍️ Rehydrated current user\'s suggestion:', currentSuggestionId);
+                        return true;
+                    }
+
+                    // 2b. Typing inside someone else's suggestion — start a new one
+                    if (markAtPos && markAtPos.attrs.userId !== currentUser.id) {
+                        const suggestionId = `sugg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+                        currentSuggestionId = suggestionId;
+
+                        const mark = schema.marks.suggestion.create({
+                            suggestionId,
+                            username: currentUser.name,
+                            userId: currentUser.id,
+                            color: currentUser.color,
+                            createdAt,
+                        });
+
+                        const node = schema.text(text, [mark]);
+                        const tr = state.tr.replaceWith(from, to, node);
+                        dispatch(tr);
+
+                        // After insertion, compute actual range/text
+                        const updatedState = view.state;
+                        const range = findSuggestionRange(updatedState, suggestionId);
+                        const actualText = range
+                            ? updatedState.doc.textBetween(range.from, range.to)
+                            : text;
+
+                        tempSuggestion = {
+                            from: range?.from ?? from,
+                            to: range?.to ?? from + text.length,
+                            text: actualText,
+                            suggestionId,
+                            user: currentUser,
+                            createdAt,
+                            mark,
+                            view,
+                            type: 'insertion',
+                        };
+
+                        setActiveSuggestionId(suggestionId);
+                        setActiveSuggestion({ ...tempSuggestion });
+                        setPopupCoords({ top, left });
+                        setSuggestionPopupVisible(true);
+
+                        console.log('👤 Started new suggestion due to other user\'s mark:', suggestionId);
+                        return true;
+                    }
+
+                    // 2c. Plain area — start a fresh suggestion
+                    if (!markAtPos && !currentSuggestionId) {
+                        const suggestionId = `sugg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+                        currentSuggestionId = suggestionId;
+
+                        const mark = schema.marks.suggestion.create({
+                            suggestionId,
+                            username: currentUser.name,
+                            userId: currentUser.id,
+                            color: currentUser.color,
+                            createdAt,
+                        });
+
+                        const node = schema.text(text, [mark]);
+                        const tr = state.tr.replaceWith(from, to, node);
+                        dispatch(tr);
+
+                        // After insertion, compute actual range/text
+                        const updatedState = view.state;
+                        const range = findSuggestionRange(updatedState, suggestionId);
+                        const actualText = range
+                            ? updatedState.doc.textBetween(range.from, range.to)
+                            : text;
+
+                        tempSuggestion = {
+                            from: range?.from ?? from,
+                            to: range?.to ?? from + text.length,
+                            text: actualText,
+                            suggestionId,
+                            user: currentUser,
+                            createdAt,
+                            mark,
+                            view,
+                            type: 'insertion',
+                        };
+
+                        setActiveSuggestionId(suggestionId);
+                        setActiveSuggestion({ ...tempSuggestion });
+                        setPopupCoords({ top, left });
+                        setSuggestionPopupVisible(true);
+                        console.log('🆕 New suggestion started in plain text:', suggestionId);
+                        return true;
+                    }
+
+                    // Case: tempSuggestion got lost, but we are inside same suggestion — rehydrate
+                    if (
+                        isInsideSameSuggestion &&
+                        !tempSuggestion
+                    ) {
+                        currentSuggestionId = markAtPos.attrs.suggestionId;
+
+                        const mark = markAtPos;
+                        const tr = state.tr.replaceWith(from, to, schema.text(text, [mark]));
+                        dispatch(tr);
+
+                        const updatedState = view.state;
+                        const range = findSuggestionRange(updatedState, currentSuggestionId);
+                        const actualText = range
+                            ? updatedState.doc.textBetween(range.from, range.to)
+                            : text;
+
+                        tempSuggestion = {
+                            from: range?.from ?? from,
+                            to: range?.to ?? from + text.length,
+                            text: actualText,
+                            suggestionId: currentSuggestionId,
+                            user: {
+                                id: markAtPos.attrs.userId,
+                                name: markAtPos.attrs.username,
+                                color: markAtPos.attrs.color,
+                            },
+                            createdAt: markAtPos.attrs.createdAt,
+                            mark,
+                            view,
+                            type: 'insertion',
+                        };
+
+                        setActiveSuggestion({ ...tempSuggestion });
+                        setPopupCoords({ top, left });
+                        saveCurrentSuggestion(tempSuggestion);
+                        console.log('♻️ Rehydrated due to missing tempSuggestion');
+                        return true;
+                    }
+
+                    // Fallback: inconsistent state (e.g., cursor moved inside your suggestion but currentSuggestionId mismatched)
+                    console.log('⚠️ Cursor moved mid-suggestion or inconsistent state:', {
+                        currentSuggestionId,
+                        markAtPos,
+                        tempSuggestion,
+                    });
+
+                    if (markAtPos && markAtPos.attrs.userId === currentUser.id && markAtPos.attrs.suggestionId !== currentSuggestionId) {
+                        // Try rehydrating fallback
+                        currentSuggestionId = markAtPos.attrs.suggestionId;
+
+                        // Insert current text under that mark
+                        const mark = markAtPos;
+                        const tr = state.tr.replaceWith(from, to, schema.text(text, [mark]));
+                        dispatch(tr);
+
+                        const updatedState = view.state;
+                        const range = findSuggestionRange(updatedState, currentSuggestionId);
+                        console.log("fallback", range)
+                        const actualText = range
+                            ? updatedState.doc.textBetween(range.from, range.to)
+                            : text;
+
+                        tempSuggestion = {
+                            from: range?.from ?? from,
+                            to: range?.to ?? from + text.length,
+                            text: actualText,
+                            suggestionId: currentSuggestionId,
+                            user: {
+                                id: markAtPos.attrs.userId,
+                                name: markAtPos.attrs.username,
+                                color: markAtPos.attrs.color,
+                            },
+                            createdAt: markAtPos.attrs.createdAt,
+                            mark,
+                            view,
+                            type: 'insertion',
+                        };
+
+                        setActiveSuggestionId(currentSuggestionId);
+                        setActiveSuggestion({ ...tempSuggestion });
+                        setPopupCoords({ top, left });
+
+                        console.log('♻️ Rehydrated in fallback');
+                        return true;
+                    }
+
+                    // If everything else fails, do nothing (or optionally clear)
                     return false;
+                },
+                handleKeyDown(view, event) {
+                },
+                decorations(state) {
+                    try {
+                        const decorations = [];
+                        const { selection } = state;
+                        const cursorPos = selection.from;
+
+                        const markRanges = findChildrenMarks(state.doc, (mark) => mark.type.name === 'suggestion');
+
+                        markRanges.forEach(({ node, from: start, to }) => {
+                            const mark = node.marks.find(m => m.type.name === 'suggestion');
+                            const isOwn = mark?.attrs?.userId === getUser().id;
+                            const isFocused = cursorPos >= start && cursorPos <= to;
+
+                            if (isOwn && isFocused) {
+                                decorations.push(Decoration.inline(start, to, {
+                                    class: 'suggestion-focused'
+                                }));
+                            }
+                        });
+
+                        return DecorationSet.create(state.doc, decorations);
+                    } catch (err) {
+                        console.warn("Failed to generate decorations:", err);
+                        return DecorationSet.empty;
+                    }
+                },
+                view(view) {
+                    return {
+                        update(view, prevState) {
+                            const { state } = view;
+                            const { from } = state.selection;
+
+                            // Only if mode is Suggesting
+                            if (getMode() !== 'Suggesting') return;
+
+                            // If active suggestion exists AND cursor moved away
+                            if (
+                                tempSuggestion &&
+                                lastCursorPos !== null &&
+                                from !== lastCursorPos
+                            ) {
+                                finalizeActiveSuggestion(view);
+                            }
+
+                            lastCursorPos = from;
+                        },
+                        destroy() {
+                            lastCursorPos = null;
+                        }
+                    };
                 },
             },
         });
     };
 
-    function saveCurrentSuggestion() {
-        console.log("activeSuggestion", activeSuggestion);
-        if (!activeSuggestion || !activeSuggestion?.text?.trim()) return;
+    useEffect(() => {
+        setTimeout(() => {
+            const card = document.querySelector('.sidebar-card.highlighted');
+            if (card) {
+                card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest', });
+            }
+        }, 100);
+    }, [highlightedSuggestionId]);
+    // 2. SuggestionFinalizer Plugin: for saving suggestion
+    const SuggestionFinalizer = Extension.create({
+        name: 'suggestion-finalizer',
 
-        const { suggestionId, from, to, text, user } = activeSuggestion;
+        addProseMirrorPlugins() {
+            return [
+                new Plugin({
+                    key: new PluginKey('suggestionFinalizer'),
+                    props: {
+                        handleDOMEvents: {
+                            click: async (view, event) => {
+                                //still need to figure out specific touch and enable it properly
+                                const el = event.target.closest('[data-suggestion-id]') || event.target.querySelector('[data-suggestion-id]');
+                                const clickedSuggestionId = el?.getAttribute('data-suggestion-id');
+                                try {
+                                    dispatch(fetchSuggestions(editionId));
+                                } catch (error) {
+                                    
+                                }
+                                if (clickedSuggestionId) {
+                                    currentSuggestionId = clickedSuggestionId;
 
+                                    // get mark info from editor state
+                                    const { state } = view;
+                                    const pos = findPosForSuggestionId(state.doc, clickedSuggestionId); // <-- You need to implement this
+                                    if (pos != null) {
+                                        const mark = getMarkAtPos(state, pos, 'suggestion');
+                                        const range = findSuggestionRange(state, clickedSuggestionId);
+                                        if (range && mark) {
+                                            const actualText = state.doc.textBetween(range.from, range.to);
+
+                                            tempSuggestion = {
+                                                from: range.from,
+                                                to: range.to,
+                                                text: actualText,
+                                                suggestionId: clickedSuggestionId,
+                                                user: {
+                                                    id: mark.attrs.userId,
+                                                    name: mark.attrs.username,
+                                                    color: mark.attrs.color,
+                                                },
+                                                createdAt: mark.attrs.createdAt,
+                                                mark,
+                                                view,
+                                                type: 'insertion',
+                                            };
+                                            setActiveSuggestion({ ...tempSuggestion });
+                                        }
+                                    }
+
+                                    const sidebarCard = document.querySelector(`.${clickedSuggestionId.trim()}`);
+                                    document.querySelectorAll('.sidebar-card.highlighted').forEach(card => {
+                                        setHighlightedSuggestionId('');
+                                    });
+                                    await updateSuggestionTextWithId(clickedSuggestionId);
+                                    if (sidebarCard) {
+                                        setHighlightedSuggestionId(clickedSuggestionId);
+                                    }
+                                } else {
+                                    // Clear all highlights
+                                    document.querySelectorAll('.sidebar-card.highlighted').forEach(el => {
+                                        setHighlightedSuggestionId('');
+                                    });
+
+                                    currentSuggestionId = null;
+                                    tempSuggestion = null;
+                                    console.log('Finalized and cleared suggestion');
+                                }
+                                setSuggestionPopupVisible(false);
+                                return false;
+                            }
+                        },
+                    },
+                }),
+            ]
+        },
+    });
+
+    const updateSuggestionTextWithId = (suggestionId) => {
+        const existingSuggestionIndex = trackChangeDetails.suggestions.findIndex(
+            (sugg) => sugg.suggestionId === suggestionId
+        );
+        const el = document.querySelector(`[data-suggestion-id="${suggestionId}"]`);
+        const text = el?.textContent || "";
+        console.log("Suggestion Text:", text);
+
+        if (existingSuggestionIndex !== -1) {
+            dispatch(updateSuggestion({ suggestionId: suggestionId, data: { text: text } }));
+            dispatch(fetchSuggestions(editionId));
+        }
+    }
+
+    const saveCurrentSuggestion = async (tempSuggestion) => {
+        console.log("inside save function tempSuggestion", tempSuggestion);
+        if (!tempSuggestion || !tempSuggestion?.text?.trim()) return;
+
+        const { suggestionId, from, to, text, user, type } = tempSuggestion;
+        const existingSuggestionIndex = trackChangeDetails.suggestions.findIndex(
+            (sugg) => sugg.suggestionId === suggestionId
+        );
         const payload = {
             editionId: editionId,
             suggestionId: suggestionId,
@@ -1522,17 +1584,21 @@ const EditorComponent = ({ ydoc, provider, room }) => {
             text,
             fromPos: from,
             toPos: to,
+            type,
             createdAt: new Date().toISOString(),
         };
         try {
-            dispatch(createSuggestion(payload)); // redux-thunk
-            // document.querySelector(".suggestion-popup")?.remove();
-            tempSuggestion = null; // ✅ Clear only after save
-            setActiveSuggestion(null); // Optionally reset React state
-
-
+            if (existingSuggestionIndex !== -1) {
+                await dispatch(updateSuggestion({ suggestionId: suggestionId, data: { text: text } }));
+            } else {
+                await dispatch(createSuggestion(payload)); // Wait for creation
+            }
+            await dispatch(fetchSuggestions(editionId)); // Fetch updated list
+            // Optional cleanup
+            tempSuggestion = null; // Clear only after save
+            setActiveSuggestion(null); // Reset React state
         } catch (error) {
-            console.log("Create suggestion", error)
+            console.log("Create suggestion", error);
         }
     }
 
@@ -1543,13 +1609,18 @@ const EditorComponent = ({ ydoc, provider, room }) => {
         suggestionText,
         suggestionId,
         isActive,
+        type,
         onApprove,
         onReject,
     }) => {
+        let text = "";
+        const el = document.querySelector('[data-suggestion-id="' + suggestionId + '"]');
+        if (el) {
+            text = el.textContent;
+        }
         return (
             <div
-                className={`${suggestionId} sidebar-card rounded-md shadow-sm w-full max-w-md transition-all duration-200 ${isActive ? 'highlighted' : ''
-                    }`}
+                className={`${suggestionId} sidebar-card ${highlightedSuggestionId === suggestionId ? 'highlighted' : ''}`}
             >
                 {/* Header Row */}
                 <div className="flex items-start justify-between gap-3">
@@ -1586,12 +1657,113 @@ const EditorComponent = ({ ydoc, provider, room }) => {
 
                 {/* Suggestion Text Row */}
                 <div className="mt-2 text-sm text-gray-800">
-                    <strong>Add:</strong>{' '}
-                    <span className="italic text-gray-600">“{suggestionText}”</span>
+                    <strong>{type === 'insertion' ? 'Add:' : 'Delete:'}</strong>
+                    <span className="italic text-gray-600">“{suggestionText || text}”</span>
                 </div>
             </div>
         );
     };
+
+    function approveSuggestionById(editor, suggestionId) {
+        const { state, view } = editor;
+        const { doc, tr } = state;
+        const suggestionMarkType = state.schema.marks.suggestion;
+
+        let hasChanged = false;
+
+        doc.descendants((node, pos) => {
+            node.marks.forEach((mark) => {
+                if (
+                    mark.type === suggestionMarkType &&
+                    mark.attrs.suggestionId === suggestionId
+                ) {
+                    // Remove the suggestion mark
+                    tr.removeMark(pos, pos + node.nodeSize, suggestionMarkType);
+
+                    // If it's a deletion suggestion, remove the node
+                    if (mark.attrs.type === 'deletion') {
+                        tr.delete(pos, pos + node.nodeSize);
+                    }
+
+                    hasChanged = true;
+                }
+            });
+        });
+
+        const suggestionExistsInAPI = trackChangeDetails.suggestions.some(
+            (s) => s.suggestionId === suggestionId
+        );
+        if (hasChanged) {
+            view.dispatch(tr);
+            if (suggestionExistsInAPI) {
+                // Dispatch only once outside the loop
+                dispatch(updateSuggestion({ suggestionId, data: { isApproved: true } }))
+                    .then(() => dispatch(fetchSuggestions(editionId)))
+                    .catch((err) => {
+                        console.error("Error approving suggestion", err);
+                    });
+            }
+            setSuggestionPopupVisible(false);
+        }
+    }
+
+    function deleteSuggestionById(editor, suggestionId) {
+        const { state, view } = editor;
+        const { doc, tr } = state;
+        const suggestionMarkType = state.schema.marks.suggestion;
+
+        let hasChanged = false;
+
+        doc.descendants((node, pos) => {
+            node.marks.forEach((mark) => {
+                if (
+                    mark.type === suggestionMarkType &&
+                    mark.attrs.suggestionId === suggestionId
+                ) {
+                    // Remove the content wrapped with the suggestion
+                    tr.delete(pos, pos + node.nodeSize);
+                    hasChanged = true;
+                }
+            });
+        });
+
+        const suggestionExistsInAPI = trackChangeDetails.suggestions.some(
+            (s) => s.suggestionId === suggestionId
+        );
+
+        if (hasChanged) {
+            view.dispatch(tr);
+            if (suggestionExistsInAPI) {
+                // Update the backend to mark the suggestion as deleted
+                dispatch(updateSuggestion({ suggestionId, data: { isDeleted: true } }))
+                    .then(() => dispatch(fetchSuggestions(editionId)))
+                    .catch((err) => {
+                        console.error("Error deleting suggestion", err);
+                    });
+            }
+            setSuggestionPopupVisible(false);
+        }
+    }
+
+    const onCardApprove = (event) => {
+        // TODO: call your API to approve suggestion
+        const parentCardElement = event.target.closest('.sidebar-card');
+        const suggestionId = parentCardElement.classList[0];
+        approveSuggestionById(editor, suggestionId);
+
+
+        // You can remove the suggestion from the editor here if needed
+    };
+
+    const onCardReject = (event) => {
+        // TODO: call your API to reject suggestion
+        const parentCardElement = event.target.closest('.sidebar-card');
+        const suggestionId = parentCardElement.classList[0];
+        deleteSuggestionById(editor, suggestionId);
+
+    };
+    /* suggestion/track change code ends */
+
     return (
         <>
             <RulesModal
@@ -1648,7 +1820,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                             >
                                 <div className="col-group">
                                     <div className="main" style={{ width: sideBarMenu ? "70%" : "100%" }}>
-                                        <div className="editor-container">
+                                        <div className="editor-container" style={{ position: 'relative' }}>
                                             <div className="editor-page" ref={editorWrapperRef} data-viewmode={showUnresolved ? 'open' : 'resolved'}>
                                                 <EditorContent editor={editor} className={action + ' mode'} />
                                                 <div className="collab-status-group"
@@ -1684,6 +1856,31 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                                                             </div>
                                                         </div>
                                                     )}
+                                                </div>
+                                            )}
+                                            {activeSuggestion && (
+                                                <div
+                                                    id="floating-suggestion"
+                                                    ref={popupRef}
+                                                    style={{
+                                                        display: suggestionPopupVisible ? 'block' : 'none',
+                                                        position: 'absolute',
+                                                        top: popupCoords?.top ?? 0,
+                                                        left: popupCoords?.left ?? 0,
+                                                        zIndex: 9999,
+                                                    }}
+                                                >
+                                                    <SuggestionCard
+                                                        avatarUrl="https://example.com/avatar.jpg"
+                                                        username={activeSuggestion.user.name}
+                                                        timestamp={activeSuggestion.createdAt}
+                                                        suggestionText={activeSuggestion.text}
+                                                        suggestionId={activeSuggestion.suggestionId}
+                                                        isActive={true}
+                                                        type={activeSuggestion.type}
+                                                        onApprove={(e) => onCardApprove(e)}
+                                                        onReject={(e) => onCardReject(e)}
+                                                    />
                                                 </div>
                                             )}
                                         </div>
@@ -1838,10 +2035,17 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                                                                 suggestionText={sugg.text}
                                                                 suggestionId={sugg?.suggestionId}
                                                                 isActive={activeSuggestion?.suggestionId === sugg?.suggestionId}
+                                                                type={sugg?.type}
                                                                 onApprove={(e) => onCardApprove(e)}
                                                                 onReject={(e) => onCardReject(e)}
                                                             />
                                                         ))}
+                                                        {trackChangeDetails.status === "succeeded" && trackChangeDetails.suggestions.length === 0 &&
+                                                            <div className="no-suggestions-message">
+                                                                No suggestions found.
+                                                            </div>
+
+                                                        }
                                                     </div>
                                                 )}
                                             </div>
@@ -1868,9 +2072,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                 {action === "Editing" && editor && (
                     <SuggestionTooltip element={tooltipElement} editor={editor} />
                 )}
-
             </div >
-
         </>
     );
 
