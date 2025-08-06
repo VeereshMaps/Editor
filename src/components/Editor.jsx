@@ -124,7 +124,8 @@ const EditorComponent = ({ ydoc, provider, room }) => {
     const dispatch = useDispatch();
     const editionsById = useSelector((state) => state.editionsById);
     const loginDetails = useSelector((state) => state.auth);
-    const trackChangeDetails = useSelector((state) => state.suggestion);
+    const [trackChangeDetails, setTrackChangeDetails] = useState([]);
+    // const trackChangeDetails = useSelector((state) => state.suggestion);
     const { contentAIToken, documentToken } = useSelector((state) => state.tiptapToken);
     const [status, setStatus] = useState('connecting');
     const [currentUser, setCurrentUser] = useState(getInitialUser());
@@ -137,6 +138,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
     const [editor, setEditor] = useState(null);
     const importRef = useRef(null);
     const APP_ID = "8mzjy21k";
+    const VITE_SOCKET_URL = import.meta.env.VITE_SOCKET_URL;
 
     const roleName = loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase();
     const user = useUser();
@@ -468,7 +470,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
 
     useEffect(() => {
         dispatch(getEditionsById(editionId));
-        dispatch(fetchSuggestions(editionId));
+        // dispatch(fetchSuggestions(editionId));
     }, []);
 
     useEffect(() => {
@@ -508,7 +510,8 @@ const EditorComponent = ({ ydoc, provider, room }) => {
 
     useEffect(() => {
         if (!editionId || !stableUser) return;
-        const ws = new WebSocket("ws://localhost:5000/ws/" + editionId);
+        const ws = new WebSocket(VITE_SOCKET_URL + editionId);
+        // const ws = new WebSocket("ws://localhost:5000/ws/" + editionId);
         ws.onopen = () => {
             console.log("✅ WebSocket connected");
             // alert("WebSocket URL: " + ws.url);
@@ -522,6 +525,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
             ws.send(JSON.stringify({ type: "join-room", userId: user._id, username: user.name }));
             ws.send(JSON.stringify({ type: "get-all-documents", editionId }));
             ws.send(JSON.stringify({ type: "all-comments", editionId }));
+            ws.send(JSON.stringify({ type: "get-suggestion", editionId }));
         };
         getReRender(ws)
     }, [editionId, stableUser]);
@@ -567,6 +571,10 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                         .chain()
                         .setThread(message.data)
                         .run() */
+                    break;
+                case "get-suggestion":
+                    console.log("📄 Got Suggisytion:", message.data);
+                    setTrackChangeDetails(message.data)
                     break;
             }
         };
@@ -1492,9 +1500,9 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                                 const el = event.target.closest('[data-suggestion-id]') || event.target.querySelector('[data-suggestion-id]');
                                 const clickedSuggestionId = el?.getAttribute('data-suggestion-id');
                                 try {
-                                    dispatch(fetchSuggestions(editionId));
+                                    // dispatch(fetchSuggestions(editionId));
                                 } catch (error) {
-                                    
+
                                 }
                                 if (clickedSuggestionId) {
                                     currentSuggestionId = clickedSuggestionId;
@@ -1556,16 +1564,31 @@ const EditorComponent = ({ ydoc, provider, room }) => {
     });
 
     const updateSuggestionTextWithId = (suggestionId) => {
-        const existingSuggestionIndex = trackChangeDetails.suggestions.findIndex(
+        const existingSuggestionIndex = trackChangeDetails.findIndex(
             (sugg) => sugg.suggestionId === suggestionId
         );
         const el = document.querySelector(`[data-suggestion-id="${suggestionId}"]`);
         const text = el?.textContent || "";
         console.log("Suggestion Text:", text);
 
+        // if (existingSuggestionIndex !== -1) {
+        //     dispatch(updateSuggestion({ suggestionId: suggestionId, data: { text: text } }));
+        //     // dispatch(fetchSuggestions(editionId));
+        // }
+        const payload = {
+            text: text
+        }
         if (existingSuggestionIndex !== -1) {
-            dispatch(updateSuggestion({ suggestionId: suggestionId, data: { text: text } }));
-            dispatch(fetchSuggestions(editionId));
+            if (webIORef.current && webIORef.current.readyState === 1) {
+                webIORef.current.send(JSON.stringify({
+                    type: "update-suggestion",
+                    userId: user._id,
+                    username: user.name,
+                    content: payload,
+                    suggestionId: suggestionId
+                }));
+            }
+            // await dispatch(updateSuggestion({ suggestionId: suggestionId, data: { text: text } }));
         }
     }
 
@@ -1574,7 +1597,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
         if (!tempSuggestion || !tempSuggestion?.text?.trim()) return;
 
         const { suggestionId, from, to, text, user, type } = tempSuggestion;
-        const existingSuggestionIndex = trackChangeDetails.suggestions.findIndex(
+        const existingSuggestionIndex = trackChangeDetails.findIndex(
             (sugg) => sugg.suggestionId === suggestionId
         );
         const payload = {
@@ -1589,11 +1612,29 @@ const EditorComponent = ({ ydoc, provider, room }) => {
         };
         try {
             if (existingSuggestionIndex !== -1) {
-                await dispatch(updateSuggestion({ suggestionId: suggestionId, data: { text: text } }));
+                if (webIORef.current && webIORef.current.readyState === 1) {
+                    webIORef.current.send(JSON.stringify({
+                        type: "update-suggestion",
+                        userId: user._id,
+                        username: user.name,
+                        content: payload,
+                        suggestionId: suggestionId
+                    }));
+                }
+                // await dispatch(updateSuggestion({ suggestionId: suggestionId, data: { text: text } }));
             } else {
-                await dispatch(createSuggestion(payload)); // Wait for creation
+                // await dispatch(createSuggestion(payload)); // Wait for creation
+                if (webIORef.current && webIORef.current.readyState === 1) {
+                    webIORef.current.send(JSON.stringify({
+                        type: "create-suggestion",
+                        userId: user._id,
+                        username: user.name,
+                        content: payload,
+                    }));
+                }
             }
-            await dispatch(fetchSuggestions(editionId)); // Fetch updated list
+
+            // await dispatch(fetchSuggestions(editionId)); // Fetch updated list
             // Optional cleanup
             tempSuggestion = null; // Clear only after save
             setActiveSuggestion(null); // Reset React state
@@ -1657,12 +1698,21 @@ const EditorComponent = ({ ydoc, provider, room }) => {
 
                 {/* Suggestion Text Row */}
                 <div className="mt-2 text-sm text-gray-800">
-                    <strong>{type === 'insertion' ? 'Add:' : 'Delete:'}</strong>
-                    <span className="italic text-gray-600">“{suggestionText || text}”</span>
+                    <strong>{type === 'insertion' ? 'Add:' : 'Delete:'}</strong>{' '}
+                    <span
+                        className="italic text-gray-600"
+                        title={suggestionText || text} // Full text shown on hover
+                    >
+                        {truncateText(suggestionText || text, 30)}
+                    </span>
                 </div>
             </div>
         );
     };
+    function truncateText(str, maxLength) {
+        if (!str) return '';
+        return str.length > maxLength ? str.substring(0, maxLength) + '...' : str;
+    }
 
     function approveSuggestionById(editor, suggestionId) {
         const { state, view } = editor;
@@ -1690,18 +1740,30 @@ const EditorComponent = ({ ydoc, provider, room }) => {
             });
         });
 
-        const suggestionExistsInAPI = trackChangeDetails.suggestions.some(
+        const suggestionExistsInAPI = trackChangeDetails.some(
             (s) => s.suggestionId === suggestionId
         );
         if (hasChanged) {
             view.dispatch(tr);
             if (suggestionExistsInAPI) {
                 // Dispatch only once outside the loop
-                dispatch(updateSuggestion({ suggestionId, data: { isApproved: true } }))
-                    .then(() => dispatch(fetchSuggestions(editionId)))
-                    .catch((err) => {
-                        console.error("Error approving suggestion", err);
-                    });
+                // dispatch(updateSuggestion({ suggestionId, data: { isApproved: true } }))
+                //     // .then(() => dispatch(fetchSuggestions(editionId)))
+                //     .catch((err) => {
+                //         console.error("Error approving suggestion", err);
+                //     });
+                const payload = {
+                    isApproved: true
+                }
+                if (webIORef.current && webIORef.current.readyState === 1) {
+                    webIORef.current.send(JSON.stringify({
+                        type: "update-suggestion",
+                        userId: user._id,
+                        username: user.name,
+                        content: payload,
+                        suggestionId: suggestionId
+                    }));
+                }
             }
             setSuggestionPopupVisible(false);
         }
@@ -1727,19 +1789,31 @@ const EditorComponent = ({ ydoc, provider, room }) => {
             });
         });
 
-        const suggestionExistsInAPI = trackChangeDetails.suggestions.some(
+        const suggestionExistsInAPI = trackChangeDetails.some(
             (s) => s.suggestionId === suggestionId
         );
 
         if (hasChanged) {
             view.dispatch(tr);
             if (suggestionExistsInAPI) {
-                // Update the backend to mark the suggestion as deleted
-                dispatch(updateSuggestion({ suggestionId, data: { isDeleted: true } }))
-                    .then(() => dispatch(fetchSuggestions(editionId)))
-                    .catch((err) => {
-                        console.error("Error deleting suggestion", err);
-                    });
+                // // Update the backend to mark the suggestion as deleted
+                // dispatch(updateSuggestion({ suggestionId, data: { isDeleted: true } }))
+                //     // .then(() => dispatch(fetchSuggestions(editionId)))
+                //     .catch((err) => {
+                //         console.error("Error deleting suggestion", err);
+                //     });
+                const payload = {
+                    isDeleted: true
+                }
+                if (webIORef.current && webIORef.current.readyState === 1) {
+                    webIORef.current.send(JSON.stringify({
+                        type: "update-suggestion",
+                        userId: user._id,
+                        username: user.name,
+                        content: payload,
+                        suggestionId: suggestionId
+                    }));
+                }
             }
             setSuggestionPopupVisible(false);
         }
@@ -1790,7 +1864,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                     handleApprovalClick={handleApprovalClick}
                     actionType={setActionType}
                     sideBarMenu={setSideBarMenu}
-                    suggestionLength={trackChangeDetails.suggestions.length}
+                    suggestionLength={trackChangeDetails.length}
                 />
                 {action === "History" ? (
                     <VersioningModal
@@ -2026,7 +2100,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                                                 )}
                                                 {activeTab === "Suggesting" && (
                                                     <div style={{ display: "flex", flexDirection: "column", rowGap: 10 }}>
-                                                        {trackChangeDetails.status === "succeeded" && trackChangeDetails.suggestions.length > 0 && trackChangeDetails.suggestions.map((sugg, index) => (
+                                                        {trackChangeDetails.length > 0 && trackChangeDetails.map((sugg, index) => (
                                                             <SuggestionCard
                                                                 key={index}
                                                                 avatarUrl="https://example.com/avatar.jpg"
@@ -2040,7 +2114,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                                                                 onReject={(e) => onCardReject(e)}
                                                             />
                                                         ))}
-                                                        {trackChangeDetails.status === "succeeded" && trackChangeDetails.suggestions.length === 0 &&
+                                                        {trackChangeDetails.length === 0 &&
                                                             <div className="no-suggestions-message">
                                                                 No suggestions found.
                                                             </div>
