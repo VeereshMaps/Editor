@@ -112,7 +112,9 @@ const GoldRepo = () => {
                 // };
                 const handleview = () => {
                     setSelectedRow(params.row);
-                    navigate('/projects/viewAsBook', { state: { jsonContent: params.row.editorContent } });
+                    console.log("params.row", params.row);
+                    
+                    navigate('/goldprojects/viewAsBook/'+params.row.projectId, { state: { jsonContent: params.row.editorContent } });
 
                     //old flow redirection
                     // navigate('/goldprojects/view', { state: { bookData: params.row } });
@@ -158,7 +160,8 @@ const GoldRepo = () => {
             publicationDate: moment(item.publicationDate).format("DD-MM-YYYY"),
             versions: item.versions,
             versionId: item._id,
-            editorContent:item.editorContent
+            editorContent:item.editorContent,
+            projectId: item.project._id,
         }
     });
 

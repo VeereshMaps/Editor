@@ -30,7 +30,7 @@ import docxParserReducer from'./Slices/docxParserSlice';
 import tiptapTokenReducer from'./Slices/tiptapTokenSlice';
 import proofreadReducer from "./Slices/proofreadSlice";
 import suggestionReducer from "./Slices/suggestionSlice";
-
+import  goldEditionsByProjectId  from './Slices/goldEditionByProjectIdSlice';
   const rootReducer = combineReducers({
         auth: authReducer,
         userDetailsById:userIdReducer,
@@ -59,6 +59,7 @@ import suggestionReducer from "./Slices/suggestionSlice";
         tiptapToken:tiptapTokenReducer,
         proofread: proofreadReducer,
         suggestion: suggestionReducer,
+        editionsGold:goldEditionsByProjectId
 });
 
 // const persistedReducer = persistReducer(persistConfig, rootReducer);

@@ -23,6 +23,7 @@ import PublishBook from 'pages/selfPublishing/publish-book';
 import ProtectedRoute from 'components/ProtectedRoute';
 import DashboardLayout from 'layout/Dashboard';
 import AssetForm from "pages/assetslib/addassets"
+import GoldEditionDetails from 'pages/projects/goldEditionDetails';
 
 const Color = Loadable(lazy(() => import('pages/component-overview/color')));
 const Typography = Loadable(lazy(() => import('pages/component-overview/typography')));
@@ -129,12 +130,16 @@ const MainRoutes = {
           element: <GoldRepo />
         },
         {
+          path: 'viewAsBook/:projectId',
+          element: <GoldEditionDetails />
+        },
+        {
           path: 'add',
           element: <AddProjectForm />
         },
         {
-          path: 'view',
-          element: <ViewGoldBook />
+          path: 'view/:editionId',
+          element: <ViewAsBook />
         },
         {
           path: 'edit',

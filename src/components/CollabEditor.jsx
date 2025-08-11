@@ -38,7 +38,8 @@ import Paragraph from "@tiptap/extension-paragraph";
 import { getEditionById, updateEdition } from "redux/Slices/updateEditionSlice";
 // const APP_ID = "7j9y6m10";//7j9y6m10
 
-const APP_ID = "8mzjy21k";
+// const APP_ID = "8mzjy21k";
+const APP_ID = "6kpvqylk";
 export default function CollabEditor({ ydoc, provider, room }) {
     const navigate = useNavigate();
     const dispatch = useDispatch();
@@ -163,7 +164,9 @@ export default function CollabEditor({ ydoc, provider, room }) {
 
     const handleMoveToGold = async () => {
         try {
-            const updatedEdition = { status: "Gold", editorContent: editor?.getJSON().toString() };
+            console.log(editor?.getJSON());
+            
+            const updatedEdition = { status: "Gold", editorContent: editor?.getJSON() };
             const response=await dispatch(updateEdition({ id: editionId, updatedData: updatedEdition })).unwrap();
             console.log("!@##response ",response);
             

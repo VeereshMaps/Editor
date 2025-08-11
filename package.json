@@ -77,6 +77,7 @@
     "dayjs": "^1.11.13",
     "formik": "^2.4.5",
     "framer-motion": "^11.0.8",
+    "jose": "^6.0.12",
     "language-list": "^0.0.3",
     "lodash": "^4.17.21",
     "mammoth": "^1.9.1",

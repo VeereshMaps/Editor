@@ -137,7 +137,8 @@ const EditorComponent = ({ ydoc, provider, room }) => {
     const [tooltipElement, setTooltipElement] = useState(null);
     const [editor, setEditor] = useState(null);
     const importRef = useRef(null);
-    const APP_ID = "8mzjy21k";
+    // const APP_ID = "8mzjy21k";
+    const APP_ID = "6kpvqylk";
     const VITE_SOCKET_URL = import.meta.env.VITE_SOCKET_URL;
 
     const roleName = loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase();
@@ -458,7 +459,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
 
 
         return () => newEditor.destroy(); // cleanup on action change
-    }, [action]);
+    }, []);
 
     const stableUser = useMemo(() => user, [user?._id]);
     const { threads, createThread } = useThreads(provider, editor, user, webIORef, getThreds || []);
@@ -758,12 +759,15 @@ const EditorComponent = ({ ydoc, provider, room }) => {
 
     const handleApprovalClick = async () => {
         try {
+            console.log(editor?.getJSON());
+            
             const updatedData = {};
             if (roleName === "author") {
                 updatedData.isAuthorApproved = true;
                 updatedData.editorContent = editor?.getJSON(); // ✅ move into updatedData
             } else if (roleName === "editor") {
                 updatedData.isEditorApproved = true;
+                updatedData.editorContent = editor?.getJSON(); // ✅ move into updatedData
             }
 
             if (Object.keys(updatedData).length > 0) {

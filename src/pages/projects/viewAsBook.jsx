@@ -1,8 +1,10 @@
 import React, { useState, useLayoutEffect, useRef } from 'react';
 import '../../styles/ViewAsBook.css';
-import { useLocation } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { flushSync } from 'react-dom';
 import * as ReactDOM from 'react-dom/client';
+import { Box, Button, Typography } from '@mui/material';
+import { ArrowBack } from '@mui/icons-material';
 
 const ViewAsBook = () => {
     const location = useLocation();
@@ -91,22 +93,22 @@ const ViewAsBook = () => {
 
     // ✅ Height-based pagination logic
     useLayoutEffect(() => {
-        if (!jsonContent?.content) return;
+        if (!jsonContent?.editorContent?.content) return;
 
         const totalPageHeightPx = 1122; // fixed page height in px (A4)
         const verticalPaddingPx = mmToPx(50); // 25mm top + 25mm bottom
         const pageContentHeightPx = totalPageHeightPx - verticalPaddingPx;
 
-        const meaningfulNodes = jsonContent.content.filter(node => !isEmptyParagraph(node));
+        const meaningfulNodes = jsonContent.editorContent.content.filter(node => !isEmptyParagraph(node));
         const nodeElements = meaningfulNodes.map((node, i) => renderNode(node, i));
 
         // ✅ STEP 1: Extract heading + author as first page
         const firstPage = [];
         let remainingNodes = [...nodeElements];
 
-        if (jsonContent.content.length >= 2 &&
-            jsonContent.content[0].type === 'heading' &&
-            jsonContent.content[1].type === 'paragraph') {
+        if (jsonContent.editorContent.content.length >= 2 &&
+            jsonContent.editorContent.content[0].type === 'heading' &&
+            jsonContent.editorContent.content[1].type === 'paragraph') {
             firstPage.push(nodeElements[0], nodeElements[1]);
             remainingNodes = remainingNodes.slice(2);
         } else {
@@ -152,21 +154,34 @@ const ViewAsBook = () => {
         finalPages.push(...tempPages);
 
         setPages(finalPages);
-    }, [jsonContent]);
-
+    }, [jsonContent?.editorContent]);
+    const backToEdition = () => {
+        const navigate = useNavigate();
+        return () => {
+            navigate('/goldprojects/viewAsBook/'+jsonContent.projectID._id);
+        };
+    };
     return (
-        <div className="book-container">
-            {pages.map((pageContent, pageIndex) => (
-                <div
-                    className={`a4-page ${pageIndex === 0 ? 'first-page' : ''}`}
-                    key={pageIndex}
-                >
-                    {pageContent}
-                </div>
-            ))}
+        <div className="view-as-book">
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Button title='back to Gold Project' onClick={backToEdition()} startIcon={<ArrowBack style={{ fontSize: 25 }} />}>
+                </Button>
+                <Typography variant="h4">{jsonContent.title}</Typography>
+            </Box>
+            <div className="book-container">
 
-            {/* Hidden container for measurement */}
-            <div ref={hiddenContainerRef} style={{ visibility: 'hidden', position: 'absolute', top: '-9999px' }}></div>
+                {pages.map((pageContent, pageIndex) => (
+                    <div
+                        className={`a4-page ${pageIndex === 0 ? 'first-page' : ''}`}
+                        key={pageIndex}
+                    >
+                        {pageContent}
+                    </div>
+                ))}
+
+                {/* Hidden container for measurement */}
+                <div ref={hiddenContainerRef} style={{ visibility: 'hidden', position: 'absolute', top: '-9999px' }}></div>
+            </div>
         </div>
     );
 };
