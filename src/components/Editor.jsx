@@ -761,7 +761,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
     const handleApprovalClick = async () => {
         try {
             console.log(editor?.getJSON());
-            
+
             const updatedData = {};
             if (roleName === "author") {
                 updatedData.isAuthorApproved = true;
@@ -912,32 +912,57 @@ const EditorComponent = ({ ydoc, provider, room }) => {
         }
         return null;
     }
+    // function findSuggestionRange(state, suggestionId) {
+    //     let start = -1;
+    //     let end = -1;
+    //     const { doc, schema } = state;
+    //     const suggestionMarkName = 'suggestion';
+
+    //     doc.descendants((node, pos) => {
+    //         if (!node.isText) return true; // continue
+    //         const hasMark = node.marks.some(
+    //             (m) => m.type.name === suggestionMarkName && m.attrs.suggestionId === suggestionId
+    //         );
+    //         if (hasMark) {
+    //             if (start === -1) {
+    //                 start = pos;
+    //             }
+    //             end = pos + node.nodeSize; // nodeSize for text includes its length
+    //         }
+    //         return true; // continue traversal
+    //     });
+
+    //     if (start === -1 || end === -1) {
+    //         return null; // not found
+    //     }
+
+    //     // For textBetween we need the actual character positions; ProseMirror textBetween expects "from" inclusive, "to" exclusive in document positions.
+    //     return { from: start, to: end };
+    // }
+    // Fix the range finding logic
     function findSuggestionRange(state, suggestionId) {
         let start = -1;
         let end = -1;
-        const { doc, schema } = state;
+        const { doc } = state;
         const suggestionMarkName = 'suggestion';
 
         doc.descendants((node, pos) => {
-            if (!node.isText) return true; // continue
+            if (!node.isText) return true;
+
             const hasMark = node.marks.some(
                 (m) => m.type.name === suggestionMarkName && m.attrs.suggestionId === suggestionId
             );
+
             if (hasMark) {
                 if (start === -1) {
                     start = pos;
                 }
-                end = pos + node.nodeSize; // nodeSize for text includes its length
+                end = pos + node.textContent.length; // Use textContent.length instead of nodeSize
             }
-            return true; // continue traversal
+            return true;
         });
 
-        if (start === -1 || end === -1) {
-            return null; // not found
-        }
-
-        // For textBetween we need the actual character positions; ProseMirror textBetween expects "from" inclusive, "to" exclusive in document positions.
-        return { from: start, to: end };
+        return (start === -1 || end === -1) ? null : { from: start, to: end };
     }
 
     function findPosForSuggestionId(doc, suggestionId) {
@@ -1456,34 +1481,86 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                         return DecorationSet.empty;
                     }
                 },
+                // view(view) {
+                //     return {
+                //         update(view, prevState) {
+                //             const { state } = view;
+                //             const { from } = state.selection;
+
+                //             // Only if mode is Suggesting
+                //             if (getMode() !== 'Suggesting') return;
+
+                //             // If active suggestion exists AND cursor moved away
+                //             if (
+                //                 tempSuggestion &&
+                //                 lastCursorPos !== null &&
+                //                 from !== lastCursorPos
+                //             ) {
+                //                 finalizeActiveSuggestion(view);
+                //             }
+
+                //             lastCursorPos = from;
+                //         },
+                //         destroy() {
+                //             lastCursorPos = null;
+                //         }
+                //     };
+                // },
                 view(view) {
                     return {
                         update(view, prevState) {
                             const { state } = view;
                             const { from } = state.selection;
 
-                            // Only if mode is Suggesting
                             if (getMode() !== 'Suggesting') return;
 
-                            // If active suggestion exists AND cursor moved away
-                            if (
-                                tempSuggestion &&
-                                lastCursorPos !== null &&
-                                from !== lastCursorPos
-                            ) {
-                                finalizeActiveSuggestion(view);
+                            // Only finalize if cursor moved OUTSIDE current suggestion
+                            if (tempSuggestion && currentSuggestionId) {
+                                const range = findSuggestionRange(state, currentSuggestionId);
+                                const isOutsideSuggestion = !range || from < range.from || from > range.to;
+
+                                if (isOutsideSuggestion && lastCursorPos !== null) {
+                                    finalizeActiveSuggestion(view);
+                                }
                             }
 
                             lastCursorPos = from;
                         },
-                        destroy() {
-                            lastCursorPos = null;
-                        }
                     };
                 },
             },
         });
     };
+    const finalizeActiveSuggestion = async (view) => {
+        if (tempSuggestion && currentSuggestionId) {
+            console.log("🔚 Finalizing active suggestion:", currentSuggestionId);
+            
+            // Wait for save to complete
+            await saveCurrentSuggestion(tempSuggestion);
+            
+            // Then clear state
+            tempSuggestion = null;
+            currentSuggestionId = null;
+            setActiveSuggestion(null);
+            setSuggestionPopupVisible(false);
+        }
+    };
+    // Add this cleanup function
+    const cleanupSuggestionState = () => {
+        tempSuggestion = null;
+        currentSuggestionId = null;
+        lastCursorPos = null;
+        setActiveSuggestion(null);
+        setSuggestionPopupVisible(false);
+        setActiveSuggestionId(null);
+    };
+
+    // Call this when mode changes
+    useEffect(() => {
+        if (action !== "Suggesting") {
+            cleanupSuggestionState();
+        }
+    }, [action]);
 
     useEffect(() => {
         setTimeout(() => {
