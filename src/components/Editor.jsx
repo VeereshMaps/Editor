@@ -706,6 +706,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
     const handleRevert = useCallback((version, versionData) => {
         const versionTitle = versionData ? versionData.name || renderDate(versionData.date) : version
         editor.commands.revertToVersion(version, `Revert to ${versionTitle}`, `Unsaved changes before revert to ${versionTitle}`)
+        setAction('Editing');
     }, [editor]);
 
     const handleApprovalClick = async () => {

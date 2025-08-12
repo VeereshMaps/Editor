@@ -1,8 +1,8 @@
-import { EditorContent, useEditor, useEditorState } from '@tiptap/react'
+import { EditorContent, Extension, Mark, useEditor, useEditorState } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { watchPreviewContent } from '@tiptap-pro/extension-collaboration-history'
 import {
-  memo, useCallback, useEffect, useMemo, useState,
+  memo, useCallback, useEffect, useMemo, useRef, useState,
 } from 'react'
 import React from 'react'
 import { VersionItem } from './VersionItem'
@@ -32,6 +32,8 @@ import { useUser } from 'components/hooks/useUser'
 import "../../styles/tiptap.css";
 import "../../styles/version-histoty.scss";
 import { Heading } from './DiffHeading'
+
+import { Plugin, PluginKey, TextSelection } from 'prosemirror-state';
 
 const getVersionName = version => {
   // console.log(version);
@@ -71,6 +73,7 @@ export const VersioningModal = memo(({
   const [selectedVersion, setSelectedVersion] = useState(null)
   const [errorMessage, setErrorMessage] = useState(null)
   const user = useUser();
+   const currentUserRef = useRef(user);
   if (!colorMapping.has(user._id)) {
     colorMapping.set(user._id, colors[(user._id || '').length % colors.length])
   }
@@ -89,6 +92,105 @@ export const VersioningModal = memo(({
     backgroundColor: '#e0e0e0',
     color: '#333',
   };
+
+//suggestion code starts
+const SuggestionDeletionMark = Mark.create({
+  name: 'suggestion-deletion',
+
+  addAttributes() {
+      const user = currentUserRef.current;
+      return {
+          username: { default: user.name },
+          userId: { default: user.id },
+          color: { default: user.color },
+          createdAt: { default: () => new Date().toISOString() },
+      };
+  },
+
+  parseHTML() {
+      return [{ tag: 'del[data-suggestion-deletion]' }];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+      const viewerUserId = this.options.viewerUserId ?? null;
+      const isOwnDeletion = HTMLAttributes.userId === viewerUserId;
+      const color = !isOwnDeletion ? HTMLAttributes.color : '#008000';
+      const borderStyle = isOwnDeletion ? 'solid' : 'dashed';
+
+      return [
+          'del',
+          {
+              ...HTMLAttributes,
+              'data-suggestion-deletion': 'true',
+              'data-user': HTMLAttributes.username,
+              'data-timestamp': HTMLAttributes.createdAt,
+              class: `suggestion-deletion user-${HTMLAttributes.userId}`,
+              style: `
+            text-decoration: line-through;
+     border-top: 1px ${borderStyle} ${color};
+border-bottom: 1px ${borderStyle} ${color};
+border-radius: 2px;
+  `,
+          },
+          0,
+      ];
+  },
+});
+
+const SuggestionMark = Mark.create({
+  name: 'suggestion',
+
+  addOptions() {
+      return {
+          viewerUserId: null,
+      };
+  },
+
+  addAttributes() {
+      return {
+          username: { default: 'User' },
+          userId: { default: null },
+          color: { default: '#0000ff' },
+          suggestionId: { default: null },
+          createdAt: { default: () => new Date().toISOString() },
+      };
+  },
+
+  parseHTML() {
+      return [{ tag: 'span[data-suggestion]' }];
+  },
+
+  renderHTML({ HTMLAttributes, options = {} }) {
+      const isOwn = HTMLAttributes.userId === options.viewerUserId;
+      const userClass = isOwn ? 'suggestion-own' : 'suggestion-other';
+      const userIdClass = `user-${HTMLAttributes.userId}`;
+      const userColor = HTMLAttributes.color || '#444475ff';
+
+      return [
+          'span',
+          {
+              ...HTMLAttributes,
+              'data-suggestion': 'true',
+              'data-user': HTMLAttributes.username,
+              'data-timestamp': HTMLAttributes.createdAt,
+              'data-suggestion-id': HTMLAttributes.suggestionId,
+              class: `suggestion ${userClass} ${userIdClass}`,
+              style: `color: ${userColor};`,
+              // style: `border: 1px solid ${userColor}; border-radius: 2px;`,
+          },
+          0,
+      ];
+  },
+});
+
+const SuggestionExtension = Extension.create({
+  name: 'suggestion-extension',
+});
+const SuggestionFinalizer = Extension.create({
+name: 'suggestion-finalizer',
+});
+//suggestion code ends
+
   const editorHistory = useEditor({
     editable: false,
     immediatelyRender: true,
@@ -127,6 +229,17 @@ export const VersioningModal = memo(({
           })
         },
       }),
+      SuggestionMark.configure({
+        viewerUserId: currentUserRef.current?.id || 'anonymous',
+    }),
+    SuggestionDeletionMark.configure({
+        viewerUserId: currentUserRef.current?.id || 'anonymous',
+    }),
+    SuggestionExtension.configure({
+        getMode: () => editorModeRef.current,
+        getUser: () => currentUserRef.current,
+    }),
+    SuggestionFinalizer,
     ],
   })
   const versionData = useMemo(() => {
@@ -276,6 +389,7 @@ export const VersioningModal = memo(({
     setCurrentVersionId(null)
     editorHistory.commands.clearContent()
   }, [onClose, editorHistory])
+
 
 
   if (!isOpen) {
