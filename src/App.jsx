@@ -9,7 +9,8 @@ import ScrollTop from "components/ScrollTop";
 import { fetchUserById } from "redux/Slices/userSlice";
 import { setAuthState } from "redux/Slices/authSlice"; // Import action to update state
 import useAuthCheck from "./api/hooks/useAuthCheck"; // Import the hook
-
+import { ToastContainer } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
 export default function App() {
   const dispatch = useDispatch();
   const userDetails = useSelector((state) => state.auth);
@@ -31,22 +32,23 @@ export default function App() {
 
   useEffect(() => {
     if (userDetails?.user && userDetails?.isAuthenticated) {
-        fetchUserDetailsById(userDetails.user);
+      fetchUserDetailsById(userDetails.user);
     } else {
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-            const parsedUser = JSON.parse(storedUser);
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
 
-            // Ensure we dispatch only if Redux doesn't already have this user
-            if (!userDetails?.user || userDetails?.user?._id !== parsedUser._id) {
-                dispatch(setAuthState({ user: parsedUser }));
-            }
+        // Ensure we dispatch only if Redux doesn't already have this user
+        if (!userDetails?.user || userDetails?.user?._id !== parsedUser._id) {
+          dispatch(setAuthState({ user: parsedUser }));
         }
+      }
     }
   }, [userDetails]); // Include dispatch in dependencies
 
   return (
     <ThemeCustomization>
+      <ToastContainer/>
       <ScrollTop>
         <Suspense fallback={<div>Loading...</div>}>
           <RouterProvider router={router} />

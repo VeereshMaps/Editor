@@ -24,6 +24,7 @@ const GoldEditionDetails = () => {
     const { projectId } = useParams(); // Still included in case GoldEditions uses it internally
 
     useEffect(() => {
+        getProjectDetails(projectId);
         if (bookData?.projectId) {
             dispatch(getProjectDetailsById(bookData.projectId));
         }
@@ -36,7 +37,13 @@ const GoldEditionDetails = () => {
     const handleBackClick = () => {
         navigate('/goldprojects');
     };
-
+    const getProjectDetails = async (id) => {
+        try {
+            await dispatch(getProjectDetailsById(id))
+        } catch (error) {
+            console.log("project details by id error", error);
+        }
+    }
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
             <Paper sx={{ width: '100%', padding: 1 }}>

@@ -36,6 +36,7 @@ import { InlineThread } from '@tiptap-pro/extension-comments'
 import { Heading } from "./tiptop_version/DiffHeading";
 import Paragraph from "@tiptap/extension-paragraph";
 import { getEditionById, updateEdition } from "redux/Slices/updateEditionSlice";
+import AlertService from "utils/AlertService";
 // const APP_ID = "7j9y6m10";//7j9y6m10
 
 // const APP_ID = "8mzjy21k";
@@ -169,11 +170,12 @@ export default function CollabEditor({ ydoc, provider, room }) {
             const updatedEdition = { status: "Gold", editorContent: editor?.getJSON() };
             const response=await dispatch(updateEdition({ id: editionId, updatedData: updatedEdition })).unwrap();
             console.log("!@##response ",response);
-            
+            AlertService.success('Edition Moved to gold successfully!');
             if(response){
                 navigate(`/projects`);
             }
         } catch (error) {
+            AlertService.error('Failed to move the edition to Gold.');
             console.error("Error updating edition status to Gold:", error);
         }
     };

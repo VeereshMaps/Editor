@@ -83,6 +83,7 @@ import { Extension, Editor, Mark } from '@tiptap/core';
 import { Plugin, PluginKey, TextSelection } from 'prosemirror-state';
 import { Fragment } from 'prosemirror-model';
 import moment from 'moment-timezone';
+import AlertService from 'utils/AlertService';
 
 const defaultContent = `
     <p>Hi Welcome To Document Editor</p>
@@ -776,11 +777,14 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                 if (updateEdition.fulfilled.match(result)) {
                     console.log("✅ Edition updated successfully");
                     dispatch(getEditionsById(editionId)); // 🔄 Refetch
+                    AlertService.success('Edition approved successfully!');
                 }
             } else {
+                AlertService.error('Failed to approve the edition.');
                 console.warn("⚠️ Role is neither author nor editor. Skipping update.");
             }
         } catch (error) {
+            AlertService.error('Failed to approve the edition.')
             console.error("❌ Error updating edition:", error);
         }
     };

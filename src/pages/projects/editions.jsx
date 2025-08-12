@@ -25,6 +25,7 @@ import { createEditionFunc } from "redux/Slices/createEditionSlice";
 import { updateEdition } from "redux/Slices/updateEditionSlice";
 import moment from "moment-timezone";
 import { elevatedAccess, formattedUserRole, superAccess } from "api/menu";
+import AlertService from "utils/AlertService";
 // import { updateEditionFunc } from "redux/Slices/updateEditionSlice"; // New API call for editing
 
 const Editions = ({ setShowEditForm, bookDetails }) => {
@@ -128,9 +129,11 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
             const updatedEdition = { ...edition, status: "Gold" };
 
             await dispatch(updateEdition({ id: edition._id, updatedData: updatedEdition }));
+            AlertService.success('Edition Moved to gold successfully!');
 
             getEditionsFunc(); // Refresh the list after successful update
         } catch (error) {
+            AlertService.error('Failed to move the edition to Gold.');
             console.error("Error updating edition status to Gold:", error);
         }
     };
@@ -167,7 +170,7 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
         if (!editionData.textcolor) newErrors.textcolor = "Text Color is required";
         if (!editionData.description) newErrors.description = "Description is required";
         if (!editionData.status) newErrors.status = "Status is required";
-        console.log("newErrors",newErrors)
+        console.log("newErrors", newErrors)
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
             return;
@@ -178,13 +181,18 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
             if (editData) {
                 // If editing, call the update API
                 await dispatch(updateEdition({ id: editData._id, updatedData: editionData }));
+                AlertService.success('Edition updated successfully!');
+
             } else {
                 // If creating, call the create API
                 await dispatch(createEditionFunc(editionData));
+                AlertService.success('Edition created successfully!');
+
             }
             handleCloseModal();
             getEditionsFunc(); // Refresh list
         } catch (error) {
+            AlertService.error('The edition could not be saved.');
             console.log("Error while saving edition", error);
         }
     };
@@ -260,7 +268,7 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
                                 <Button variant="outlined" color="primary" size="small" onClick={() => navigate(`/projects/editions/${edition._id}/${edition.projectID._id}`)}>
                                     View
                                 </Button>
-                                {(!edition.status || edition.status === "WIP") && formattedUserRole.includes(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase()) &&(edition.isAuthorApproved) && (loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === superAccess || loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === elevatedAccess) && (
+                                {(!edition.status || edition.status === "WIP") && formattedUserRole.includes(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase()) && (edition.isAuthorApproved) && (loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === superAccess || loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === elevatedAccess) && (
                                     <Button variant="outlined" color="primary" size="small" onClick={() => handleMoveToGold(edition)}>
                                         Move to GOLD
                                     </Button>

@@ -1,185 +1,105 @@
-import { Box, Button, Chip, CircularProgress, Grid, IconButton, Paper } from '@mui/material';
-import Typography from '@mui/material/Typography';
+import {
+    Box,
+    CircularProgress,
+    IconButton,
+    Paper,
+    Typography
+} from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { DeleteColumnOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons';
-import { Add, AddCircleOutline, DeleteOutline, DeleteOutlineSharp } from '@mui/icons-material';
+import { useEffect } from 'react';
+import { EyeOutlined } from '@ant-design/icons';
 import { useDispatch, useSelector } from 'react-redux';
-import { getEditions } from '../../redux/Slices/editionSlice';
+import { getGoldProjectsUser } from 'redux/Slices/goldProjectSliceByUserId';
 import moment from 'moment-timezone';
-import { getGoldProjects } from 'redux/Slices/goldProjectSlice';
+
+const NoRowsOverlay = () => (
+    <Box sx={{ textAlign: 'center', padding: 3 }}>
+        <Typography variant="body1" color="text.secondary">
+            No record found
+        </Typography>
+    </Box>
+);
 
 const GoldRepo = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
-    const [selectedRow, setSelectedRow] = useState(null);
-    const allGoldProjects = useSelector((state) => state.goldProjects);
-    const loginDetails = useSelector((state) => state.auth);
-    const userId = loginDetails.user._id.toString();
+
+    const userRole = useSelector((state) => state.auth.user?.role);
+    const { projects, loading } = useSelector((state) => state.goldProjectsUser);
+
     useEffect(() => {
-        getEditionFunc();
-    }, []);
-
-    const filteredGoldEditions = allGoldProjects.projects.filter((edition) => {
-        const project = edition.project;
-
-        if (!project) return false;
-
-        const {
-            author,
-            editor,
-            projectManager,
-            proofReader,
-            designer,
-            teamLead,
-            createdBy,
-            lastEditedBy,
-            Admin,
-        } = project;
-
-        const matchDirect =
-            author?._id?.toString() === userId ||
-            editor?._id?.toString() === userId ||
-            projectManager?._id?.toString() === userId ||
-            proofReader?._id?.toString() === userId ||
-            designer?._id?.toString() === userId ||
-            createdBy?._id?.toString() === userId ||
-            lastEditedBy?._id?.toString() === userId ||
-            Admin?._id?.toString() === userId;
-
-        const matchTeamLead = Array.isArray(teamLead)
-            ? teamLead.some((lead) => lead?._id?.toString() === userId)
-            : false;
-
-        return matchDirect || matchTeamLead;
-    });
-
-
-    console.log("filteredGoldEditions", filteredGoldEditions);
-
-    const getEditionFunc = async () => {
-        try {
-            await dispatch(getGoldProjects());
-        } catch (error) {
-            console.log('getting editions error', error);
+        if (userRole) {
+            dispatch(getGoldProjectsUser(userRole));
         }
-    }
+    }, [userRole, dispatch]);
 
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'Published':
-                return 'success'; // Green
-            case 'Editing':
-                return 'success'; // Yellow
-            case 'In Progress':
-                return 'success'; // Blue
-            case 'Review':
-                return 'success'; // Red
-            default:
-                return 'success';
-        }
+    const handleView = (row) => {
+        navigate(`/goldprojects/viewAsBook/${row.projectId}`, {
+            state: { jsonContent: row.editorContent },
+        });
     };
 
     const columns = [
-        { field: 'id', headerName: 'Sl No.', width: 70 },
-        { field: 'title', headerName: 'Project Title', flex: 2 },
-        { field: 'versionTitle', headerName: 'Version Title', flex: 2 },
-        { field: 'publisher', headerName: 'Publisher', flex: 1 },
-        { field: 'subject', headerName: 'Subject', width: 150 },
-        { field: 'publicationDate', headerName: 'Edition Publication Date', width: 150 },
-        // {
-        //   field: 'status',
-        //   headerName: 'Status',
-        //   width: 130,
-        //   renderCell: (params) => (
-        //     <Chip size='small' variant='outlined' label={params.value} color={getStatusColor(params.value)} />
-        //   ),
-        // },
+        { field: 'id', headerName: 'Sl No', width: 70 },
+        { field: 'title', headerName: 'Book Title', flex: 2 },
+        { field: 'author', headerName: 'Author', flex: 1 },
+        { field: 'genre', headerName: 'Genre', width: 150 },
+        { field: 'publicationDate', headerName: 'Publication Date', width: 150 },
         {
             field: 'actions',
             headerName: 'Actions',
-            width: 150,
+            width: 100,
             sortable: false,
-            renderCell: (params) => {
-                // const handleEdit = () => {
-                //   setSelectedRow(params.row);
-                //   navigate('/goldprojects/edit', { state: { bookData: params.row } });
-                // };
-
-                // const handleDelete = () => {
-                //   alert(`Deleting book project: ${params.row.bookTitle}`);
-                // };
-                const handleview = () => {
-                    setSelectedRow(params.row);
-                    console.log("params.row", params.row);
-                    
-                    navigate('/goldprojects/viewAsBook/'+params.row.projectId, { state: { jsonContent: params.row.editorContent } });
-
-                    //old flow redirection
-                    // navigate('/goldprojects/view', { state: { bookData: params.row } });
-                };
-
-                return (
-                    <>
-                        {/* <IconButton onClick={handleEdit} color="primary">
-              <EditOutlined />
-            </IconButton> */}
-                        <IconButton onClick={handleview} color="warning">
-                            <EyeOutlined />
-                        </IconButton>
-                        {/* <IconButton onClick={handleDelete} color="error">
-              <DeleteOutlineSharp/>
-            </IconButton> */}
-
-                    </>
-                );
-            },
+            renderCell: (params) => (
+                <IconButton onClick={() => handleView(params.row)} color="warning">
+                    <EyeOutlined />
+                </IconButton>
+            ),
         },
     ];
 
-    const handleAddBook = () => {
-        navigate('/goldprojects/add', { state: { bookData: null } });
-    };
-
-    const isAdminOrPM = loginDetails?.user?.role === "Admin" || loginDetails?.user?.role === "Project Manager";
-    const dataSource = isAdminOrPM ? allGoldProjects : filteredGoldEditions;
-    const normalizedProjects = isAdminOrPM
-  ? dataSource?.projects || [] // `allGoldProjects.projects`
-  : dataSource || [];          // `filteredGoldEditions` is already an array
-
-    
-
-    const rows = normalizedProjects.map((item, index) => {
-        return {
-            id: index + 1,
-            title: item.project.title,
-            versionTitle: item.title,
-            publisher: item.publisher,
-            subject: item.subject,
-            publicationDate: moment(item.publicationDate).format("DD-MM-YYYY"),
-            versions: item.versions,
-            versionId: item._id,
-            editorContent:item.editorContent,
-            projectId: item.project._id,
-        }
-    });
-
+    const rows = (projects || []).map((item, index) => ({
+        id: index + 1,
+        title: item.title,
+        originLanguage: `${item?.originLanguage || "N/A"}`,
+        author: `${item.author?.firstName || "N/A"} ${item.author?.lastName || ""}`.trim(),
+        editor: `${item.editor?.firstName || "N/A"} ${item.editor?.lastName || ""}`.trim(),
+        projectManager: `${item.projectManager?.firstName || "N/A"} ${item.projectManager?.lastName || ""}`.trim(),
+        proofReader: item.proofReader ? `${item.proofReader.firstName} ${item.proofReader.lastName}` : "N/A",
+        designer: item.designer ? `${item.designer.firstName} ${item.designer.lastName}` : null,
+        teamLead: Array.isArray(item.teamLead)
+            ? item.teamLead.map(tl => `${tl.firstName} ${tl.lastName}`)
+            : item.teamLead
+                ? [`${item.teamLead.firstName} ${item.teamLead.lastName}`]
+                : [],
+        genre: ["Fiction", "Non-Fiction", "Technology", "Publishing", "Science"][index % 5],
+        publicationDate: item.publicationDate ? new Date(item.publicationDate).toISOString().split("T")[0] : null,
+        status: item.status || "Unknown",
+        projectId: item._id
+    }));
 
     return (
         <Paper sx={{ padding: 2 }}>
-            {/* <Grid container justifyContent="flex-end" sx={{ marginBottom: 2 }}>
-        <Button endIcon={<AddCircleOutline />} variant="contained" color="primary" onClick={handleAddBook}>
-          Add Book/project
-        </Button>
-      </Grid> */}
-            {dataSource?.loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
+            {loading ? (
+                <Box
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        height: '300px',
+                    }}
+                >
                     <CircularProgress color="primary" />
                 </Box>
-
             ) : (
-                <DataGrid rows={rows} columns={columns} autoHeight pageSize={10} />
+                <DataGrid
+                    rows={rows}
+                    columns={columns}
+                    autoHeight
+                    pageSize={10}
+                    components={{ NoRowsOverlay }}
+                />
             )}
         </Paper>
     );
