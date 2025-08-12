@@ -131,7 +131,6 @@ const EditorComponent = ({ ydoc, provider, room }) => {
     const [status, setStatus] = useState('connecting');
     const [currentUser, setCurrentUser] = useState(getInitialUser());
     const [isLoading, setIsLoading] = useState(false);
-    const [aiLoading, setAiLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [sideBarMenu, setSideBarMenu] = useState(false);
     const [rules, setRules] = useState(initialRules);
@@ -322,26 +321,6 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                     experimentalDocxImport: true,
                 }),
                 CollaborationCursor.configure({ provider }),
-                ...(action === "Editing" ? [
-                    AiSuggestion.configure({
-                        rules,
-                        appId: APP_ID,
-                        token: contentAIToken,
-                        getCustomSuggestionDecoration({ suggestion, isSelected, getDefaultDecorations }) {
-                            const decorations = getDefaultDecorations();
-                            if (isSelected && !suggestion.isRejected) {
-                                decorations.push(
-                                    Decoration.widget(suggestion.deleteRange.to, () => {
-                                        const element = document.createElement('span');
-                                        setTooltipElement(element);
-                                        return element;
-                                    }),
-                                );
-                            }
-                            return decorations;
-                        },
-                    })
-                ] : []),
                 CommentsKit.configure({
                     provider,
                     useLegacyWrapping: false,
@@ -603,41 +582,11 @@ const EditorComponent = ({ ydoc, provider, room }) => {
     }, [provider]);
 
     useEffect(() => {
-        if (!editor && roleName != "editor") return;
-
-        const interval = setInterval(() => {
-            const storage = editor.extensionStorage.aiSuggestion;
-            setAiLoading(storage?.isLoading || false);
-        }, 200);
-
-        return () => clearInterval(interval);
-    }, [editor]);
-
-    useEffect(() => {
         if (editor && currentUser) {
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
             editor.chain().focus().updateUser(currentUser).run();
         }
     }, [editor, currentUser]);
-
-
-    const loadSuggestions = async () => {
-        if (!editor || action !== "Editing") return;
-
-        try {
-            await editor?.commands?.loadAiSuggestions();
-            const storage = editor?.extensionStorage?.aiSuggestion
-            if (storage.isLoading) {
-                setAiLoading(true);
-            } else if (storage.error) {
-                setAiLoading(false);
-            }
-        } catch (err) {
-            console.error("AI suggestions load error", err);
-        } finally {
-            setAiLoading(false);
-        }
-    };
 
     const handleImportClick = useCallback(() => {
         importRef.current.click();
@@ -745,7 +694,8 @@ const EditorComponent = ({ ydoc, provider, room }) => {
         }
         editor.commands.saveVersion(commitDescription)
         setCommitDescription('')
-        alert(`Version ${commitDescription} created! Open the version history to see all versions.`)
+        // alert(`Version ${commitDescription} created! Open the version history to see all versions.`)
+        AlertService.success(`Version "${commitDescription}" created! Open the version history to see all versions.`)
         setHasChanges(false)
     }, [editor, commitDescription])
 
@@ -1942,8 +1892,6 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                     handleImportClick={handleImportClick}
                     importRef={importRef}
                     handleImportFilePick={handleImportFilePick}
-                    aiLoading={aiLoading}
-                    loadAiSuggestions={roleName === "editor" ? loadSuggestions : () => { }}
                     user={user}
                     editionsById={editionsById}
                     handleApprovalClick={handleApprovalClick}
@@ -2049,14 +1997,6 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                                         <div style={{ width: '30%' }}>
                                             {/* Tab Buttons */}
                                             <div className="tab-header" style={{ width: '100%', overflowX: 'auto' }}>
-                                                {roleName === "editor" && (
-                                                    <button
-                                                        className={activeTab === 'ai' ? 'active' : ''}
-                                                        onClick={() => setActiveTab('ai')}
-                                                    >
-                                                        AI Suggestions
-                                                    </button>
-                                                )}
                                                 <button
                                                     className={activeTab === 'comments' ? 'active' : ''}
                                                     onClick={() => setActiveTab('comments')}
@@ -2079,10 +2019,6 @@ const EditorComponent = ({ ydoc, provider, room }) => {
 
                                             {/* Tab Content */}
                                             <div className="tab-content">
-                                                {activeTab === 'ai' && (action === "Editing") && (
-                                                    <AISuggestionsSidebar editor={editor} aiLoading={aiLoading} />
-                                                )}
-
                                                 {activeTab === 'comments' && (
                                                     <div className="sidebar-options sidebar" style={{ background: '#fdfdfd', width: '100%', padding: '10px' }}>
                                                         <div className="option-group">

@@ -29,7 +29,7 @@ import { CheckCircleOutline, CheckCircleOutlineOutlined, DeleteOutline, UploadFi
 import { useNavigate } from 'react-router';
 import { useSelector } from 'react-redux';
 
-export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportClick, handleImportFilePick, importRef, aiLoading, loadAiSuggestions, editionsById, handleApprovalClick, actionType, sideBarMenu, suggestionLength }) => {
+export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportClick, handleImportFilePick, importRef, editionsById, handleApprovalClick, actionType, sideBarMenu, suggestionLength }) => {
     const navigate = useNavigate();
     const loginDetails = useSelector((state) => state.auth);
     const [anchorEl, setAnchorEl] = useState(null);
@@ -165,25 +165,6 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
                                         onChange={handleImportFilePick}
                                         style={{ display: "none" }}
                                     />
-                                </Tooltip>
-
-                                {/* Proof Read */}
-                                <Tooltip title="Proof">
-                                    <div>
-                                        <Button
-                                            variant="outlined"
-                                            startIcon={aiLoading ? <CircularProgress size={16} /> : <CheckCircleOutline style={{ color: "green" }} />}
-                                            onClick={loadAiSuggestions}
-                                            size="small"
-                                            disabled={aiLoading}
-                                            sx={{
-                                                minWidth: 'auto',
-                                                px: 1.5,
-                                            }}
-                                        >
-                                            {aiLoading ? 'Loading...' : 'Proof Read with AI'}
-                                        </Button>
-                                    </div>
                                 </Tooltip>
                             </>
                         )

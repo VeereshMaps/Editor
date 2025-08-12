@@ -107,7 +107,7 @@ const EditionDetails = () => {
 
     useEffect(() => {
         getProjectDetails(projectId);
-        getVersionDetails(editionId);
+        // getVersionDetails(editionId);
         dispatch(getEditionsById(editionId));
     }, [editionId, projectId]);
 
@@ -267,7 +267,7 @@ const EditionDetails = () => {
             try {
                 const createVersionResponse = await dispatch(createVersion(formData));
                 setNotification({ open: true, message: createVersionResponse?.payload?.message, severity: "success" });
-                await getVersionDetails(editionId);
+                // await getVersionDetails(editionId);
             } catch (error) {
                 console.log("error", error);
                 setSubmitAvailable(false);
