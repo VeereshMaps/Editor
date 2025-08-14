@@ -376,7 +376,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                     getMode: () => editorModeRef.current,
                     getUser: () => currentUserRef.current,
                 }),
-                // SuggestionFinalizer,
+                SuggestionFinalizer,
             ],
             onCreate: ({ editor: currentEditor }) => {
                 provider.on('synced', () => {
@@ -980,7 +980,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                 //             tempSuggestion.to = range.to;
                 //             tempSuggestion.text = actualText;
                 //             tempSuggestion.mark = mark; // mark can remain; you might want to re-resolve it if needed
-                //             console.log("--",tempSuggestion)
+                //             console.log("--", tempSuggestion)
                 //             setActiveSuggestion({ ...tempSuggestion });
                 //         } else {
                 //             // Fallback: reset or clear if something went wrong
@@ -1128,9 +1128,10 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                 //             setPopupCoords({ top, left });
 
                 //             console.log("♻️ Rehydrated in fallback");
-                        // }sd
+                //         }
                 //     }
                 // },
+                //currently using 14-08-2025 on 08:22
                 handleTextInput(view, from, to, text) {
                     const { state, dispatch } = view;
                     const { schema } = state;
@@ -1138,6 +1139,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                     if (getMode() !== 'Suggesting') {
                         const node = schema.text(text); // plain text without marks
                         dispatch(state.tr.replaceWith(from, to, node));
+                        console.log("assdadsas");
                         return true;
                     }
 
@@ -1156,6 +1158,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                         markAtPos.attrs.userId === currentUser.id;
                     // ✅ 1. Extend existing suggestion if already typing in the same view
                     if (isInsideSameSuggestion && tempSuggestion && tempSuggestion.view === view) {
+                        console.log('1st if')
                         const mark = tempSuggestion.mark;
 
                         // Replace the slice with the new input (handles insertion/replacement)
@@ -1190,6 +1193,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
 
                     // 2a. Rehydrate same user's existing suggestion (cursor entered it, but nothing is active yet)
                     if (markAtPos && markAtPos.attrs.userId === currentUser.id && !currentSuggestionId) {
+                        console.log('2a')
                         currentSuggestionId = markAtPos.attrs.suggestionId;
 
                         // After inserting the current character, we want to reflect actual doc state.
@@ -1230,6 +1234,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
 
                     // 2b. Typing inside someone else's suggestion — start a new one
                     if (markAtPos && markAtPos.attrs.userId !== currentUser.id) {
+                        console.log('2b')
                         const suggestionId = `sugg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
                         currentSuggestionId = suggestionId;
 
@@ -1242,7 +1247,23 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                         });
 
                         const node = schema.text(text, [mark]);
-                        const tr = state.tr.replaceWith(from, to, node);
+                        let tr = state.tr;
+
+                        if (from === to) {
+                            console.log('adsda')
+                            const $pos = state.doc.resolve(from);
+                            const nextCharMark = $pos.nodeAfter?.marks?.find(m => m.type === markAtPos.type);
+
+                            if (nextCharMark) {
+                                // Split at caret by removing from this point onwards
+                                tr = tr.removeMark(from, from + 1, markAtPos.type);
+                            }
+
+                            tr = tr.insert(from, schema.text(text, [mark]));
+                        } else {
+                            // Selection — replace as before
+                            tr = tr.replaceWith(from, to, schema.text(text, [mark]));
+                        }
                         dispatch(tr);
 
                         // After insertion, compute actual range/text
@@ -1274,6 +1295,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
 
                     // 2c. Plain area — start a fresh suggestion
                     if (!markAtPos && !currentSuggestionId) {
+                        console.log('2c')
                         const suggestionId = `sugg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
                         currentSuggestionId = suggestionId;
 
@@ -1320,6 +1342,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                         isInsideSameSuggestion &&
                         !tempSuggestion
                     ) {
+                        console.log('Case')
                         currentSuggestionId = markAtPos.attrs.suggestionId;
 
                         const mark = markAtPos;
@@ -1356,13 +1379,24 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                     }
 
                     // Fallback: inconsistent state (e.g., cursor moved inside your suggestion but currentSuggestionId mismatched)
-                    console.log('⚠️ Cursor moved mid-suggestion or inconsistent state:', {
-                        currentSuggestionId,
-                        markAtPos,
-                        tempSuggestion,
-                    });
+                    if (!markAtPos || markAtPos.attrs.id !== currentSuggestionId) {
+                        console.log('⚠️ Cursor moved mid-suggestion or inconsistent state:', {
+                            currentSuggestionId,
+                            markAtPos,
+                            tempSuggestion,
+                        });
+
+                        // 🔹 Clear stale state
+                        currentSuggestionId = null;
+                        tempSuggestion = null;
+                        suggestionStartPos = null; // if you're tracking starting position
+                        popupOpen = false; // if popup is showing
+
+                        return false; // Let normal typing proceed
+                    }
 
                     if (markAtPos && markAtPos.attrs.userId === currentUser.id && markAtPos.attrs.suggestionId !== currentSuggestionId) {
+                        alert('Fallback')
                         // Try rehydrating fallback
                         currentSuggestionId = markAtPos.attrs.suggestionId;
 
@@ -1410,7 +1444,18 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                     const { selection, schema } = state;
                     const currentUser = getUser();
 
-                    if (getMode() !== 'Suggesting') return false;
+                    if (getMode() !== 'Suggesting') {
+                        const { from, $from } = selection;
+                        const markAtPos = $from.marks().find(m => m.type.name === 'suggestion');
+                        console.log("markAtPos", markAtPos,currentSuggestionId);
+                        
+                        if (!markAtPos && currentSuggestionId) {
+                            console.log('🧹 Clearing suggestion state: cursor moved outside');
+                            currentSuggestionId = null;
+                            tempSuggestion = null;
+                        }
+                        return false;
+                    }
 
                     const { from, to, empty } = selection;
                     const isDeleteKey = event.key === 'Backspace' || event.key === 'Delete';
@@ -1431,6 +1476,26 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                             ? from
                             : from + 1
                         : to;
+
+                    let deletingOwnInsertion = false;
+                    state.doc.nodesBetween(deleteFrom, deleteTo, (node) => {
+                        if (node.isText && node.marks?.length) {
+                            const insMark = node.marks.find(
+                                m => m.type.name === 'suggestion' && m.attrs.userId === currentUser.id
+                            );
+                            if (insMark) {
+                                deletingOwnInsertion = true;
+                            }
+                        }
+                    });
+                    console.log("Own insertion deletion:", deletingOwnInsertion);
+
+                    if (deletingOwnInsertion) {
+                        // Just delete without adding a deletion suggestion
+                        dispatch(state.tr.delete(deleteFrom, deleteTo));
+                        return true;
+                    }
+
 
                     // Expand deletion range if adjacent marks already part of same deletion suggestion
                     const $from = state.doc.resolve(deleteFrom);
@@ -1590,6 +1655,89 @@ const EditorComponent = ({ ydoc, provider, room }) => {
         setSuggestionPopupVisible(false);
         setActiveSuggestionId(null);
     };
+
+    const SuggestionFinalizer = Extension.create({
+        name: 'suggestion-finalizer',
+
+        addProseMirrorPlugins() {
+            return [
+                new Plugin({
+                    key: new PluginKey('suggestionFinalizer'),
+                    props: {
+                        handleDOMEvents: {
+                            click: async (view, event) => {
+                                //still need to figure out specific touch and enable it properly
+                                console.log("action", action, editorModeRef.current);
+
+                                if (action !== "Suggesting") return true;   // Only handle clicks in Suggesting mode
+
+                                const el = event.target.closest('[data-suggestion-id]') || event.target.querySelector('[data-suggestion-id]');
+                                const clickedSuggestionId = el?.getAttribute('data-suggestion-id');
+                                try {
+                                    dispatch(fetchSuggestions(editionId));
+                                } catch (error) {
+
+                                }
+                                if (clickedSuggestionId) {
+                                    currentSuggestionId = clickedSuggestionId;
+
+                                    // get mark info from editor state
+                                    const { state } = view;
+                                    const pos = findPosForSuggestionId(state.doc, clickedSuggestionId); // <-- You need to implement this
+                                    if (pos != null) {
+                                        const mark = getMarkAtPos(state, pos, 'suggestion');
+                                        const range = findSuggestionRange(state, clickedSuggestionId);
+                                        if (range && mark) {
+                                            const actualText = state.doc.textBetween(range.from, range.to);
+
+                                            tempSuggestion = {
+                                                from: range.from,
+                                                to: range.to,
+                                                text: actualText,
+                                                suggestionId: clickedSuggestionId,
+                                                user: {
+                                                    id: mark.attrs.userId,
+                                                    name: mark.attrs.username,
+                                                    color: mark.attrs.color,
+                                                },
+                                                createdAt: mark.attrs.createdAt,
+                                                mark,
+                                                view,
+                                                type: 'insertion',
+                                            };
+                                            setActiveSuggestion({ ...tempSuggestion });
+                                        }
+                                    }
+
+                                    const sidebarCard = document.querySelector(`.${clickedSuggestionId.trim()}`);
+                                    document.querySelectorAll('.sidebar-card.highlighted').forEach(card => {
+                                        setHighlightedSuggestionId('');
+                                    });
+                                    await updateSuggestionTextWithId(clickedSuggestionId);
+                                    console.log("sidebarCard", sidebarCard);
+
+                                    if (sidebarCard) {
+                                        setHighlightedSuggestionId(clickedSuggestionId);
+                                    }
+                                } else {
+                                    // Clear all highlights
+                                    document.querySelectorAll('.sidebar-card.highlighted').forEach(el => {
+                                        setHighlightedSuggestionId('');
+                                    });
+
+                                    currentSuggestionId = null;
+                                    tempSuggestion = null;
+                                    console.log('Finalized and cleared suggestion');
+                                }
+                                setSuggestionPopupVisible(false);
+                                return false;
+                            }
+                        },
+                    },
+                }),
+            ]
+        },
+    });
 
     // Call this when mode changes
     useEffect(() => {
@@ -1932,74 +2080,74 @@ const EditorComponent = ({ ydoc, provider, room }) => {
 
     // Reject a delete suggestion → keep text but remove the deletion mark
     const onCardDeleteReject = (event, sugg) => {
-  event?.stopPropagation();
+        event?.stopPropagation();
 
-  const targetId =
-    (sugg && (sugg.id || sugg.suggestionId || sugg.suggestionid || sugg.suggestion_id)) || null;
+        const targetId =
+            (sugg && (sugg.id || sugg.suggestionId || sugg.suggestionid || sugg.suggestion_id)) || null;
 
-  if (!targetId) {
-    console.warn('onCardDeleteReject: no suggestion id on card', sugg);
-    return;
-  }
+        if (!targetId) {
+            console.warn('onCardDeleteReject: no suggestion id on card', sugg);
+            return;
+        }
 
-  editor.chain().focus().command(({ tr, state }) => {
-    const marks = state.schema.marks;
-    // try common mark names (adjust if your schema used a different name)
-    const deletionMarkType =
-      marks.deletion || marks['suggestion-deletion'] || marks['suggestion_deletion'];
+        editor.chain().focus().command(({ tr, state }) => {
+            const marks = state.schema.marks;
+            // try common mark names (adjust if your schema used a different name)
+            const deletionMarkType =
+                marks.deletion || marks['suggestion-deletion'] || marks['suggestion_deletion'];
 
-    if (!deletionMarkType) {
-      console.warn('onCardDeleteReject: deletion mark type not found in schema');
-      return false;
-    }
+            if (!deletionMarkType) {
+                console.warn('onCardDeleteReject: deletion mark type not found in schema');
+                return false;
+            }
 
-    const ranges = [];
+            const ranges = [];
 
-    // collect contiguous ranges of text nodes that have the matching deletion mark
-    state.doc.descendants((node, pos) => {
-      if (!node.isText || !node.marks?.length) return;
+            // collect contiguous ranges of text nodes that have the matching deletion mark
+            state.doc.descendants((node, pos) => {
+                if (!node.isText || !node.marks?.length) return;
 
-      // find a mark on this node that matches the deletion type and the id
-      const found = node.marks.find(m => {
-        if (m.type !== deletionMarkType) return false;
-        const a = m.attrs || {};
-        return (
-          a.id === targetId ||
-          a.suggestionId === targetId ||
-          a.suggestionid === targetId ||
-          a.suggestion_id === targetId
-        );
-      });
+                // find a mark on this node that matches the deletion type and the id
+                const found = node.marks.find(m => {
+                    if (m.type !== deletionMarkType) return false;
+                    const a = m.attrs || {};
+                    return (
+                        a.id === targetId ||
+                        a.suggestionId === targetId ||
+                        a.suggestionid === targetId ||
+                        a.suggestion_id === targetId
+                    );
+                });
 
-      if (!found) return;
+                if (!found) return;
 
-      const nodeFrom = pos;
-      const nodeTo = pos + node.text.length;
+                const nodeFrom = pos;
+                const nodeTo = pos + node.text.length;
 
-      const last = ranges[ranges.length - 1];
-      if (last && last.to === nodeFrom) {
-        // extend previous contiguous range
-        last.to = nodeTo;
-      } else {
-        ranges.push({ from: nodeFrom, to: nodeTo });
-      }
-    });
+                const last = ranges[ranges.length - 1];
+                if (last && last.to === nodeFrom) {
+                    // extend previous contiguous range
+                    last.to = nodeTo;
+                } else {
+                    ranges.push({ from: nodeFrom, to: nodeTo });
+                }
+            });
 
-    if (!ranges.length) {
-      console.warn('onCardDeleteReject: no matching ranges for suggestion id', targetId);
-      return false;
-    }
+            if (!ranges.length) {
+                console.warn('onCardDeleteReject: no matching ranges for suggestion id', targetId);
+                return false;
+            }
 
-    console.log('onCardDeleteReject: removing mark over ranges', ranges);
+            console.log('onCardDeleteReject: removing mark over ranges', ranges);
 
-    // remove the mark over collected ranges (do this after collecting them)
-    ranges.forEach(r => {
-      tr.removeMark(r.from, r.to, deletionMarkType);
-    });
+            // remove the mark over collected ranges (do this after collecting them)
+            ranges.forEach(r => {
+                tr.removeMark(r.from, r.to, deletionMarkType);
+            });
 
-    return true;
-  }).run();
-};
+            return true;
+        }).run();
+    };
 
 
 
