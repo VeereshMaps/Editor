@@ -595,29 +595,77 @@ const EditorComponent = ({ ydoc, provider, room }) => {
         importRef.current.click();
     }, []);
 
+    // const handleImportFilePick = useCallback(async (e) => {
+    //     const file = e.target.files[0];
+    //     importRef.current.value = "";
+    //     if (!file) return;
+
+    //     setIsLoading(true);
+
+    //     await editor.chain().import({
+    //         file,
+    //         onImport: async (context) => {
+    //             if (context.error) {
+    //                 console.error("Import error:", context.error);
+    //             } else {
+    //                 setIsLoading(false);
+    //                 editor.commands.setContent(context.content);
+    //                 // editor.commands.setTextSelection(editor.state.doc.content.size);
+    //                 // editor.commands.focus();
+    //                 // await waitUntilEditorViewIsReady(editor);
+    //                 const updatedContent = context.content;
+    //                 if (mode == false) {
+    //                     if (webIORef.current && webIORef.current.readyState === 1) {
+    //                         webIORef.current.send(JSON.stringify({
+    //                             type: "create-document", // or "update-document"
+    //                             userId: user._id,
+    //                             username: user.name,
+    //                             editionId,
+    //                             content: updatedContent,
+    //                         }));
+    //                     }
+    //                 } else {
+    //                     if (webIORef.current && webIORef.current.readyState === 1) {
+    //                         webIORef.current.send(JSON.stringify({
+    //                             type: "update-document", // or "update-document"
+    //                             userId: user._id,
+    //                             username: user.name,
+    //                             editionId,
+    //                             content: updatedContent,
+    //                         }));
+    //                     }
+    //                 }
+    //             }
+    //         },
+    //     }).run();
+    // }, [editor]);
+
+
     const handleImportFilePick = useCallback(async (e) => {
         const file = e.target.files[0];
         importRef.current.value = "";
         if (!file) return;
-
+    
         setIsLoading(true);
-
-        await editor.chain().import({
-            file,
-            onImport: async (context) => {
-                if (context.error) {
-                    console.error("Import error:", context.error);
-                } else {
-                    setIsLoading(false);
+    
+        // Create a promise that resolves when the import is complete
+        await new Promise((resolve) => {
+            editor.chain().import({
+                file,
+                onImport: async (context) => {
+                    if (context.error) {
+                        console.error("Import error:", context.error);
+                        setIsLoading(false);
+                        return resolve(); // Resolve even on error to stop hanging
+                    }
+    
                     editor.commands.setContent(context.content);
-                    // editor.commands.setTextSelection(editor.state.doc.content.size);
-                    // editor.commands.focus();
-                    // await waitUntilEditorViewIsReady(editor);
                     const updatedContent = context.content;
-                    if (mode == false) {
-                        if (webIORef.current && webIORef.current.readyState === 1) {
+    
+                    if (mode === false) {
+                        if (webIORef.current?.readyState === 1) {
                             webIORef.current.send(JSON.stringify({
-                                type: "create-document", // or "update-document"
+                                type: "create-document",
                                 userId: user._id,
                                 username: user.name,
                                 editionId,
@@ -625,9 +673,9 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                             }));
                         }
                     } else {
-                        if (webIORef.current && webIORef.current.readyState === 1) {
+                        if (webIORef.current?.readyState === 1) {
                             webIORef.current.send(JSON.stringify({
-                                type: "update-document", // or "update-document"
+                                type: "update-document",
                                 userId: user._id,
                                 username: user.name,
                                 editionId,
@@ -635,11 +683,24 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                             }));
                         }
                     }
-                }
-            },
-        }).run();
+    
+                    AlertService.success('Document imported successfully!');
+    
+                    // Now wait until this finishes, AFTER content is fully set
+                    if (webIORef.current?.readyState === 1) {
+                        webIORef.current.send(JSON.stringify({
+                            type: 'bulk-delete-suggestion-comments',
+                            editionId: editionId,
+                        }));
+                    }
+    
+                    setIsLoading(false);
+                    resolve(); // ✅ Import and socket complete
+                },
+            }).run();
+        });
+    
     }, [editor]);
-
     const updateComment = useCallback((threadId, commentId, content, metaData) => {
         editor.commands.updateComment({
             threadId, id: commentId, content, data: metaData,

@@ -93,7 +93,7 @@ const AssetsLib = () => {
                 <p className="text-center text-red-500">{error}</p>
             ) : photos.length > 0 ? (
                 <>
-                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 overflow-auto" style={{ maxHeight: "70vh" }}>
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 overflow-auto" style={{ maxHeight: "70vh",overflow:'auto' }}>
                         {/* <></> */}
                         <Gallery
                             photos={photos.map((photo, index) => ({

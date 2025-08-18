@@ -326,7 +326,7 @@ name: 'suggestion-finalizer',
               color: {
                 // This is the default color for the user
                 color: '#000',
-                backgroundColor: `${colorMapping.get(userId)}B0`,
+                // backgroundColor: `${colorMapping.get(userId)}B0`,
                 // Specifically color deletions as a lighter color
                 delete: {
                   color: '#777',
@@ -396,18 +396,8 @@ name: 'suggestion-finalizer',
     return null
   }
   return (
-    // <Modal
-    //   open={open}
-    //   onClose={handleClose}
-    //   aria-labelledby="parent-modal-title"
-    //   aria-describedby="parent-modal-description"
-    // >
       <div style={{ display: 'flex' }} >
         <div style={{ width: '100%' }}> <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-          {/* <h2 style={{ color: 'gray' }}>{versionName}</h2> */}
-          {/* <IconButton style={{ marginLeft: 'auto' }} onClick={handleClose} aria-label="close">
-            <CloseIcon />
-          </IconButton> */}
         </div>
           <div className=' col-group-history'>
             <div className="main_history">
@@ -504,8 +494,6 @@ name: 'suggestion-finalizer',
           </div>
         </div>
       </div>
-
-    // </Modal>
   )
 });
 VersioningModal.displayName = 'VersioningModal'

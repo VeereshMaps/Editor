@@ -96,7 +96,7 @@ const GoldRepo = () => {
                 <DataGrid
                     rows={rows}
                     columns={columns}
-                    autoHeight
+                    style={{height:'100%',maxHeight:'75vh'}}
                     pageSize={10}
                     components={{ NoRowsOverlay }}
                 />

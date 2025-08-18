@@ -159,7 +159,7 @@ const BooksRepo = () => {
                     <CircularProgress color="primary" />
                 </Box>
             ) : (
-                <DataGrid rows={rows} columns={columns} autoHeight pageSize={10} />
+                <DataGrid rows={rows} columns={columns}  pageSize={10} style={{height:'100%',maxHeight:'75vh'}} />
             )}
 
 
