@@ -4,7 +4,7 @@ import { useDropzone } from 'react-dropzone';
 import { useLocation, useNavigate } from 'react-router';
 import { updateUserDetailsFunc } from 'redux/Slices/updateUserSlice';
 import { useDispatch } from 'react-redux';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { ArrowBack, Visibility, VisibilityOff } from '@mui/icons-material';
 import { createUserFunc } from 'redux/Slices/createUserSlice';
 import Notification from "../../../components/Notification";
 import { useFormik } from 'formik';
@@ -91,117 +91,127 @@ const AddAuthorForm = ({ id, onSubmit }) => {
     const handleCloseNotification = () => {
         setNotification({ ...notification, open: false });
     };
+    const back = () => {
+        const navigate = useNavigate();
+        return () => {
+            navigate('/users/authors');
+        };
+    };
 
 
     return (
-        <Paper sx={{ padding: 3 }}>
-            <form onSubmit={formik.handleSubmit}>
-                <Grid container spacing={2}>
-                    <Grid item xs={12}>
-                        <TextField
-                            label="First Name"
-                            name="firstName"
-                            fullWidth
-                            margin="normal"
-                            {...formik.getFieldProps('firstName')}
-                            error={formik.touched.firstName && Boolean(formik.errors.firstName)}
-                            helperText={formik.touched.firstName && formik.errors.firstName}
-                        />
-                    </Grid>
-                    <Grid item xs={12}>
-                        <TextField
-                            label="Last Name"
-                            name="lastName"
-                            fullWidth
-                            margin="normal"
-                            {...formik.getFieldProps('lastName')}
-                            error={formik.touched.lastName && Boolean(formik.errors.lastName)}
-                            helperText={formik.touched.lastName && formik.errors.lastName}
-                        />
-                    </Grid>
-                    <Grid item xs={12}>
-                        <TextField
-                            label="Email"
-                            name="email"
-                            type="email"
-                            fullWidth
-                            margin="normal"
-                            {...formik.getFieldProps('email')}
-                            error={formik.touched.email && Boolean(formik.errors.email)}
-                            helperText={formik.touched.email && formik.errors.email}
-                        />
-                    </Grid>
-                    {!authorData1 && (
+        <>
+            <Button title='back to previous' onClick={back()} startIcon={<ArrowBack style={{ fontSize: 25 }} />}>
+            </Button>
+            <Paper sx={{ padding: 3 }} className='max_height_form'>
+                <form onSubmit={formik.handleSubmit}>
+                    <Grid container spacing={2}>
                         <Grid item xs={12}>
                             <TextField
-                                label="Password"
-                                name="password"
+                                label="First Name"
+                                name="firstName"
                                 fullWidth
                                 margin="normal"
-                                type={showPassword ? "text" : "password"}
-                                {...formik.getFieldProps('password')}
-                                error={formik.touched.password && Boolean(formik.errors.password)}
-                                helperText={formik.touched.password && formik.errors.password}
-                                InputProps={{
-                                    endAdornment: (
-                                        <InputAdornment position="end">
-                                            <IconButton onClick={() => setShowPassword(!showPassword)}>
-                                                {showPassword ? <VisibilityOff /> : <Visibility />}
-                                            </IconButton>
-                                        </InputAdornment>
-                                    ),
-                                }}
+                                {...formik.getFieldProps('firstName')}
+                                error={formik.touched.firstName && Boolean(formik.errors.firstName)}
+                                helperText={formik.touched.firstName && formik.errors.firstName}
                             />
-                            <Button variant="outlined" color="primary" onClick={handleGeneratePassword} sx={{ marginTop: 2 }}>Generate Password</Button>
                         </Grid>
-                    )}
-                    <Grid item xs={12}>
-                        <TextField
-                            label="Bio"
-                            name="bio"
-                            fullWidth
-                            margin="normal"
-                            multiline
-                            rows={4}
-                            {...formik.getFieldProps('bio')}
-                            error={formik.touched.bio && Boolean(formik.errors.bio)}
-                            helperText={formik.touched.bio && formik.errors.bio}
-                        />
+                        <Grid item xs={12}>
+                            <TextField
+                                label="Last Name"
+                                name="lastName"
+                                fullWidth
+                                margin="normal"
+                                {...formik.getFieldProps('lastName')}
+                                error={formik.touched.lastName && Boolean(formik.errors.lastName)}
+                                helperText={formik.touched.lastName && formik.errors.lastName}
+                            />
+                        </Grid>
+                        <Grid item xs={12}>
+                            <TextField
+                                label="Email"
+                                name="email"
+                                type="email"
+                                fullWidth
+                                margin="normal"
+                                {...formik.getFieldProps('email')}
+                                error={formik.touched.email && Boolean(formik.errors.email)}
+                                helperText={formik.touched.email && formik.errors.email}
+                            />
+                        </Grid>
+                        {!authorData1 && (
+                            <Grid item xs={12}>
+                                <TextField
+                                    label="Password"
+                                    name="password"
+                                    fullWidth
+                                    margin="normal"
+                                    type={showPassword ? "text" : "password"}
+                                    {...formik.getFieldProps('password')}
+                                    error={formik.touched.password && Boolean(formik.errors.password)}
+                                    helperText={formik.touched.password && formik.errors.password}
+                                    InputProps={{
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                <IconButton onClick={() => setShowPassword(!showPassword)}>
+                                                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                                                </IconButton>
+                                            </InputAdornment>
+                                        ),
+                                    }}
+                                />
+                                <Button variant="outlined" color="primary" onClick={handleGeneratePassword} sx={{ marginTop: 2 }}>Generate Password</Button>
+                            </Grid>
+                        )}
+                        <Grid item xs={12}>
+                            <TextField
+                                label="Bio"
+                                name="bio"
+                                fullWidth
+                                margin="normal"
+                                multiline
+                                rows={4}
+                                {...formik.getFieldProps('bio')}
+                                error={formik.touched.bio && Boolean(formik.errors.bio)}
+                                helperText={formik.touched.bio && formik.errors.bio}
+                            />
+                        </Grid>
+                        <Grid item xs={12}>
+                            <FormControl fullWidth margin="normal">
+                                <InputLabel>Country</InputLabel>
+                                <Select
+                                    name="country"
+                                    {...formik.getFieldProps('country')}
+                                    error={formik.touched.country && Boolean(formik.errors.country)}
+                                >
+                                    <MenuItem value="USA">USA</MenuItem>
+                                    <MenuItem value="India">India</MenuItem>
+                                    <MenuItem value="UK">UK</MenuItem>
+                                    <MenuItem value="Australia">Australia</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid item xs={12}>
+                            <div {...getRootProps()} style={{ border: '2px dashed #1976d2', padding: '20px', textAlign: 'center', cursor: 'pointer' }}>
+                                <input {...getInputProps()} />
+                                <p>Drag & drop a profile picture, or click to select one</p>
+                                {formik.values.profilePicture && <p>Selected File: {formik.values.profilePicture.name}</p>}
+                            </div>
+                        </Grid>
+                        <Grid item xs={12}>
+                            <Button type="submit" disabled={disableButton} variant="contained" color="primary" fullWidth>{authorData1 ? 'Save Changes' : 'Add Author'}</Button>
+                        </Grid>
                     </Grid>
-                    <Grid item xs={12}>
-                        <FormControl fullWidth margin="normal">
-                            <InputLabel>Country</InputLabel>
-                            <Select
-                                name="country"
-                                {...formik.getFieldProps('country')}
-                                error={formik.touched.country && Boolean(formik.errors.country)}
-                            >
-                                <MenuItem value="USA">USA</MenuItem>
-                                <MenuItem value="India">India</MenuItem>
-                                <MenuItem value="UK">UK</MenuItem>
-                                <MenuItem value="Australia">Australia</MenuItem>
-                            </Select>
-                        </FormControl>
-                    </Grid>
-                    <Grid item xs={12}>
-                        <div {...getRootProps()} style={{ border: '2px dashed #1976d2', padding: '20px', textAlign: 'center', cursor: 'pointer' }}>
-                            <input {...getInputProps()} />
-                            <p>Drag & drop a profile picture, or click to select one</p>
-                            {formik.values.profilePicture && <p>Selected File: {formik.values.profilePicture.name}</p>}
-                        </div>
-                    </Grid>
-                    <Grid item xs={12}>
-                        <Button type="submit" disabled={disableButton} variant="contained" color="primary" fullWidth>{authorData1 ? 'Save Changes' : 'Add Author'}</Button>
-                    </Grid>
-                </Grid>
-            </form>
-            <Notification
-                open={notification.open}
-                onClose={handleCloseNotification}
-                message={notification.message}
-                severity={notification.severity}
-            />
-        </Paper>
+                </form>
+                <Notification
+                    open={notification.open}
+                    onClose={handleCloseNotification}
+                    message={notification.message}
+                    severity={notification.severity}
+                />
+            </Paper>
+        </>
     );
 };
 

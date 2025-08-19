@@ -779,3 +779,15 @@ body:has(.dialog[data-state="open"]) {
 
 
 /* Version snapshot */
+
+.max_height_form {
+  max-height: 80vh !important;
+  overflow: auto;
+  height: 100% !important;
+}
+.max-height-table{
+  max-height: 70vh !important;
+  overflow: auto;
+  height: 100% !important;
+  width: 100% !important;
+}

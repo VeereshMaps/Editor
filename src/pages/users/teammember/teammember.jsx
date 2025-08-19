@@ -139,7 +139,7 @@ export default function TeamMember() {
                 </Grid>
             </Grid>
 
-            <Paper sx={{ height: '80%', width: '100%' }}>
+            <Paper className='max-height-table'>
                 {roleBasedOrAllUsers?.status === "loading" ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
                         <CircularProgress color="primary" />

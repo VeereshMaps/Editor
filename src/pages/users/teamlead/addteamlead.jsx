@@ -4,7 +4,7 @@ import { useDropzone } from 'react-dropzone';
 import { useLocation, useNavigate } from 'react-router';
 import { updateUserDetailsFunc } from 'redux/Slices/updateUserSlice';
 import { useDispatch } from 'react-redux';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { ArrowBack, Visibility, VisibilityOff } from '@mui/icons-material';
 import { createUserFunc } from 'redux/Slices/createUserSlice';
 import Notification from "../../../components/Notification";
 import { useFormik } from 'formik';
@@ -92,9 +92,17 @@ const AddTeamLeadForm = ({ id, onSubmit }) => {
         setNotification({ ...notification, open: false });
     };
 
-
+    const back = () => {
+        const navigate = useNavigate();
+        return () => {
+            navigate('/users/tl');
+        };
+    };
     return (
-        <Paper sx={{ padding: 3 }}>
+        <>
+          <Button title='back to previous' onClick={back()} startIcon={<ArrowBack style={{ fontSize: 25 }} />}>
+                    </Button>
+        <Paper sx={{ padding: 3 }} className='max_height_form'>
             <form onSubmit={formik.handleSubmit}>
                 <Grid container spacing={2}>
                     <Grid item xs={12}>
@@ -191,7 +199,7 @@ const AddTeamLeadForm = ({ id, onSubmit }) => {
                         </div>
                     </Grid>
                     <Grid item xs={12}>
-                        <Button type="submit" variant="contained" disabled={disableButton} color="primary" fullWidth>{authorData1 ? 'Save Changes' : 'Add Author'}</Button>
+                        <Button type="submit" variant="contained" disabled={disableButton} color="primary" fullWidth>{authorData1 ? 'Save Changes' : 'Add Team Lead'}</Button>
                     </Grid>
                 </Grid>
             </form>
@@ -202,6 +210,7 @@ const AddTeamLeadForm = ({ id, onSubmit }) => {
                 severity={notification.severity}
             />
         </Paper>
+        </>
     );
 };
 

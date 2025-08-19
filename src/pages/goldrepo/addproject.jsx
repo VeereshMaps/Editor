@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { TextField, Button, Grid, Paper, MenuItem, Select, InputLabel, FormControl, InputAdornment, TextareaAutosize } from '@mui/material';
 import { useDropzone } from 'react-dropzone';
-import { useLocation } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { ArrowBack } from '@mui/icons-material';
 const AddProjectForm = ({ id, Data, onSubmit }) => {
   const location = useLocation();
   const bookData = location.state?.bookData;
-
 
   // State for form fields
   const [project, setProject] = useState({
@@ -73,8 +73,17 @@ const AddProjectForm = ({ id, Data, onSubmit }) => {
     onSubmit(author);  // Call parent onSubmit handler with form data
   };
 
+  const back = () => {
+    const navigate = useNavigate();
+    return () => {
+        navigate('/goldprojects');
+    };
+};
   return (
-    <Paper sx={{ padding: 3 }}>
+    <>
+    <Button title='back to previous' onClick={back()} startIcon={<ArrowBack style={{ fontSize: 25 }} />}>
+    </Button>
+    <Paper sx={{ padding: 3 }} className='max_height_form'>
       <form onSubmit={handleSubmit}>
         <Grid container spacing={2}>
           {/* Author Name Field */}
@@ -188,6 +197,7 @@ const AddProjectForm = ({ id, Data, onSubmit }) => {
         </Grid>
       </form>
     </Paper>
+    </>
   );
 };
 
