@@ -92,9 +92,10 @@ export default function ProjectManager() {
                     onClick={() => navigate('/users/add-manager', { state: { authorData: null } })}
                     variant="contained"
                     color="primary"
-                    sx={{ maxWidth: '150px', width: 'auto', marginBottom: 2 }}
+                    sx={{ maxWidth: '200px', width: 'auto', marginBottom: 2 }}
+                    title='Add Project Manager'
                 >
-                    Add Manager
+                    Add Project Manager
                 </Button>
             </Grid>
             <Paper className='max-height-table'>

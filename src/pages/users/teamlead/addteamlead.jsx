@@ -9,6 +9,8 @@ import { createUserFunc } from 'redux/Slices/createUserSlice';
 import Notification from "../../../components/Notification";
 import { useFormik } from 'formik';
 import * as yup from 'yup';
+import countries from 'utils/countries';
+import AlertService from 'utils/AlertService';
 
 const validationSchema = yup.object({
     firstName: yup.string().required('First Name is required'),
@@ -30,14 +32,14 @@ const AddTeamLeadForm = ({ id, onSubmit }) => {
     const [showPassword, setShowPassword] = useState(false);
     const [disableButton, setDisableButton] = useState(false);
     const authorData1 = location.state?.authorData || null;
-    const [notification, setNotification] = useState({ open: false, message: "", severity: "idle" });
+    // const [notification, setNotification] = useState({ open: false, message: "", severity: "idle" });
 
-    useEffect(() => {
-        if (!notification.open && notification.severity === "success") {
-            setDisableButton(false);
-            navigate(-1);  // Navigate back after the notification is closed
-        }
-    }, [notification.open]);
+    // useEffect(() => {
+    //     // if (!notification.open && notification.severity === "success") {
+    //     //     setDisableButton(false);
+    //     //     navigate(-1);  // Navigate back after the notification is closed
+    //     // }
+    // }, [notification.open]);
 
     const formik = useFormik({
         initialValues: {
@@ -47,7 +49,8 @@ const AddTeamLeadForm = ({ id, onSubmit }) => {
             bio: authorData1?.bio || '',
             role: "teamLead",
             country: authorData1?.country || '',
-            password: authorData1?.password || '',
+            password:'',
+            // password: authorData1?.password || '',
             profilePicture: authorData1?.profilePicture || null,
         },
         validationSchema,
@@ -61,13 +64,17 @@ const AddTeamLeadForm = ({ id, onSubmit }) => {
                 };
                 if (authorData1) {
                     const updatedUserResponse = await dispatch(updateUserDetailsFunc(submitPayload));
-                    setNotification({ open: true, message: updatedUserResponse?.payload?.message, severity: "success" });
+                    // setNotification({ open: true, message: updatedUserResponse?.payload?.message, severity: "success" });
+                    AlertService.success("Team Lead updated successfully");
                 } else {
                     const createdUserResponse = await dispatch(createUserFunc(values));
-                    setNotification({ open: true, message: createdUserResponse?.payload?.message, severity: "success" });
+                    AlertService.success("Team Lead created successfully");
+                    // setNotification({ open: true, message: createdUserResponse?.payload?.message, severity: "success" });
 
                 }
+                navigate(-1);
             } catch (error) {
+                AlertService.error("Failed to save Team Lead");
                 console.error("Updating author failed", error);
             }
         },
@@ -88,9 +95,9 @@ const AddTeamLeadForm = ({ id, onSubmit }) => {
         multiple: false,
     });
 
-    const handleCloseNotification = () => {
-        setNotification({ ...notification, open: false });
-    };
+    // const handleCloseNotification = () => {
+    //     setNotification({ ...notification, open: false });
+    // };
 
     const back = () => {
         const navigate = useNavigate();
@@ -139,7 +146,7 @@ const AddTeamLeadForm = ({ id, onSubmit }) => {
                             helperText={formik.touched.email && formik.errors.email}
                         />
                     </Grid>
-                    {!authorData1 && (
+                    {/* {!authorData1 && ( */}
                         <Grid item xs={12}>
                             <TextField
                                 label="Password"
@@ -162,7 +169,7 @@ const AddTeamLeadForm = ({ id, onSubmit }) => {
                             />
                             <Button variant="outlined" color="primary" onClick={handleGeneratePassword} sx={{ marginTop: 2 }}>Generate Password</Button>
                         </Grid>
-                    )}
+                    {/* )} */}
                     <Grid item xs={12}>
                         <TextField
                             label="Bio"
@@ -179,7 +186,7 @@ const AddTeamLeadForm = ({ id, onSubmit }) => {
                     <Grid item xs={12}>
                         <FormControl fullWidth margin="normal">
                             <InputLabel>Country</InputLabel>
-                            <Select
+                            {/* <Select
                                 name="country"
                                 {...formik.getFieldProps('country')}
                                 error={formik.touched.country && Boolean(formik.errors.country)}
@@ -188,7 +195,18 @@ const AddTeamLeadForm = ({ id, onSubmit }) => {
                                 <MenuItem value="India">India</MenuItem>
                                 <MenuItem value="UK">UK</MenuItem>
                                 <MenuItem value="Australia">Australia</MenuItem>
-                            </Select>
+                            </Select> */}
+                             <Select
+                                    name="country"
+                                    {...formik.getFieldProps('country')}
+                                    error={formik.touched.country && Boolean(formik.errors.country)}
+                                >
+                                    {countries.map((country) => (
+                                        <MenuItem key={country} value={country}>
+                                            {country}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
                         </FormControl>
                     </Grid>
                     <Grid item xs={12}>
@@ -203,12 +221,12 @@ const AddTeamLeadForm = ({ id, onSubmit }) => {
                     </Grid>
                 </Grid>
             </form>
-            <Notification
+            {/* <Notification
                 open={notification.open}
                 onClose={handleCloseNotification}
                 message={notification.message}
                 severity={notification.severity}
-            />
+            /> */}
         </Paper>
         </>
     );

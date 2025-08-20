@@ -14,8 +14,8 @@ import { saveProjectDetailsFunc } from 'redux/Slices/saveProjectDetails';
 import { createProjectFunc } from 'redux/Slices/createProjectSlice';
 import { elevatedAccess, formattedUserRole } from 'api/menu';
 import LanguageList from "language-list";
-import Notification from "../../components/Notification";
 import { ArrowBack } from '@mui/icons-material'
+import AlertService from 'utils/AlertService';
 const AddProjectForm = ({ id, Data, onSubmit }) => {
     const location = useLocation();
     const dispatch = useDispatch();
@@ -34,7 +34,6 @@ const AddProjectForm = ({ id, Data, onSubmit }) => {
     const [coverDesigner, setCoverDesigner] = useState([]);
     const [errors, setErrors] = useState({});
     const [disableButton, setDisableButton] = useState(false);
-    const [notification, setNotification] = useState({ open: false, message: "", severity: "info" });
     const userRole = loginDetails?.user?.role?.toLowerCase();
 
     // State for form fields
@@ -59,22 +58,10 @@ const AddProjectForm = ({ id, Data, onSubmit }) => {
         createdBy: bookData?.createdBy || loginDetails?.user?._id,
         // description: bookData?.description || '',
     });
-
-    useEffect(() => {
-        if (!notification.open && notification.severity === "success") {
-            setDisableButton(false);
-            navigate(-1);
-        }
-    }, [notification.open]);
-
     useEffect(() => {
         console.log("loginDetails", loginDetails?.user?.role);
 
     }, [loginDetails]);
-
-    const handleCloseNotification = () => {
-        setNotification({ ...notification, open: false });
-    };
 
     const getProjectDetails = async () => {
         try {
@@ -274,18 +261,19 @@ const AddProjectForm = ({ id, Data, onSubmit }) => {
                         payload: extractedData
                     }
                     await dispatch(saveProjectDetailsFunc(data));
-                    setNotification({ open: true, message: "Project saved successfully!", severity: "success" });
+                    AlertService.success("Project updated successfully!");
                 } else {
                     await dispatch(createProjectFunc(extractedData));
-                    setNotification({ open: true, message: "Project created successfully!", severity: "success" });
+                    AlertService.success("Project created successfully!");
                 }
-
+                setDisableButton(false);
+                navigate(-1);
             } catch (error) {
-                setNotification({ open: true, message: "Failed to save project!", severity: "error" });
+                AlertService.error("Failed to save project!");
                 console.log("updating error", error);
             }
         } else {
-            setNotification({ open: true, message: "Form has errors. Please check.", severity: "warning" });
+            AlertService.warn("Form has errors. Please check.");
             console.log("Form has errors");
         }
     };
@@ -324,15 +312,25 @@ const AddProjectForm = ({ id, Data, onSubmit }) => {
                                 <InputLabel>Language</InputLabel>
                                 <Select
                                     name="originLanguage"
-                                    value={project.originLanguage || ""}
+                                    value={project.originLanguage || "English"} // Default to "English"
                                     onChange={handleChange}
+                                    disabled={true}
                                 >
                                     {languages.map((lang) => (
-                                        <MenuItem key={lang.code} value={lang.language}>{lang.language}</MenuItem>
+                                        <MenuItem
+                                            key={lang.code}
+                                            value={lang.language}
+                                           
+                                        >
+                                            {lang.language}
+                                        </MenuItem>
                                     ))}
                                 </Select>
-                                {errors.originLanguage && <FormHelperText>{errors.originLanguage}</FormHelperText>}
+                                {errors.originLanguage && (
+                                    <FormHelperText>{errors.originLanguage}</FormHelperText>
+                                )}
                             </FormControl>
+
                         </Grid>
 
                         {userRole !== "author" && (
@@ -528,12 +526,6 @@ const AddProjectForm = ({ id, Data, onSubmit }) => {
                         </Grid>
                     </Grid>
                 </form>
-                <Notification
-                    open={notification.open}
-                    onClose={handleCloseNotification}
-                    message={notification.message}
-                    severity={notification.severity}
-                />
             </Paper>
         </>
     );

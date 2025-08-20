@@ -96,8 +96,9 @@ export default function TeamLead() {
                     variant="contained"
                     color="primary"
                     sx={{ maxWidth: '150px', width: 'auto', marginBottom: 2 }}
+                    title='Add Team Lead'
                 >
-                    Add TeamLead
+                    Add Team Lead
                 </Button>
             </Grid>
             <Paper className='max-height-table'>

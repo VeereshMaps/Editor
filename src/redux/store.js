@@ -32,6 +32,7 @@ import proofreadReducer from "./Slices/proofreadSlice";
 import suggestionReducer from "./Slices/suggestionSlice";
 import goldEditionsByProjectId from './Slices/goldEditionByProjectIdSlice';
 import getGoldProjectsUser from './Slices/goldProjectSliceByUserId';
+import resetPasswordSlice from './Slices/resetPassword';
 const rootReducer = combineReducers({
   auth: authReducer,
   userDetailsById: userIdReducer,
@@ -61,7 +62,8 @@ const rootReducer = combineReducers({
   proofread: proofreadReducer,
   suggestion: suggestionReducer,
   editionsGold: goldEditionsByProjectId,
-  goldProjectsUser: getGoldProjectsUser
+  goldProjectsUser: getGoldProjectsUser,
+  resetPassword: resetPasswordSlice,
 });
 
 // const persistedReducer = persistReducer(persistConfig, rootReducer);

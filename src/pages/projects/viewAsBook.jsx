@@ -5,6 +5,35 @@ import { flushSync } from 'react-dom';
 import * as ReactDOM from 'react-dom/client';
 import { Box, Button, Typography } from '@mui/material';
 import { ArrowBack } from '@mui/icons-material';
+import Download from '@mui/icons-material/Download';
+import { Editor } from '@tiptap/core';
+import { ExportDocx } from '@tiptap-pro/extension-export-docx'
+import Document from '@tiptap/extension-document'
+import Paragraph from '@tiptap/extension-paragraph'
+import Text from '@tiptap/extension-text'
+import TextStyle from '@tiptap/extension-text-style';
+import { Heading } from '@tiptap/extension-heading'
+import { HardBreak } from '@tiptap/extension-hard-break'
+import { CustomHighlight } from 'components/CustomHighlight';
+import Image from '@tiptap/extension-image';
+import Table from '@tiptap/extension-table';
+import { InlineThread } from '@tiptap-pro/extension-comments';
+import Underline from '@tiptap/extension-underline';
+import Highlight from '@tiptap/extension-highlight';
+import Strike from '@tiptap/extension-strike';
+import Link from '@tiptap/extension-link';
+import TableRow from '@tiptap/extension-table-row';
+import TableCell from '@tiptap/extension-table-cell';
+import TableHeader from '@tiptap/extension-table-header';
+import TextAlign from '@tiptap/extension-text-align';
+import BulletList from '@tiptap/extension-bullet-list';
+import ListItem from '@tiptap/extension-list-item';
+import AlertService from 'utils/AlertService';
+import Blockquote from '@tiptap/extension-blockquote'
+import CodeBlock from '@tiptap/extension-code-block'
+import OrderedList from '@tiptap/extension-ordered-list'
+import Bold from '@tiptap/extension-bold';
+import Italic from '@tiptap/extension-italic';
 
 const ViewAsBook = () => {
     const location = useLocation();
@@ -158,15 +187,93 @@ const ViewAsBook = () => {
     const backToEdition = () => {
         const navigate = useNavigate();
         return () => {
-            navigate('/goldprojects/viewAsBook/'+jsonContent.projectID._id);
+            navigate('/goldprojects/viewAsBook/' + jsonContent.projectID._id);
         };
     };
+    const downloadDocument = () => {
+        // console.log("@##$jsonContent.editorContent", jsonContent.editorContent);
+    
+        let editor;
+    
+        try {
+            editor = new Editor({
+                content: jsonContent.editorContent,
+                editable:false,
+                extensions: [
+                    Document,
+                    Paragraph,
+                    Text,
+                    Heading,
+                    TextStyle,
+                    HardBreak,
+                    Image.configure({ inline: true, allowBase64: true }),
+                    Table.configure({ resizable: true }),
+                    InlineThread,
+                    Underline,
+                    Highlight,
+                    Strike,
+                    Link,
+                    TableRow,
+                    TableCell,
+                    TableHeader,
+                    BulletList,
+                    ListItem,
+                    OrderedList,
+                    CodeBlock,
+                    Bold,
+                    Italic,
+                    Blockquote,
+                    TextAlign.configure({ types: ['heading', 'paragraph', 'orderedList'] }),
+                    ExportDocx.configure({
+                        onCompleteExport: (result) => {
+                            const blob = result instanceof Blob ? result : new Blob([result]);
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `${jsonContent.title || 'document'}.docx`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+    
+                            editor.destroy();
+                        },
+                        exportType: 'blob',
+                    }),
+                ],
+            });
+        } catch (err) {
+            console.error("❌ TipTap Editor initialization failed:", err.message);
+            AlertService.error("The content contains unsupported nodes or marks. Fix it before exporting.");
+            return;
+        }
+    
+        // Run export in next tick
+        try {
+            setTimeout(() => {
+                editor.chain().exportDocx().run();
+            }, 100);
+            AlertService.success("Exporting document... Please wait.");
+        } catch (err) {
+            console.error("❌ Export failed:", err.message);
+            AlertService.error("Export failed. Please fix content or try again.");
+        }
+    };
+    
     return (
         <div className="view-as-book">
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <Button title='back to Gold Project' onClick={backToEdition()} startIcon={<ArrowBack style={{ fontSize: 25 }} />}>
                 </Button>
                 <Typography variant="h4">{jsonContent.title}</Typography>
+                <Button
+                    variant="text"
+                    title="Download File"
+                    style={{ marginLeft: 'auto', marginRight: 20 }}
+                    onClick={downloadDocument}
+                >
+                    <Download />
+                </Button>
             </Box>
             <div className="book-container">
 

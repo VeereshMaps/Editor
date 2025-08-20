@@ -20,7 +20,8 @@ export default function HeaderContent() {
 
   return (
     <>
-      {!downLG && <Search />}
+      {/* {!downLG && <Search />} */}
+      {!downLG && <Box sx={{ width: '100%', ml: 1 }} />}
       {downLG && <Box sx={{ width: '100%', ml: 1 }} />}
       {/* <IconButton
         component={Link}
@@ -34,7 +35,7 @@ export default function HeaderContent() {
         <GithubOutlined />
       </IconButton> */}
 
-      <Notification />
+      {/* <Notification /> */}
       {!downLG && <Profile />}
       {downLG && <MobileSection />}
     </>

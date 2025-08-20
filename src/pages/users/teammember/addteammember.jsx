@@ -20,6 +20,8 @@ import { updateUserDetailsFunc } from 'redux/Slices/updateUserSlice';
 import { createUserFunc } from 'redux/Slices/createUserSlice';
 import { ArrowBack, Visibility, VisibilityOff } from '@mui/icons-material';
 import Notification from "../../../components/Notification";
+import countries from 'utils/countries';
+import AlertService from 'utils/AlertService';
 
 const validationSchema = Yup.object({
     firstName: Yup.string().required('First Name is required'),
@@ -37,14 +39,14 @@ const AddTeamMember = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [disableButton, setDisableButton] = useState(false);
     const authorData1 = location.state?.authorData || null;
-    const [notification, setNotification] = useState({ open: false, message: "", severity: "idle" });
+    // const [notification, setNotification] = useState({ open: false, message: "", severity: "idle" });
 
-    useEffect(() => {
-        if (!notification.open && notification.severity === "success") {
-            setDisableButton(false);
-            navigate(-1);  // Navigate back after the notification is closed
-        }
-    }, [notification.open]);
+    // useEffect(() => {
+    //     if (!notification.open && notification.severity === "success") {
+    //         setDisableButton(false);
+    //         navigate(-1);  // Navigate back after the notification is closed
+    //     }
+    // }, [notification.open]);
 
     const formik = useFormik({
         initialValues: {
@@ -55,7 +57,7 @@ const AddTeamMember = () => {
             role: authorData1?.role || '',
             country: authorData1?.country || '',
             profilePicture: authorData1?.profilePicture || null,
-            password: authorData1 ? '' : ''
+            password: ''
         },
         validationSchema,
         onSubmit: async (values) => {
@@ -63,13 +65,17 @@ const AddTeamMember = () => {
             try {
                 if (!authorData1) {
                     const createdUserResponse = await dispatch(createUserFunc(values));
-                    setNotification({ open: true, message: createdUserResponse?.payload?.message, severity: "success" });
+                    // setNotification({ open: true, message: createdUserResponse?.payload?.message, severity: "success" });
+                    AlertService.success("User created successfully");
                 } else {
                     const submitPayload = { payload: values, userId: authorData1.userId };
                     const updatedUserResponse = await dispatch(updateUserDetailsFunc(submitPayload));
-                    setNotification({ open: true, message: updatedUserResponse?.payload?.message, severity: "success" });
+                    AlertService.success("User updated successfully");
+                    // setNotification({ open: true, message: updatedUserResponse?.payload?.message, severity: "success" });
                 }
+                navigate(-1);
             } catch (error) {
+                AlertService.error("Failed to save user");
                 console.log('Updating author failed', error);
             }
         }
@@ -90,9 +96,9 @@ const AddTeamMember = () => {
         formik.setFieldValue('password', generatedPassword);
     };
 
-    const handleCloseNotification = () => {
-        setNotification({ ...notification, open: false });
-    };
+    // const handleCloseNotification = () => {
+    //     setNotification({ ...notification, open: false });
+    // };
     const back = () => {
         const navigate = useNavigate();
         return () => {
@@ -140,7 +146,7 @@ const AddTeamMember = () => {
                             />
                         </Grid>
 
-                        {!authorData1 && (
+                        {/* {!authorData1 && ( */}
                             <Grid item xs={12}>
                                 <TextField
                                     label="Password"
@@ -164,16 +170,27 @@ const AddTeamMember = () => {
                                     Generate Password
                                 </Button>
                             </Grid>
-                        )}
+                        {/* )} */}
 
                         <Grid item xs={12}>
                             <FormControl fullWidth>
                                 <InputLabel>Country</InputLabel>
-                                <Select name="country" {...formik.getFieldProps('country')}>
+                                {/* <Select name="country" {...formik.getFieldProps('country')}>
                                     <MenuItem value="USA">USA</MenuItem>
                                     <MenuItem value="India">India</MenuItem>
                                     <MenuItem value="UK">UK</MenuItem>
                                     <MenuItem value="Australia">Australia</MenuItem>
+                                </Select> */}
+                                 <Select
+                                    name="country"
+                                    {...formik.getFieldProps('country')}
+                                    error={formik.touched.country && Boolean(formik.errors.country)}
+                                >
+                                    {countries.map((country) => (
+                                        <MenuItem key={country} value={country}>
+                                            {country}
+                                        </MenuItem>
+                                    ))}
                                 </Select>
                             </FormControl>
                         </Grid>
@@ -204,12 +221,12 @@ const AddTeamMember = () => {
                         </Grid>
                     </Grid>
                 </form>
-                <Notification
+                {/* <Notification
                     open={notification.open}
                     onClose={handleCloseNotification}
                     message={notification.message}
                     severity={notification.severity}
-                />
+                /> */}
             </Paper></>
     );
 };

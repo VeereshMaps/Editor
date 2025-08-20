@@ -113,6 +113,7 @@ export default function Authors() {
                     variant="contained"
                     color="primary"
                     sx={{ maxWidth: '150px', width: 'auto', marginBottom: 2 }}
+                    title='Add Author'
                 >
                     Add Author
                 </Button>

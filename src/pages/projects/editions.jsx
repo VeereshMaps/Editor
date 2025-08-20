@@ -58,7 +58,7 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
         illustrations: "",
         textcolor: "",
         description: "",
-        status: "",
+        status: "WIP",
         createdBy: loginDetails?.user?._id,
         projectID: bookDetails.projects._id
     });
@@ -161,7 +161,7 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
         if (!editionData.ebookPrice) newErrors.ebookPrice = "eBook Price is required";
         if (!editionData.bookType) newErrors.bookType = "Book Type is required";
         if (!editionData.noOfPages) newErrors.noOfPages = "Number of Pages is required";
-        if (!editionData.language) newErrors.language = "Language is required";
+        // if (!editionData.language) newErrors.language = "Language is required";
         if (!editionData.keywords) newErrors.keywords = "Keywords are required";
         if (!editionData.category) newErrors.category = "Category is required";
         if (!editionData.grade) newErrors.grade = "Grade is required";
@@ -395,7 +395,7 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
 
                     <TextField fullWidth label="Number of Pages" variant="outlined" name="noOfPages" type="number" value={editionData.noOfPages} onChange={handleInputChange} error={!!errors.noOfPages} helperText={errors.noOfPages} sx={{ mb: 2 }} />
 
-                    <TextField fullWidth label="Language" variant="outlined" name="language" value={editionData.language} onChange={handleInputChange} error={!!errors.language} helperText={errors.language} sx={{ mb: 2 }} />
+                    {/* <TextField fullWidth label="Language" variant="outlined" name="language" value={editionData.language} onChange={handleInputChange} error={!!errors.language} helperText={errors.language} sx={{ mb: 2 }} /> */}
 
                     <TextField fullWidth label="Keywords" variant="outlined" name="keywords" value={editionData.keywords} onChange={handleInputChange} error={!!errors.keywords} helperText={errors.keywords} sx={{ mb: 2 }} />
 
@@ -438,14 +438,14 @@ const Editions = ({ setShowEditForm, bookDetails }) => {
                         {errors.textcolor && <FormHelperText>{errors.textcolor}</FormHelperText>}
                     </FormControl>
 
-                    <FormControl fullWidth sx={{ mb: 2 }}>
+                    {/* <FormControl fullWidth sx={{ mb: 2 }}>
                         <InputLabel>Status</InputLabel>
                         <Select name="status" value={editionData.status} onChange={handleInputChange}>
                             <MenuItem value="WIP">WIP</MenuItem>
                             <MenuItem value="Gold">Gold</MenuItem>
                         </Select>
                         {errors.status && <FormHelperText>{errors.status}</FormHelperText>}
-                    </FormControl>
+                    </FormControl> */}
 
                     <TextField fullWidth label="Description" variant="outlined" name="description" multiline rows={3} value={editionData.description} onChange={handleInputChange} error={!!errors.description} helperText={errors.description} sx={{ mb: 2 }} />
 

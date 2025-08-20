@@ -44,6 +44,7 @@
     "@tiptap-pro/extension-ai-suggestion": "^2.18.0-beta.13",
     "@tiptap-pro/extension-collaboration-history": "^2.21.5",
     "@tiptap-pro/extension-comments": "^2.21.5",
+    "@tiptap-pro/extension-export-docx": "^1.0.0-beta.4",
     "@tiptap-pro/extension-import": "^2.21.5",
     "@tiptap-pro/extension-import-docx": "^2.18.0-beta.13",
     "@tiptap-pro/extension-snapshot-compare": "^3.0.0",

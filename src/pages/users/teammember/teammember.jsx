@@ -133,6 +133,7 @@ export default function TeamMember() {
                         variant="contained"
                         color="primary"
                         sx={{ maxWidth: 'auto', width: 'auto' }}
+                        title='Add Team Member'
                     >
                         Add Team Member
                     </Button>
