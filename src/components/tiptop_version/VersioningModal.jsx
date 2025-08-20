@@ -6,7 +6,7 @@ import {
 } from 'react'
 import React from 'react'
 import { VersionItem } from './VersionItem'
-import TextStyle from '@tiptap/extension-text-style'
+import { FontSize, TextStyle } from '@tiptap/extension-text-style'
 import Underline from '@tiptap/extension-underline'
 import { CustomHighlight } from 'components/CustomHighlight'
 import Table from '@tiptap/extension-table'

@@ -25,11 +25,14 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import EditIcon from '@mui/icons-material/Edit';
 import HistoryIcon from '@mui/icons-material/History';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import RemoveIcon from "@mui/icons-material/Remove";
+import AddIcon from "@mui/icons-material/Add";
 import { CheckCircleOutline, CheckCircleOutlineOutlined, DeleteOutline, UploadFile } from '@mui/icons-material';
 import { useNavigate } from 'react-router';
 import { useSelector } from 'react-redux';
+import { border } from '@mui/system';
 
-export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportClick, handleImportFilePick, importRef, editionsById, handleApprovalClick, actionType, sideBarMenu, suggestionLength }) => {
+export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportClick, handleImportFilePick, importRef, editionsById, handleApprovalClick, actionType, sideBarMenu, suggestionLength,fontSize,decreaseFont,increaseFont }) => {
     const navigate = useNavigate();
     const loginDetails = useSelector((state) => state.auth);
     const [anchorEl, setAnchorEl] = useState(null);
@@ -38,7 +41,7 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
     const [toggleAction, setToggleAction] = useState(false);
     const roleName = loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase();
     // const isEditor = ((roleName === "author" || roleName === "editor"));
-    const [isEditor,setIsEditor]=useState(false);
+    const [isEditor, setIsEditor] = useState(false);
     const modeOptions = [
         {
             label: 'Editing',
@@ -76,7 +79,7 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
 
     // useEffect(() => {
     //     console.log("fnfnfn_",editionsById?.editions);
-        
+
     //     if ((roleName === "author" || roleName === "editor")) {
     //         alert("fnfjn")
     //         setIsEditor(false)
@@ -96,29 +99,29 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
     // }, [isEditor]);
     useEffect(() => {
         console.log("fnfnfn_", editionsById?.editions);
-      
+
         if (roleName === "author" && editionsById?.editions?.isAuthorApproved === false) {
-          setIsEditor(true);
-          setMode("Editing");
+            setIsEditor(true);
+            setMode("Editing");
         } else if (roleName === "editor") {
-          // If editor and NOT approved yet, view mode + editor enabled
-          if (editionsById?.editions?.isEditorApproved === true) {
+            // If editor and NOT approved yet, view mode + editor enabled
+            if (editionsById?.editions?.isEditorApproved === true) {
+                setMode("View");
+                setIsEditor(false);
+            } else {
+                // Editor and approved (or any other case)
+                setMode("Suggesting");
+                setIsEditor(true);
+            }
+        } else if (editionsById?.editions?.isAuthorApproved === true) {
             setMode("View");
             setIsEditor(false);
-          } else {
-            // Editor and approved (or any other case)
-            setMode("Editing");
-            setIsEditor(true);
-          }
-        } else if (editionsById?.editions?.isAuthorApproved === true) {
-          setMode("View");
-          setIsEditor(false);
         } else {
-          setMode("View");
-          setIsEditor(false);
+            setMode("View");
+            setIsEditor(false);
         }
-      }, [roleName, editionsById]);
-      
+    }, [roleName, editionsById]);
+
 
     if (!editor) return null;
 
@@ -140,7 +143,7 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
             }}
         >
             {(mode === 'Editing' || mode === 'Suggesting') && (
-                <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: "0 !important" }}>
                     {/* Upload DOCX */}
                     {(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === "editor") && (mode != 'Suggesting') &&
                         (
@@ -242,6 +245,81 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
                             <TitleIcon />
                         </IconButton>
                     </Tooltip>
+
+                    {/* Font Family */}
+                    <Tooltip title="Font Family">
+                        <select
+                            value={editor.getAttributes('textStyle')?.fontFamily || 'Arial'}
+                            onChange={(e) =>
+                                editor.chain().focus().setMark('textStyle', { fontFamily: e.target.value }).run()
+                            }
+                            style={{ padding: '4px', borderRadius: '4px' }}
+                        >
+                            <option value="Arial">Arial</option>
+                            <option value="Times New Roman">Times New Roman</option>
+                            <option value="Courier New">Courier New</option>
+                            <option value="Verdana">Verdana</option>
+                        </select>
+                    </Tooltip>
+
+                    {/* Increase Font Size */}
+                    <div className="flex items-center gap-2">
+                        <IconButton onClick={decreaseFont}>-</IconButton>
+                        <span style={{border:"1px solid #b0b0b0ff",borderRadius:"5px",padding:"3px"}}>{fontSize}</span>
+                        <IconButton onClick={increaseFont}>+</IconButton>
+                    </div>
+
+
+
+
+                    {/* Text Color */}
+                    <Tooltip title="Text Color">
+                        <input
+                            type="color"
+                            onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
+                            style={{ width: 30, height: 30, border: 'none', marginLeft: 8 }}
+                        />
+                    </Tooltip>
+
+                    {/* Highlight */}
+                    <Tooltip title="Background Color">
+                        <input
+                            type="color"
+                            onChange={(e) =>
+                                editor.chain().focus().toggleHighlight({ color: e.target.value }).run()
+                            }
+                            style={{ width: 30, height: 30, border: 'none', marginLeft: 8 }}
+                        />
+                    </Tooltip>
+
+                    {/* Superscript */}
+                    <Tooltip title="Superscript">
+                        <IconButton onClick={() => editor.chain().focus().toggleSuperscript().run()}>
+                            x<sup>2</sup>
+                        </IconButton>
+                    </Tooltip>
+
+                    {/* Subscript */}
+                    <Tooltip title="Subscript">
+                        <IconButton onClick={() => editor.chain().focus().toggleSubscript().run()}>
+                            x<sub>2</sub>
+                        </IconButton>
+                    </Tooltip>
+
+                    {/* Indent */}
+                    {/* <Tooltip title="Indent">
+                        <IconButton onClick={() => editor.chain().focus().sinkListItem('listItem').run()}>
+                            ➡️
+                        </IconButton>
+                    </Tooltip> */}
+
+                    {/* Outdent */}
+                    {/* <Tooltip title="Outdent">
+                        <IconButton onClick={() => editor.chain().focus().liftListItem('listItem').run()}>
+                            ⬅️
+                        </IconButton>
+                    </Tooltip> */}
+
 
                     {/* Bullet List */}
                     <Tooltip title="Bullet List">

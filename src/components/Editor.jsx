@@ -25,6 +25,11 @@ import TableRow from "@tiptap/extension-table-row";
 import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import { CommentsKit, hoverOffThread, hoverThread } from '@tiptap-pro/extension-comments'
+import { FontSize, TextStyle } from '@tiptap/extension-text-style'
+import Color from "@tiptap/extension-color";
+import Superscript from "@tiptap/extension-superscript";
+import Subscript from "@tiptap/extension-subscript";
+
 
 import AiSuggestion from "@tiptap-pro/extension-ai-suggestion";
 import { Import } from '@tiptap-pro/extension-import'
@@ -32,8 +37,6 @@ import { ThreadsList } from './ThreadsList'
 import { ThreadsProvider } from './context'
 import { useThreads } from './hooks/useThreads'
 import { useUser } from './hooks/useUser'
-
-import TextStyle from '@tiptap/extension-text-style';
 
 import Collaboration from "@tiptap/extension-collaboration";
 import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
@@ -151,7 +154,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
             if (editionsById?.editions?.isEditorApproved === true) {
                 return 'View';
             }
-            return 'Editing';
+            return 'Suggesting';
         }
         if (editionsById?.editions?.isAuthorApproved === true) {
             return 'View';
@@ -173,6 +176,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
     const [hasChanges, setHasChanges] = React.useState(false)
     const [showInputBox, setShowInputBox] = useState(false);
     const [commentText, setCommentText] = useState('');
+    const [fontSize, setFontSize] = useState('14px');
     const [tooltipPosition, setTooltipPosition] = useState(null);
     const [suggestions, setSuggestions] = useState([]);
 
@@ -305,6 +309,8 @@ const EditorComponent = ({ ydoc, provider, room }) => {
     });
 
 
+
+
     const showVersioningModal = useCallback(() => {
         setVersioningModalOpen(true)
     }, []);
@@ -335,8 +341,12 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                 History,
                 InlineThread,
                 TextStyle,
+                FontSize,
                 Underline,
-                Highlight,
+                Color,
+                Highlight.configure({ multicolor: true }),
+                Superscript,
+                Subscript,
                 Strike,
                 Link,
                 TableRow,
@@ -645,9 +655,9 @@ const EditorComponent = ({ ydoc, provider, room }) => {
         const file = e.target.files[0];
         importRef.current.value = "";
         if (!file) return;
-    
+
         setIsLoading(true);
-    
+
         // Create a promise that resolves when the import is complete
         await new Promise((resolve) => {
             editor.chain().import({
@@ -658,10 +668,10 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                         setIsLoading(false);
                         return resolve(); // Resolve even on error to stop hanging
                     }
-    
+
                     editor.commands.setContent(context.content);
                     const updatedContent = context.content;
-    
+
                     if (mode === false) {
                         if (webIORef.current?.readyState === 1) {
                             webIORef.current.send(JSON.stringify({
@@ -683,9 +693,9 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                             }));
                         }
                     }
-    
+
                     AlertService.success('Document imported successfully!');
-    
+
                     // Now wait until this finishes, AFTER content is fully set
                     if (webIORef.current?.readyState === 1) {
                         webIORef.current.send(JSON.stringify({
@@ -693,13 +703,13 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                             editionId: editionId,
                         }));
                     }
-    
+
                     setIsLoading(false);
                     resolve(); // ✅ Import and socket complete
                 },
             }).run();
         });
-    
+
     }, [editor]);
     const updateComment = useCallback((threadId, commentId, content, metaData) => {
         editor.commands.updateComment({
@@ -828,6 +838,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
         }
         console.log("DATA", data, " Action ", action);
     };
+
 
     useEffect(() => {
         if (!editor || editor.state.selection.empty) {
@@ -1508,8 +1519,8 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                     if (getMode() !== 'Suggesting') {
                         const { from, $from } = selection;
                         const markAtPos = $from.marks().find(m => m.type.name === 'suggestion');
-                        console.log("markAtPos", markAtPos,currentSuggestionId);
-                        
+                        console.log("markAtPos", markAtPos, currentSuggestionId);
+
                         if (!markAtPos && currentSuggestionId) {
                             console.log('🧹 Clearing suggestion state: cursor moved outside');
                             currentSuggestionId = null;
@@ -2218,7 +2229,6 @@ const EditorComponent = ({ ydoc, provider, room }) => {
         const suggestions = [];
         doc.descendants((node, pos) => {
             node.marks.forEach(mark => {
-                console.log("mark", mark.attrs);
                 if (['suggestion', 'suggestion-deletion'].includes(mark.type.name)) {
                     suggestions.push({
                         id: mark.attrs.suggestionId,
@@ -2239,9 +2249,24 @@ const EditorComponent = ({ ydoc, provider, room }) => {
         setSuggestions(list)
     }
 
+    const increaseFont = () => {
+        const number = parseInt(fontSize, 10);
+        const newSize = Math.min(number + 2, 72);
+        setFontSize(`${newSize}px`);
+
+    }
+
+    const decreaseFont = () => {
+        const number = parseInt(fontSize, 10);
+        const newSize = Math.max(number - 2, 8);
+        setFontSize(`${newSize}px`);
+
+    }
+
     useEffect(() => {
-        console.log("suggestions", suggestions, suggestions.length);
-    }, [suggestions])
+        console.log(" editor?.commands?", editor?.commands)
+        editor?.chain().focus().setFontSize(fontSize).run();
+    },[editor,fontSize])
     /* suggestion/track change code ends */
 
     return (
@@ -2268,6 +2293,9 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                     handleApprovalClick={handleApprovalClick}
                     actionType={setActionType}
                     sideBarMenu={setSideBarMenu}
+                    fontSize={fontSize}
+                    decreaseFont={decreaseFont}
+                    increaseFont={increaseFont}
                     suggestionLength={suggestions.length}
                 />
                 {action === "History" ? (

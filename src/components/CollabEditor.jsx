@@ -21,7 +21,7 @@ import TableHeader from "@tiptap/extension-table-header";
 import AiSuggestion from "@tiptap-pro/extension-ai-suggestion";
 import { Import } from '@tiptap-pro/extension-import'
 import { useUser } from './hooks/useUser'
-import TextStyle from '@tiptap/extension-text-style';
+import { FontSize, TextStyle } from '@tiptap/extension-text-style'
 import PageBreak from './extensions/PageBreak';
 import Collaboration from "@tiptap/extension-collaboration";
 import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
