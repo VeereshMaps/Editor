@@ -53,7 +53,7 @@ const AddProjectForm = ({ id, Data, onSubmit }) => {
         proofReader: proofReader.find((item) => `${item.firstName} ${item.lastName}` === bookData?.proofReader) || '',
         designer: coverDesigner.find((item) => `${item.firstName} ${item.lastName}` === bookData?.designer) || '',
         projectManager: bookData?.projectmanager || '',
-        originLanguage: bookData?.originLanguage || '',
+        originLanguage: bookData?.originLanguage || 'English', // Default to English if not provided
         Admin: bookData?.Admin || loginDetails?.user?._id,
         createdBy: bookData?.createdBy || loginDetails?.user?._id,
         // description: bookData?.description || '',
@@ -213,7 +213,7 @@ const AddProjectForm = ({ id, Data, onSubmit }) => {
     const validate = () => {
         let tempErrors = {};
         if (!project.title.trim()) tempErrors.title = "Project Name is required.";
-        if (!project.originLanguage) tempErrors.originLanguage = "Language is required.";
+        // if (!project.originLanguage) tempErrors.originLanguage = "Language is required.";
         if (userRole != "author") {
             if (!project.author) tempErrors.author = "Author is required.";
             if (!project.projectManager) tempErrors.projectManager = "Project Manager is required.";
@@ -263,6 +263,8 @@ const AddProjectForm = ({ id, Data, onSubmit }) => {
                     await dispatch(saveProjectDetailsFunc(data));
                     AlertService.success("Project updated successfully!");
                 } else {
+                    console.log("extractedData", extractedData);
+                    
                     await dispatch(createProjectFunc(extractedData));
                     AlertService.success("Project created successfully!");
                 }

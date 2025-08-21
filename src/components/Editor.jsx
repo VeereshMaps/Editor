@@ -791,9 +791,11 @@ const EditorComponent = ({ ydoc, provider, room }) => {
             if (roleName === "author") {
                 updatedData.isAuthorApproved = true;
                 updatedData.editorContent = editor?.getJSON(); // ✅ move into updatedData
+                updatedData.currentUser= user._id;
             } else if (roleName === "editor") {
                 updatedData.isEditorApproved = true;
                 updatedData.editorContent = editor?.getJSON(); // ✅ move into updatedData
+                updatedData.currentUser= user._id;
             }
 
             if (Object.keys(updatedData).length > 0) {

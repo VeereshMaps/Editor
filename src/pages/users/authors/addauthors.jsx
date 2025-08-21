@@ -60,22 +60,34 @@ const AddAuthorForm = ({ id, onSubmit }) => {
             try {
                 const submitPayload = {
                     payload: values,
-                    userId: authorData1?.userId
+                    userId: authorData1?.userId,
                 };
+        
+                let result;
                 if (authorData1) {
-                    const updatedUserResponse = await dispatch(updateUserDetailsFunc(submitPayload));
-                    AlertService.success("Author updated successfully");
+                    result = await dispatch(updateUserDetailsFunc(submitPayload));
                 } else {
-                    const createdUserResponse = await dispatch(createUserFunc(values));
-                    AlertService.success("Author created successfully");
-
+                    result = await dispatch(createUserFunc(values));
                 }
+        
+                if (result?.error) {
+                    throw new Error(result.payload || "Something went wrong");
+                }
+        
+                AlertService.success(`Author ${authorData1 ? "updated" : "created"} successfully`);
                 navigate(-1);
             } catch (error) {
-                AlertService.error("Failed to save author");
-                console.error("Updating author failed", error);
+                if (error?.message === "A user with this email already exists.") {
+                    AlertService.error("A user with this email already exists.");
+                } else {
+                    AlertService.error("Failed to save author");
+                }
+                console.error("Error submitting author form:", error);
+            } finally {
+                setDisableButton(false);
             }
-        },
+        }
+        ,
     });
 
     const handleGeneratePassword = () => {

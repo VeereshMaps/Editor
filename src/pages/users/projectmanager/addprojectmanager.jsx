@@ -62,22 +62,34 @@ const AddProjectManagerForm = ({ id, onSubmit }) => {
                     payload: values,
                     userId: authorData1?.userId
                 };
+        
+                let result;
                 if (authorData1) {
-                    const updatedUserResponse = await dispatch(updateUserDetailsFunc(submitPayload));
-                    AlertService.success("Project Manager updated successfully");
-                    // setNotification({ open: true, message: updatedUserResponse?.payload?.message, severity: "success" });
+                    result = await dispatch(updateUserDetailsFunc(submitPayload));
                 } else {
-                    const createdUserResponse = await dispatch(createUserFunc(values));
-                    // setNotification({ open: true, message: createdUserResponse?.payload?.message, severity: "success" });
-                    AlertService.success("Project Manager created successfully");
-                    
+                    result = await dispatch(createUserFunc(values));
                 }
-                navigate(-1); 
+        
+                if (result?.error) {
+                    throw new Error(result.payload || "Something went wrong");
+                }
+        
+                AlertService.success(`Project Manager ${authorData1 ? "updated" : "created"} successfully`);
+                navigate(-1);
             } catch (error) {
-                console.error("Updating author failed", error);
-                AlertService.error("Failed to save Project Manager");
+                console.error("Error submitting Project Manager form:", error);
+        
+                // Improved error check
+                if (error?.message === "A user with this email already exists.") {
+                    AlertService.error("A user with this email already exists.");
+                } else {
+                    AlertService.error("Failed to save Project Manager");
+                }
+            } finally {
+                setDisableButton(false);
             }
-        },
+        }
+        
     });
 
     const handleGeneratePassword = () => {

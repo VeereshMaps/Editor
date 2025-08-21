@@ -48,6 +48,8 @@ export default function AuthLogin({ isDemo = false }) {
     };
 
     useEffect(() => {
+        console.log("deployment done till here 20-08-2025");
+        
         if (loginDetails?.isAuthenticated && loginDetails?.user != null) {
             navigate('/dashboard', { replace: true });
         }

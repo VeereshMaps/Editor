@@ -63,22 +63,36 @@ const AddTeamMember = () => {
         onSubmit: async (values) => {
             setDisableButton(true);
             try {
+                let result;
                 if (!authorData1) {
-                    const createdUserResponse = await dispatch(createUserFunc(values));
-                    // setNotification({ open: true, message: createdUserResponse?.payload?.message, severity: "success" });
-                    AlertService.success("User created successfully");
+                    result = await dispatch(createUserFunc(values));
                 } else {
                     const submitPayload = { payload: values, userId: authorData1.userId };
-                    const updatedUserResponse = await dispatch(updateUserDetailsFunc(submitPayload));
-                    AlertService.success("User updated successfully");
-                    // setNotification({ open: true, message: updatedUserResponse?.payload?.message, severity: "success" });
+                    result = await dispatch(updateUserDetailsFunc(submitPayload));
                 }
+
+                if (result?.error) {
+                    const errorMessage = result.payload || "Something went wrong";
+                    throw new Error(errorMessage);
+                }
+
+                AlertService.success(authorData1 ? "User updated successfully" : "User created successfully");
                 navigate(-1);
             } catch (error) {
-                AlertService.error("Failed to save user");
-                console.log('Updating author failed', error);
+                console.error("Error submitting user form:", error);
+
+                // 🟡 Specific error handling for duplicate email
+                if (error.message === "A user with this email already exists.") {
+                    formik.setFieldError("email", "A user with this email already exists.");
+                    AlertService.error("A user with this email already exists.");
+                } else {
+                    AlertService.error("Failed to save user");
+                }
+            } finally {
+                setDisableButton(false);
             }
         }
+
     });
 
     const onDrop = (acceptedFiles) => {
@@ -147,29 +161,29 @@ const AddTeamMember = () => {
                         </Grid>
 
                         {/* {!authorData1 && ( */}
-                            <Grid item xs={12}>
-                                <TextField
-                                    label="Password"
-                                    name="password"
-                                    type={showPassword ? 'text' : 'password'}
-                                    {...formik.getFieldProps('password')}
-                                    fullWidth
-                                    error={formik.touched.password && Boolean(formik.errors.password)}
-                                    helperText={formik.touched.password && formik.errors.password}
-                                    InputProps={{
-                                        endAdornment: (
-                                            <InputAdornment position="end">
-                                                <IconButton onClick={() => setShowPassword(!showPassword)}>
-                                                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                                                </IconButton>
-                                            </InputAdornment>
-                                        )
-                                    }}
-                                />
-                                <Button variant="outlined" onClick={handleGeneratePassword} sx={{ mt: 2 }}>
-                                    Generate Password
-                                </Button>
-                            </Grid>
+                        <Grid item xs={12}>
+                            <TextField
+                                label="Password"
+                                name="password"
+                                type={showPassword ? 'text' : 'password'}
+                                {...formik.getFieldProps('password')}
+                                fullWidth
+                                error={formik.touched.password && Boolean(formik.errors.password)}
+                                helperText={formik.touched.password && formik.errors.password}
+                                InputProps={{
+                                    endAdornment: (
+                                        <InputAdornment position="end">
+                                            <IconButton onClick={() => setShowPassword(!showPassword)}>
+                                                {showPassword ? <VisibilityOff /> : <Visibility />}
+                                            </IconButton>
+                                        </InputAdornment>
+                                    )
+                                }}
+                            />
+                            <Button variant="outlined" onClick={handleGeneratePassword} sx={{ mt: 2 }}>
+                                Generate Password
+                            </Button>
+                        </Grid>
                         {/* )} */}
 
                         <Grid item xs={12}>
@@ -181,7 +195,7 @@ const AddTeamMember = () => {
                                     <MenuItem value="UK">UK</MenuItem>
                                     <MenuItem value="Australia">Australia</MenuItem>
                                 </Select> */}
-                                 <Select
+                                <Select
                                     name="country"
                                     {...formik.getFieldProps('country')}
                                     error={formik.touched.country && Boolean(formik.errors.country)}

@@ -49,7 +49,7 @@ const AddTeamLeadForm = ({ id, onSubmit }) => {
             bio: authorData1?.bio || '',
             role: "teamLead",
             country: authorData1?.country || '',
-            password:'',
+            password: '',
             // password: authorData1?.password || '',
             profilePicture: authorData1?.profilePicture || null,
         },
@@ -62,22 +62,37 @@ const AddTeamLeadForm = ({ id, onSubmit }) => {
                     payload: values,
                     userId: authorData1?.userId
                 };
-                if (authorData1) {
-                    const updatedUserResponse = await dispatch(updateUserDetailsFunc(submitPayload));
-                    // setNotification({ open: true, message: updatedUserResponse?.payload?.message, severity: "success" });
-                    AlertService.success("Team Lead updated successfully");
-                } else {
-                    const createdUserResponse = await dispatch(createUserFunc(values));
-                    AlertService.success("Team Lead created successfully");
-                    // setNotification({ open: true, message: createdUserResponse?.payload?.message, severity: "success" });
 
+                let result;
+                if (authorData1) {
+                    result = await dispatch(updateUserDetailsFunc(submitPayload));
+                } else {
+                    result = await dispatch(createUserFunc(values));
                 }
+
+                // Handle server error
+                if (result?.error) {
+                    const errorMessage = result.payload || "Something went wrong";
+                    throw new Error(errorMessage);
+                }
+
+                AlertService.success(`Team Lead ${authorData1 ? "updated" : "created"} successfully`);
                 navigate(-1);
             } catch (error) {
-                AlertService.error("Failed to save Team Lead");
-                console.error("Updating author failed", error);
+                console.error("Error submitting Team Lead form:", error);
+
+                // Optional: Inline error for email if duplicate
+                if (error.message === "A user with this email already exists.") {
+                    formik.setFieldError("email", "A user with this email already exists.");
+                    AlertService.error("A user with this email already exists.");
+                } else {
+                    AlertService.error("Failed to save Team Lead");
+                }
+            } finally {
+                setDisableButton(false);
             }
-        },
+        }
+        ,
     });
 
     const handleGeneratePassword = () => {
@@ -107,46 +122,46 @@ const AddTeamLeadForm = ({ id, onSubmit }) => {
     };
     return (
         <>
-          <Button title='back to previous' onClick={back()} startIcon={<ArrowBack style={{ fontSize: 25 }} />}>
-                    </Button>
-        <Paper sx={{ padding: 3 }} className='max_height_form'>
-            <form onSubmit={formik.handleSubmit}>
-                <Grid container spacing={2}>
-                    <Grid item xs={12}>
-                        <TextField
-                            label="First Name"
-                            name="firstName"
-                            fullWidth
-                            margin="normal"
-                            {...formik.getFieldProps('firstName')}
-                            error={formik.touched.firstName && Boolean(formik.errors.firstName)}
-                            helperText={formik.touched.firstName && formik.errors.firstName}
-                        />
-                    </Grid>
-                    <Grid item xs={12}>
-                        <TextField
-                            label="Last Name"
-                            name="lastName"
-                            fullWidth
-                            margin="normal"
-                            {...formik.getFieldProps('lastName')}
-                            error={formik.touched.lastName && Boolean(formik.errors.lastName)}
-                            helperText={formik.touched.lastName && formik.errors.lastName}
-                        />
-                    </Grid>
-                    <Grid item xs={12}>
-                        <TextField
-                            label="Email"
-                            name="email"
-                            type="email"
-                            fullWidth
-                            margin="normal"
-                            {...formik.getFieldProps('email')}
-                            error={formik.touched.email && Boolean(formik.errors.email)}
-                            helperText={formik.touched.email && formik.errors.email}
-                        />
-                    </Grid>
-                    {/* {!authorData1 && ( */}
+            <Button title='back to previous' onClick={back()} startIcon={<ArrowBack style={{ fontSize: 25 }} />}>
+            </Button>
+            <Paper sx={{ padding: 3 }} className='max_height_form'>
+                <form onSubmit={formik.handleSubmit}>
+                    <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                            <TextField
+                                label="First Name"
+                                name="firstName"
+                                fullWidth
+                                margin="normal"
+                                {...formik.getFieldProps('firstName')}
+                                error={formik.touched.firstName && Boolean(formik.errors.firstName)}
+                                helperText={formik.touched.firstName && formik.errors.firstName}
+                            />
+                        </Grid>
+                        <Grid item xs={12}>
+                            <TextField
+                                label="Last Name"
+                                name="lastName"
+                                fullWidth
+                                margin="normal"
+                                {...formik.getFieldProps('lastName')}
+                                error={formik.touched.lastName && Boolean(formik.errors.lastName)}
+                                helperText={formik.touched.lastName && formik.errors.lastName}
+                            />
+                        </Grid>
+                        <Grid item xs={12}>
+                            <TextField
+                                label="Email"
+                                name="email"
+                                type="email"
+                                fullWidth
+                                margin="normal"
+                                {...formik.getFieldProps('email')}
+                                error={formik.touched.email && Boolean(formik.errors.email)}
+                                helperText={formik.touched.email && formik.errors.email}
+                            />
+                        </Grid>
+                        {/* {!authorData1 && ( */}
                         <Grid item xs={12}>
                             <TextField
                                 label="Password"
@@ -169,24 +184,24 @@ const AddTeamLeadForm = ({ id, onSubmit }) => {
                             />
                             <Button variant="outlined" color="primary" onClick={handleGeneratePassword} sx={{ marginTop: 2 }}>Generate Password</Button>
                         </Grid>
-                    {/* )} */}
-                    <Grid item xs={12}>
-                        <TextField
-                            label="Bio"
-                            name="bio"
-                            fullWidth
-                            margin="normal"
-                            multiline
-                            rows={4}
-                            {...formik.getFieldProps('bio')}
-                            error={formik.touched.bio && Boolean(formik.errors.bio)}
-                            helperText={formik.touched.bio && formik.errors.bio}
-                        />
-                    </Grid>
-                    <Grid item xs={12}>
-                        <FormControl fullWidth margin="normal">
-                            <InputLabel>Country</InputLabel>
-                            {/* <Select
+                        {/* )} */}
+                        <Grid item xs={12}>
+                            <TextField
+                                label="Bio"
+                                name="bio"
+                                fullWidth
+                                margin="normal"
+                                multiline
+                                rows={4}
+                                {...formik.getFieldProps('bio')}
+                                error={formik.touched.bio && Boolean(formik.errors.bio)}
+                                helperText={formik.touched.bio && formik.errors.bio}
+                            />
+                        </Grid>
+                        <Grid item xs={12}>
+                            <FormControl fullWidth margin="normal">
+                                <InputLabel>Country</InputLabel>
+                                {/* <Select
                                 name="country"
                                 {...formik.getFieldProps('country')}
                                 error={formik.touched.country && Boolean(formik.errors.country)}
@@ -196,7 +211,7 @@ const AddTeamLeadForm = ({ id, onSubmit }) => {
                                 <MenuItem value="UK">UK</MenuItem>
                                 <MenuItem value="Australia">Australia</MenuItem>
                             </Select> */}
-                             <Select
+                                <Select
                                     name="country"
                                     {...formik.getFieldProps('country')}
                                     error={formik.touched.country && Boolean(formik.errors.country)}
@@ -207,27 +222,27 @@ const AddTeamLeadForm = ({ id, onSubmit }) => {
                                         </MenuItem>
                                     ))}
                                 </Select>
-                        </FormControl>
+                            </FormControl>
+                        </Grid>
+                        <Grid item xs={12}>
+                            <div {...getRootProps()} style={{ border: '2px dashed #1976d2', padding: '20px', textAlign: 'center', cursor: 'pointer' }}>
+                                <input {...getInputProps()} />
+                                <p>Drag & drop a profile picture, or click to select one</p>
+                                {formik.values.profilePicture && <p>Selected File: {formik.values.profilePicture.name}</p>}
+                            </div>
+                        </Grid>
+                        <Grid item xs={12}>
+                            <Button type="submit" variant="contained" disabled={disableButton} color="primary" fullWidth>{authorData1 ? 'Save Changes' : 'Add Team Lead'}</Button>
+                        </Grid>
                     </Grid>
-                    <Grid item xs={12}>
-                        <div {...getRootProps()} style={{ border: '2px dashed #1976d2', padding: '20px', textAlign: 'center', cursor: 'pointer' }}>
-                            <input {...getInputProps()} />
-                            <p>Drag & drop a profile picture, or click to select one</p>
-                            {formik.values.profilePicture && <p>Selected File: {formik.values.profilePicture.name}</p>}
-                        </div>
-                    </Grid>
-                    <Grid item xs={12}>
-                        <Button type="submit" variant="contained" disabled={disableButton} color="primary" fullWidth>{authorData1 ? 'Save Changes' : 'Add Team Lead'}</Button>
-                    </Grid>
-                </Grid>
-            </form>
-            {/* <Notification
+                </form>
+                {/* <Notification
                 open={notification.open}
                 onClose={handleCloseNotification}
                 message={notification.message}
                 severity={notification.severity}
             /> */}
-        </Paper>
+            </Paper>
         </>
     );
 };
