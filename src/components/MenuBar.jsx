@@ -32,34 +32,39 @@ import { useNavigate } from 'react-router';
 import { useSelector } from 'react-redux';
 import { border } from '@mui/system';
 
-export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportClick, handleImportFilePick, importRef, editionsById, handleApprovalClick, actionType, sideBarMenu, suggestionLength,fontSize,decreaseFont,increaseFont }) => {
+export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportClick, handleImportFilePick, importRef, editionsById, handleApprovalClick, actionType, sideBarMenu, suggestionLength, fontSize, fontFamilyFunc, decreaseFont, increaseFont }) => {
     const navigate = useNavigate();
     const loginDetails = useSelector((state) => state.auth);
     const [anchorEl, setAnchorEl] = useState(null);
     const [mode, setMode] = useState('');
+    const [fontFamily, setFontFamily] = useState("Arial");
     const label = { inputProps: { 'aria-label': 'Menu' } };
     const [toggleAction, setToggleAction] = useState(false);
     const roleName = loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase();
     // const isEditor = ((roleName === "author" || roleName === "editor"));
     const [isEditor, setIsEditor] = useState(false);
-    const modeOptions = [
-        {
-            label: 'Editing',
-            icon: <EditIcon fontSize="small" />,
-        },
-        {
-            label: 'History',
-            icon: <HistoryIcon fontSize="small" sx={{ mr: 1 }} />,
-        },
-        {
-            label: 'Suggesting',
-            icon: <EditIcon fontSize="small" />,
-        },
-        {
-            label: 'View',
-            icon: <VisibilityIcon fontSize="small" />,
-        },
-    ];
+    const baseModeOptions = [
+  {
+    label: 'Editing',
+    icon: <EditIcon fontSize="small" />,
+  },
+  {
+    label: 'History',
+    icon: <HistoryIcon fontSize="small" sx={{ mr: 1 }} />,
+  },
+  {
+    label: 'Suggesting',
+    icon: <EditIcon fontSize="small" />,
+  },
+  {
+    label: 'View',
+    icon: <VisibilityIcon fontSize="small" />,
+  },
+];
+
+const modeOptions = roleName === "author"
+  ? baseModeOptions.filter(option => option.label !== "Editing")
+  : baseModeOptions;
     // console.log("EEEEEEEEsuggestionLength "+suggestionLength);
 
 
@@ -76,6 +81,16 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
         setAnchorEl(null);
         actionType(option); // optionally trigger versioning modal
     };
+
+    const handleFontChange = (e) => {
+        const newFont = e.target.value;
+        setFontFamily(newFont);
+        fontFamilyFunc(editor, newFont);
+
+        // apply to current selection
+        editor.chain().focus().setFontFamily(newFont).run()
+    };
+
 
     // useEffect(() => {
     //     console.log("fnfnfn_",editionsById?.editions);
@@ -102,7 +117,7 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
 
         if (roleName === "author" && editionsById?.editions?.isAuthorApproved === false) {
             setIsEditor(true);
-            setMode("Editing");
+            setMode("Suggesting");
         } else if (roleName === "editor") {
             // If editor and NOT approved yet, view mode + editor enabled
             if (editionsById?.editions?.isEditorApproved === true) {
@@ -145,7 +160,7 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
             {(mode === 'Editing' || mode === 'Suggesting') && (
                 <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: "0 !important" }}>
                     {/* Upload DOCX */}
-                    {(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === "editor") && (mode != 'Suggesting') &&
+                    {(loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === "editor") &&
                         (
                             <>
                                 <Tooltip title="Upload DOCX">
@@ -157,7 +172,7 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
                                         sx={{
                                             marginRight: 1,
                                             minWidth: 'auto', // ensure width is only based on content
-                                            px: 1.5, // optional: adjust horizontal padding if too narrow or wide
+                                            px: 1, // optional: adjust horizontal padding if too narrow or wide
                                         }}
                                     >
                                         Upload Docx
@@ -249,10 +264,8 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
                     {/* Font Family */}
                     <Tooltip title="Font Family">
                         <select
-                            value={editor.getAttributes('textStyle')?.fontFamily || 'Arial'}
-                            onChange={(e) =>
-                                editor.chain().focus().setMark('textStyle', { fontFamily: e.target.value }).run()
-                            }
+                            value={fontFamily}
+                            onChange={handleFontChange}
                             style={{ padding: '4px', borderRadius: '4px' }}
                         >
                             <option value="Arial">Arial</option>
@@ -265,7 +278,7 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
                     {/* Increase Font Size */}
                     <div className="flex items-center gap-2">
                         <IconButton onClick={decreaseFont}>-</IconButton>
-                        <span style={{border:"1px solid #b0b0b0ff",borderRadius:"5px",padding:"3px"}}>{fontSize}</span>
+                        <span style={{ border: "1px solid #b0b0b0ff", borderRadius: "5px", padding: "3px" }}>{fontSize}</span>
                         <IconButton onClick={increaseFont}>+</IconButton>
                     </div>
 
@@ -295,14 +308,18 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
                     {/* Superscript */}
                     <Tooltip title="Superscript">
                         <IconButton onClick={() => editor.chain().focus().toggleSuperscript().run()}>
-                            x<sup>2</sup>
+                            <span style={{ fontSize: "16px" }}>
+                                x<sup style={{ fontSize: "0.7em" }}>2</sup>
+                            </span>
                         </IconButton>
                     </Tooltip>
 
                     {/* Subscript */}
                     <Tooltip title="Subscript">
                         <IconButton onClick={() => editor.chain().focus().toggleSubscript().run()}>
-                            x<sub>2</sub>
+                            <span style={{ fontSize: "16px" }}>
+                                x<sub style={{ fontSize: "0.7em" }}>2</sub>
+                            </span>
                         </IconButton>
                     </Tooltip>
 
@@ -319,6 +336,16 @@ export const MenuBar = ({ editor, createThread, handleImageUpload, handleImportC
                             ⬅️
                         </IconButton>
                     </Tooltip> */}
+
+                    <button
+                        className="insert-table-btn"
+                        onClick={() =>
+                            editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+                        }
+                    >
+                        ➕ Insert Table
+                    </button>
+
 
 
                     {/* Bullet List */}

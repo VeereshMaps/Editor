@@ -25,7 +25,7 @@ import TableRow from "@tiptap/extension-table-row";
 import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import { CommentsKit, hoverOffThread, hoverThread } from '@tiptap-pro/extension-comments'
-import { FontSize, TextStyle } from '@tiptap/extension-text-style'
+import { FontSize, TextStyle, FontFamily } from '@tiptap/extension-text-style'
 import Color from "@tiptap/extension-color";
 import Superscript from "@tiptap/extension-superscript";
 import Subscript from "@tiptap/extension-subscript";
@@ -148,7 +148,8 @@ const EditorComponent = ({ ydoc, provider, room }) => {
     const user = useUser();
     const [action, setAction] = useState(() => {
         if (roleName === "author" && editionsById?.editions?.isAuthorApproved === false) {
-            return 'Editing';
+            return 'Suggesting';
+            // return 'Editing';
         }
         if (roleName === "editor") {
             if (editionsById?.editions?.isEditorApproved === true) {
@@ -308,6 +309,53 @@ const EditorComponent = ({ ydoc, provider, room }) => {
         },
     });
 
+    // const FontFamily = Extension.create({
+    //     name: "fontFamily",
+
+    //     addGlobalAttributes() {
+    //         return [
+    //             {
+    //                 types: ["textStyle"],
+    //                 attributes: {
+    //                     fontFamily: {
+    //                         default: null,
+    //                         parseHTML: (element) => element.style.fontFamily || null,
+    //                         renderHTML: (attributes) => {
+    //                             if (!attributes.fontFamily) return {};
+    //                             return { style: `font-family: ${attributes.fontFamily}` };
+    //                         },
+    //                     },
+    //                 },
+    //             },
+    //         ];
+    //     },
+    // });
+
+    const setFontFamily = (editor, fontFamily) => {
+        const { state, view } = editor;
+        const { tr } = state;
+
+        const markType = state.schema.marks.textStyle;
+
+        if (state.selection.empty) {
+            alert
+            // apply to stored marks so new typed text inherits it
+            if (fontFamily) {
+                tr.addStoredMark(markType.create({ fontFamily }));
+            } else {
+                tr.removeStoredMark(markType); // reset if null
+            }
+            view.dispatch(tr);
+        } else {
+            // apply to existing selection
+            editor.chain().focus().setMark("textStyle", { fontFamily }).run();
+        }
+    };
+
+
+
+
+
 
 
 
@@ -340,8 +388,22 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                 Table.configure({ resizable: true }),
                 History,
                 InlineThread,
-                TextStyle,
-                FontSize,
+                TextStyle.extend({
+                    addAttributes() {
+                        return {
+                            fontFamily: {
+                                default: null,
+                                parseHTML: el => el.style.fontFamily?.replace(/['"]/g, ''),
+                                renderHTML: attrs => attrs.fontFamily ? { style: `font-family: ${attrs.fontFamily}` } : {},
+                            },
+                        }
+                    },
+                }),
+                FontSize.configure({
+                    defaultSize: '14px',
+                    step: 2,
+                }),
+                FontFamily,
                 Underline,
                 Color,
                 Highlight.configure({ multicolor: true }),
@@ -388,6 +450,12 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                 }),
                 SuggestionFinalizer,
             ],
+            selector: ctx => {
+                return {
+                    Arial: ctx.editor.isActive('textStyle', { fontFamily: 'Arial' }),
+                    TimesNewRoman: editor.isActive('textStyle', { fontFamily: '"Times New Roman"' }),
+                }
+            },
             onCreate: ({ editor: currentEditor }) => {
                 provider.on('synced', () => {
                     if (currentEditor.isEmpty) {
@@ -601,6 +669,17 @@ const EditorComponent = ({ ydoc, provider, room }) => {
         }
     }, [editor, currentUser]);
 
+     const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            editor.chain().focus().setImage({ src: reader.result }).run();
+        };
+        reader.readAsDataURL(file);
+    };
+
     const handleImportClick = useCallback(() => {
         importRef.current.click();
     }, []);
@@ -716,6 +795,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
             threadId, id: commentId, content, data: metaData,
         })
     }, [editor]);
+
 
     const resolveThread = useCallback(threadId => {
         editor.commands.resolveThread({ id: threadId })
@@ -1007,6 +1087,11 @@ const EditorComponent = ({ ydoc, provider, room }) => {
         return foundPos;
     }
 
+    function isSuggestionDeleted(mark) {
+        // Check if the mark is a deletion suggestion
+        console.log("Mark", mark && mark.attrs && mark.attrs.type === 'deletion');
+        return mark && mark.attrs && mark.attrs.type === 'deletion';
+    }
 
 
     // 2. Suggestion Plugin: Intercepts insertions
@@ -1231,7 +1316,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                         markAtPos.attrs.suggestionId === currentSuggestionId &&
                         markAtPos.attrs.userId === currentUser.id;
                     // ✅ 1. Extend existing suggestion if already typing in the same view
-                    if (isInsideSameSuggestion && tempSuggestion && tempSuggestion.view === view) {
+                    if (isInsideSameSuggestion && tempSuggestion && tempSuggestion.view === view && !isSuggestionDeleted(markAtPos)) {
                         console.log('1st if')
                         const mark = tempSuggestion.mark;
 
@@ -1266,7 +1351,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                     }
 
                     // 2a. Rehydrate same user's existing suggestion (cursor entered it, but nothing is active yet)
-                    if (markAtPos && markAtPos.attrs.userId === currentUser.id && !currentSuggestionId) {
+                    if (markAtPos && markAtPos.attrs.userId === currentUser.id && !currentSuggestionId && !isSuggestionDeleted(markAtPos)) {
                         console.log('2a')
                         currentSuggestionId = markAtPos.attrs.suggestionId;
 
@@ -2254,6 +2339,7 @@ const EditorComponent = ({ ydoc, provider, room }) => {
     const increaseFont = () => {
         const number = parseInt(fontSize, 10);
         const newSize = Math.min(number + 2, 72);
+        // editor.commands.increaseFontSize();
         setFontSize(`${newSize}px`);
 
     }
@@ -2261,14 +2347,14 @@ const EditorComponent = ({ ydoc, provider, room }) => {
     const decreaseFont = () => {
         const number = parseInt(fontSize, 10);
         const newSize = Math.max(number - 2, 8);
+        // editor.commands.decreaseFontSize();
         setFontSize(`${newSize}px`);
 
     }
 
     useEffect(() => {
-        console.log(" editor?.commands?", editor?.commands)
-        editor?.chain().focus().setFontSize(fontSize).run();
-    },[editor,fontSize])
+        editor?.commands?.setFontSize(fontSize);
+    }, [editor, fontSize])
     /* suggestion/track change code ends */
 
     return (
@@ -2290,12 +2376,14 @@ const EditorComponent = ({ ydoc, provider, room }) => {
                     handleImportClick={handleImportClick}
                     importRef={importRef}
                     handleImportFilePick={handleImportFilePick}
+                    handleImageUpload={handleImageUpload}
                     user={user}
                     editionsById={editionsById}
                     handleApprovalClick={handleApprovalClick}
                     actionType={setActionType}
                     sideBarMenu={setSideBarMenu}
                     fontSize={fontSize}
+                    fontFamilyFunc={setFontFamily}
                     decreaseFont={decreaseFont}
                     increaseFont={increaseFont}
                     suggestionLength={suggestions.length}

@@ -83,11 +83,8 @@ const EditionDetails = () => {
 
 
    
-    const canShowButton =
-        (
-            isAdminOrPM ||
-            categoryRoleMap[selectedCategory] === role
-        )
+    const canShowButton = role === "author" || role === "Admin";
+        
 
     useEffect(() => {
         if (tabData[selectedCategory]) {
@@ -459,12 +456,17 @@ const EditionDetails = () => {
                 <Box style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
                     <Typography variant="h6" >  Edition : </Typography>
                     <Typography variant="h5" style={{ fontWeight: 'bold' }}> {editionDetailsById && editionDetailsById?.editions?.title || 'NA'}</Typography>
-
                 </Box>
-                <Tabs value={mainTab} onChange={handleMainTabChange} sx={{ borderBottom: 1, borderColor: "divider" }}>
+                <Tabs value={mainTab} onChange={handleMainTabChange} sx={{ borderBottom: 1, borderColor: "divider",display: "flex",  }}>
                     {mainTabs.map((tab, index) => (
                         <Tab key={index} label={tab.charAt(0).toUpperCase() + tab.slice(1)} />
                     ))}
+                    {canShowButton && (
+                        selectedCategory === "Inputs" ? (
+                            <Button variant="contained" color="primary" onClick={handleFileInputs} sx={{ marginLeft: "auto" }}>
+                                Upload File
+                            </Button>) : (<></>)
+                    )}
                 </Tabs>
 
                 <Box sx={{ display: "flex", flex: 1, height: "100%" }}>
