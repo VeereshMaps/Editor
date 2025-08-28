@@ -1,0 +1,203 @@
+import Document from '@tiptap/extension-document'
+import Paragraph from '@tiptap/extension-paragraph'
+import Text from '@tiptap/extension-text'
+import Underline from '@tiptap/extension-underline'
+import { FontSize, TextStyle, FontFamily, TextStyleKit, LineHeight } from '@tiptap/extension-text-style'
+import Color from '@tiptap/extension-color'
+import Highlight from '@tiptap/extension-highlight'
+import Subscript from "@tiptap/extension-subscript";
+import Superscript from "@tiptap/extension-superscript";
+import { BackgroundColor } from "@tiptap/extension-text-style";
+import { Mark } from '@tiptap/core'
+import { InlineThread } from '@tiptap-pro/extension-comments'
+import Strike from "@tiptap/extension-strike";
+import Link from "@tiptap/extension-link";
+import Image from "@tiptap/extension-image";
+import HorizontalRule from "@tiptap/extension-horizontal-rule";
+import { CharacterCount, Focus } from "@tiptap/extensions";
+import { ListKit } from '@tiptap/extension-list'
+import { TableKit } from '@tiptap/extension-table'
+import TextAlign from '@tiptap/extension-text-align'
+import FileHandler from '@tiptap/extension-file-handler'
+import DragHandle from '@tiptap/extension-drag-handle'
+const CustomParagraph = Paragraph.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      role: {
+        default: null,
+        parseHTML: element => element.getAttribute('data-role'),
+        renderHTML: attributes => {
+          if (!attributes.role) {
+            return {};
+          }
+          return {
+            'data-role': attributes.role,
+          };
+        },
+      },
+    };
+  },
+});
+
+const CustomHighlight = Mark.create({
+  name: 'highlight',
+
+  addOptions() {
+    return {
+      HTMLAttributes: {},
+    }
+  },
+
+  addAttributes() {
+    return {
+      color: {
+        default: null,
+        parseHTML: element => element.style.backgroundColor || null,
+        renderHTML: attributes => {
+          if (!attributes.color) {
+            return {}
+          }
+
+          return {
+            style: `background-color: ${attributes.color}`,
+          }
+        },
+      },
+    }
+  },
+
+  parseHTML() {
+    return [
+      {
+        tag: 'mark',
+      },
+      {
+        style: 'background-color',
+      },
+    ]
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return ['mark', this.options.HTMLAttributes, HTMLAttributes, 0]
+  },
+
+  addCommands() {
+    return {
+      setHighlight: color => ({ commands }) => {
+        return commands.setMark(this.name, { color })
+      },
+      toggleHighlight: color => ({ commands }) => {
+        return commands.toggleMark(this.name, { color })
+      },
+      unsetHighlight: () => ({ commands }) => {
+        return commands.unsetMark(this.name)
+      },
+    }
+  },
+})
+export const CommenTipTapExtensions = [Document, Paragraph, CustomParagraph, Text, Underline, FontSize, TextStyle, FontFamily, LineHeight, BackgroundColor, Color, Highlight.configure({ multicolor: true }), CustomHighlight, TextStyleKit, Subscript, Superscript, InlineThread,
+  Strike,
+  Link,
+  CharacterCount,
+  Focus.configure({
+    className: 'has-focus',
+    mode: 'all',
+  }), ,
+  HorizontalRule.configure({
+    HTMLAttributes: {
+      class: 'my-custom-class',
+    },
+  }),
+  Image.configure({ inline: true, allowBase64: true }),
+  ListKit,
+  TableKit.configure({
+    table: {
+      resizable: true,
+      HTMLAttributes: {
+        style: 'border-collapse: collapse; width: 100%;',
+      },
+    },
+    tableRow: {
+      HTMLAttributes: {
+        style: 'border: 1px solid #ddd;',
+      },
+    },
+    tableCell: {
+      HTMLAttributes: {
+        style: 'border: 1px solid #ddd; padding: 8px; min-width: 50px;',
+      },
+    },
+    tableHeader: {
+      HTMLAttributes: {
+        style: 'border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5; font-weight: bold;',
+      },
+    },
+  }),
+  TextAlign.configure({
+    types: ['heading', 'paragraph'],
+    alignments: ['left', 'center', 'right', 'justify'],
+    defaultAlignment: 'left'
+  }),
+  FileHandler.configure({
+    allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
+    onDrop: (currentEditor, files, pos) => {
+      files.forEach(file => {
+        const fileReader = new FileReader()
+
+        fileReader.readAsDataURL(file)
+        fileReader.onload = () => {
+          currentEditor
+            .chain()
+            .insertContentAt(pos, {
+              type: 'image',
+              attrs: {
+                src: fileReader.result,
+              },
+            })
+            .focus()
+            .run()
+        }
+      })
+    },
+    onPaste: (currentEditor, files, htmlContent) => {
+      files.forEach(file => {
+        if (htmlContent) {
+          // if there is htmlContent, stop manual insertion & let other extensions handle insertion via inputRule
+          // you could extract the pasted file from this url string and upload it to a server for example
+          console.log(htmlContent) // eslint-disable-line no-console
+          return false
+        }
+
+        const fileReader = new FileReader()
+
+        fileReader.readAsDataURL(file)
+        fileReader.onload = () => {
+          currentEditor
+            .chain()
+            .insertContentAt(currentEditor.state.selection.anchor, {
+              type: 'image',
+              attrs: {
+                src: fileReader.result,
+              },
+            })
+            .focus()
+            .run()
+        }
+      })
+    },
+  }),
+  DragHandle.configure({
+    render: () => {
+      const element = document.createElement('div')
+
+      // Use as a hook for CSS to insert an icon
+      element.classList.add('custom-drag-handle')
+
+      return element
+    },
+    tippyOptions: {
+      placement: 'left',
+    },
+  }),
+];
