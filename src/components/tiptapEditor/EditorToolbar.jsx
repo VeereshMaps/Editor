@@ -201,49 +201,316 @@ const EditorToolbar = ({
                         ))}
                     </Select>
                 </FormControl>
-                {loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase() === "author" ? (
-                    editionsById?.editions?.isEditorApproved && suggestionLength === 0 ? (
-                        <Tooltip title="Approve as Author">
-                            <IconButton
-                                onClick={handleApprovalClick}
-                                color={editionsById?.editions?.isAuthorApproved ? "success" : "default"}
-                                sx={{
-                                    backgroundColor: 'rgba(255,255,255,0.1)',
-                                    color: 'white',
-                                    '&:hover': {
-                                        backgroundColor: 'rgba(255,255,255,0.2)'
-                                    },
-                                    ...(editionsById?.editions?.isAuthorApproved && {
-                                        pointerEvents: 'none'
-                                    })
-                                }}
-                            >
-                                <CheckCircleIcon />
-                            </IconButton>
+                {(() => {
+                    const role = loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase();
+                    const isAuthor = role === "author";
+                    const isEditor = !isAuthor;
 
+                    // ✅ Add mode condition here
+                    if (!(role === "author" || ((mode === "Editing" || mode === "Suggesting") && isEditor))) {
+                        return null;
+                    }
+
+                    const canApprove =
+                        suggestionLength === 0 &&
+                        (isAuthor
+                            ? editionsById?.editions?.isEditorApproved
+                            : true);
+
+                    const isApproved = isAuthor
+                        ? editionsById?.editions?.isAuthorApproved
+                        : editionsById?.editions?.isEditorApproved;
+
+                    const tooltipTitle = isAuthor ? "Approve as Author" : "Approve as Editor";
+                    const buttonColor = isApproved ? "success" : "default";
+
+                    return (
+                        <>
+                            {canApprove && (
+                                <Tooltip title={tooltipTitle}>
+                                    <span>
+                                        <IconButton
+                                            onClick={handleApprovalClick}
+                                            color={buttonColor}
+                                            sx={{
+                                                backgroundColor: 'rgba(255,255,255,0.1)',
+                                                color: 'white',
+                                                '&:hover': {
+                                                    backgroundColor: 'rgba(255,255,255,0.2)'
+                                                },
+                                                ...(isApproved && {
+                                                    pointerEvents: 'none'
+                                                })
+                                            }}
+                                        >
+                                            <CheckCircleIcon />
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
+                            )}
+                            {isEditor && (
+                                <SaveVersionButton
+                                    editor={editor}
+                                    setHasChanges={setHasChanges}
+                                    hasChanges={hasChanges}
+                                />
+                            )}
+
+                        </>
+                    );
+                })()}
+                {/* Font Family Dropdown */}
+                {(mode === "Editing" || mode === "Suggesting") && isEditor && (
+                    <>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
+                            <FontDownload sx={{ color: 'white' }} />
+                            <FormControl size="small" sx={{ minWidth: 140 }}>
+                                <Select
+                                    value={currentFont}
+                                    onChange={handleFontFamilyChange}
+                                    sx={{
+                                        backgroundColor: 'rgba(255,255,255,0.1)',
+                                        color: 'white',
+                                        '& .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: 'rgba(255,255,255,0.3)',
+                                        },
+                                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: 'rgba(255,255,255,0.5)',
+                                        },
+                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: 'rgba(255,255,255,0.7)',
+                                        },
+                                        '& .MuiSvgIcon-root': {
+                                            color: 'white',
+                                        },
+                                    }}
+                                    MenuProps={{
+                                        PaperProps: {
+                                            sx: {
+                                                backgroundColor: '#424242',
+                                                maxHeight: 300,
+                                                '& .MuiMenuItem-root': {
+                                                    color: 'white',
+                                                    '&:hover': {
+                                                        backgroundColor: 'rgba(255,255,255,0.1)',
+                                                    },
+                                                    '&.Mui-selected': {
+                                                        backgroundColor: 'rgba(103, 126, 234, 0.3)',
+                                                        '&:hover': {
+                                                            backgroundColor: 'rgba(103, 126, 234, 0.4)',
+                                                        },
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    }}
+                                >
+                                    {fontFamilies.map((font) => (
+                                        <MenuItem key={font.value} value={font.value}>
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    fontFamily: font.value,
+                                                    fontSize: '0.9rem'
+                                                }}
+                                            >
+                                                {font.label}
+                                            </Typography>
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Box>
+
+                        <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} />
+
+                        {/* Heading Dropdown */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
+                            <Title sx={{ color: 'white' }} />
+                            <FormControl size="small" sx={{ minWidth: 120 }}>
+                                <Select
+                                    value={currentHeading}
+                                    onChange={handleHeadingChange}
+                                    sx={{
+                                        backgroundColor: 'rgba(255,255,255,0.1)',
+                                        color: 'white',
+                                        '& .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: 'rgba(255,255,255,0.3)',
+                                        },
+                                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: 'rgba(255,255,255,0.5)',
+                                        },
+                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: 'rgba(255,255,255,0.7)',
+                                        },
+                                        '& .MuiSvgIcon-root': {
+                                            color: 'white',
+                                        },
+                                    }}
+                                    MenuProps={{
+                                        PaperProps: {
+                                            sx: {
+                                                backgroundColor: '#424242',
+                                                '& .MuiMenuItem-root': {
+                                                    color: 'white',
+                                                    '&:hover': {
+                                                        backgroundColor: 'rgba(255,255,255,0.1)',
+                                                    },
+                                                    '&.Mui-selected': {
+                                                        backgroundColor: 'rgba(103, 126, 234, 0.3)',
+                                                        '&:hover': {
+                                                            backgroundColor: 'rgba(103, 126, 234, 0.4)',
+                                                        },
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    }}
+                                >
+                                    <MenuItem value="paragraph">
+                                        <Typography variant="body2">Normal Text</Typography>
+                                    </MenuItem>
+                                    <MenuItem value="h1">
+                                        <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>
+                                            Heading 1
+                                        </Typography>
+                                    </MenuItem>
+                                    <MenuItem value="h2">
+                                        <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
+                                            Heading 2
+                                        </Typography>
+                                    </MenuItem>
+                                    <MenuItem value="h3">
+                                        <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1rem' }}>
+                                            Heading 3
+                                        </Typography>
+                                    </MenuItem>
+                                    <MenuItem value="h4">
+                                        <Typography variant="body1" sx={{ fontWeight: 'bold', fontSize: '0.95rem' }}>
+                                            Heading 4
+                                        </Typography>
+                                    </MenuItem>
+                                    <MenuItem value="h5">
+                                        <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.9rem' }}>
+                                            Heading 5
+                                        </Typography>
+                                    </MenuItem>
+                                    <MenuItem value="h6">
+                                        <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.85rem' }}>
+                                            Heading 6
+                                        </Typography>
+                                    </MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Box>
+
+                        <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} />
+                        {/* Text Alignment Dropdown */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
+                            <FormControl size="small" sx={{ minWidth: 120 }}>
+                                <Select
+                                    value={currentAlignment}
+                                    onChange={handleTextAlignmentChange}
+                                    sx={{
+                                        backgroundColor: 'rgba(255,255,255,0.1)',
+                                        color: 'white',
+                                        '& .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: 'rgba(255,255,255,0.3)',
+                                        },
+                                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: 'rgba(255,255,255,0.5)',
+                                        },
+                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: 'rgba(255,255,255,0.7)',
+                                        },
+                                        '& .MuiSvgIcon-root': {
+                                            color: 'white',
+                                        },
+                                    }}
+                                    MenuProps={{
+                                        PaperProps: {
+                                            sx: {
+                                                backgroundColor: '#424242',
+                                                '& .MuiMenuItem-root': {
+                                                    color: 'white',
+                                                    '&:hover': {
+                                                        backgroundColor: 'rgba(255,255,255,0.1)',
+                                                    },
+                                                    '&.Mui-selected': {
+                                                        backgroundColor: 'rgba(103, 126, 234, 0.3)',
+                                                        '&:hover': {
+                                                            backgroundColor: 'rgba(103, 126, 234, 0.4)',
+                                                        },
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    }}
+                                >
+                                    {alignmentOptions.map((option) => (
+                                        <MenuItem key={option.value} value={option.value}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                {option.icon}
+                                                <Typography variant="body2">{option.label}</Typography>
+                                            </Box>
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Box>
+
+                        <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} />
+                        <Tooltip title="Line height">
+                            <FormControl size="small" sx={{ minWidth: 140 }}>
+                                <InputLabel id="line-height-select-label">
+                                    <FormatLineSpacingIcon fontSize="small" />
+                                </InputLabel>
+                                <Select
+                                    labelId="line-height-select-label"
+                                    value={lineHeight}
+                                    onChange={handleLineHeightChange}
+                                    displayEmpty
+                                    sx={{
+                                        backgroundColor: 'rgba(255,255,255,0.1)',
+                                        color: 'white',
+                                        '& .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: 'rgba(255,255,255,0.3)',
+                                        },
+                                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: 'rgba(255,255,255,0.5)',
+                                        },
+                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: 'rgba(255,255,255,0.7)',
+                                        },
+                                        '& .MuiSvgIcon-root': {
+                                            color: 'white',
+                                        },
+                                    }}
+                                >
+                                    <MenuItem value="1.5">Line height 1.5</MenuItem>
+                                    <MenuItem value="2.0">Line height 2.0</MenuItem>
+                                    <MenuItem value="4.0">Line height 4.0</MenuItem>
+                                    <MenuItem value="unset">Unset line height</MenuItem>
+                                </Select>
+                            </FormControl>
                         </Tooltip>
-                    ) : null
-                ) : suggestionLength === 0 ? (
-                    <Tooltip title="Approve as Editor">
-                            <IconButton
-                                onClick={handleApprovalClick}
-                                color={editionsById?.editions?.isEditorApproved ? "success" : "default"}
-                                sx={{
-                                    backgroundColor: 'rgba(255,255,255,0.1)',
-                                    color: 'white',
-                                    '&:hover': {
-                                        backgroundColor: 'rgba(255,255,255,0.2)'
-                                    },
-                                    ...(editionsById?.editions?.isEditorApproved && {
-                                        pointerEvents: 'none'
-                                    })
-                                }}
-                            >
-                                <CheckCircleIcon />
-                            </IconButton>
-                    </Tooltip>
-                ) : null}
-                <SaveVersionButton editor={editor} setHasChanges={setHasChanges} hasChanges={hasChanges} />
+                        <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} />
+                        <Tooltip title={versioningEnabled ? 'Disable Auto Version' : 'Enable Auto Version'}>
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={versioningEnabled}
+                                        onChange={handleSwitchChange}
+                                        size="medium"
+                                        color="primary"
+                                    />
+                                }
+                                label="Enable"
+                            />
+                        </Tooltip>
+                    </>
+                )}
+
             </Box>
             {(mode === "Editing" || mode === "Suggesting") && isEditor && (
                 <Toolbar
@@ -267,150 +534,6 @@ const EditorToolbar = ({
                         },
                     }}
                 >
-                    {/* Font Family Dropdown */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
-                        <FontDownload sx={{ color: 'white' }} />
-                        <FormControl size="small" sx={{ minWidth: 140 }}>
-                            <Select
-                                value={currentFont}
-                                onChange={handleFontFamilyChange}
-                                sx={{
-                                    backgroundColor: 'rgba(255,255,255,0.1)',
-                                    color: 'white',
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255,255,255,0.3)',
-                                    },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255,255,255,0.5)',
-                                    },
-                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255,255,255,0.7)',
-                                    },
-                                    '& .MuiSvgIcon-root': {
-                                        color: 'white',
-                                    },
-                                }}
-                                MenuProps={{
-                                    PaperProps: {
-                                        sx: {
-                                            backgroundColor: '#424242',
-                                            maxHeight: 300,
-                                            '& .MuiMenuItem-root': {
-                                                color: 'white',
-                                                '&:hover': {
-                                                    backgroundColor: 'rgba(255,255,255,0.1)',
-                                                },
-                                                '&.Mui-selected': {
-                                                    backgroundColor: 'rgba(103, 126, 234, 0.3)',
-                                                    '&:hover': {
-                                                        backgroundColor: 'rgba(103, 126, 234, 0.4)',
-                                                    },
-                                                },
-                                            },
-                                        },
-                                    },
-                                }}
-                            >
-                                {fontFamilies.map((font) => (
-                                    <MenuItem key={font.value} value={font.value}>
-                                        <Typography
-                                            variant="body2"
-                                            sx={{
-                                                fontFamily: font.value,
-                                                fontSize: '0.9rem'
-                                            }}
-                                        >
-                                            {font.label}
-                                        </Typography>
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    </Box>
-
-                    <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} />
-
-                    {/* Heading Dropdown */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
-                        <Title sx={{ color: 'white' }} />
-                        <FormControl size="small" sx={{ minWidth: 120 }}>
-                            <Select
-                                value={currentHeading}
-                                onChange={handleHeadingChange}
-                                sx={{
-                                    backgroundColor: 'rgba(255,255,255,0.1)',
-                                    color: 'white',
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255,255,255,0.3)',
-                                    },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255,255,255,0.5)',
-                                    },
-                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255,255,255,0.7)',
-                                    },
-                                    '& .MuiSvgIcon-root': {
-                                        color: 'white',
-                                    },
-                                }}
-                                MenuProps={{
-                                    PaperProps: {
-                                        sx: {
-                                            backgroundColor: '#424242',
-                                            '& .MuiMenuItem-root': {
-                                                color: 'white',
-                                                '&:hover': {
-                                                    backgroundColor: 'rgba(255,255,255,0.1)',
-                                                },
-                                                '&.Mui-selected': {
-                                                    backgroundColor: 'rgba(103, 126, 234, 0.3)',
-                                                    '&:hover': {
-                                                        backgroundColor: 'rgba(103, 126, 234, 0.4)',
-                                                    },
-                                                },
-                                            },
-                                        },
-                                    },
-                                }}
-                            >
-                                <MenuItem value="paragraph">
-                                    <Typography variant="body2">Normal Text</Typography>
-                                </MenuItem>
-                                <MenuItem value="h1">
-                                    <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>
-                                        Heading 1
-                                    </Typography>
-                                </MenuItem>
-                                <MenuItem value="h2">
-                                    <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
-                                        Heading 2
-                                    </Typography>
-                                </MenuItem>
-                                <MenuItem value="h3">
-                                    <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1rem' }}>
-                                        Heading 3
-                                    </Typography>
-                                </MenuItem>
-                                <MenuItem value="h4">
-                                    <Typography variant="body1" sx={{ fontWeight: 'bold', fontSize: '0.95rem' }}>
-                                        Heading 4
-                                    </Typography>
-                                </MenuItem>
-                                <MenuItem value="h5">
-                                    <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.9rem' }}>
-                                        Heading 5
-                                    </Typography>
-                                </MenuItem>
-                                <MenuItem value="h6">
-                                    <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.85rem' }}>
-                                        Heading 6
-                                    </Typography>
-                                </MenuItem>
-                            </Select>
-                        </FormControl>
-                    </Box>
-
-                    <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} />
 
                     {/* Font Size Controls */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
@@ -574,61 +697,6 @@ const EditorToolbar = ({
 
                     <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} />
 
-                    {/* Text Alignment Dropdown */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
-                        <FormControl size="small" sx={{ minWidth: 120 }}>
-                            <Select
-                                value={currentAlignment}
-                                onChange={handleTextAlignmentChange}
-                                sx={{
-                                    backgroundColor: 'rgba(255,255,255,0.1)',
-                                    color: 'white',
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255,255,255,0.3)',
-                                    },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255,255,255,0.5)',
-                                    },
-                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255,255,255,0.7)',
-                                    },
-                                    '& .MuiSvgIcon-root': {
-                                        color: 'white',
-                                    },
-                                }}
-                                MenuProps={{
-                                    PaperProps: {
-                                        sx: {
-                                            backgroundColor: '#424242',
-                                            '& .MuiMenuItem-root': {
-                                                color: 'white',
-                                                '&:hover': {
-                                                    backgroundColor: 'rgba(255,255,255,0.1)',
-                                                },
-                                                '&.Mui-selected': {
-                                                    backgroundColor: 'rgba(103, 126, 234, 0.3)',
-                                                    '&:hover': {
-                                                        backgroundColor: 'rgba(103, 126, 234, 0.4)',
-                                                    },
-                                                },
-                                            },
-                                        },
-                                    },
-                                }}
-                            >
-                                {alignmentOptions.map((option) => (
-                                    <MenuItem key={option.value} value={option.value}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            {option.icon}
-                                            <Typography variant="body2">{option.label}</Typography>
-                                        </Box>
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    </Box>
-
-                    <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} />
 
                     {/* Color Picker */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mx: 1 }}>
@@ -828,54 +896,6 @@ const EditorToolbar = ({
                         </IconButton>
                     </Tooltip>
                     <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} />
-                    <Tooltip title="Line height">
-                        <FormControl size="small" sx={{ minWidth: 140 }}>
-                            <InputLabel id="line-height-select-label">
-                                <FormatLineSpacingIcon fontSize="small" />
-                            </InputLabel>
-                            <Select
-                                labelId="line-height-select-label"
-                                value={lineHeight}
-                                onChange={handleLineHeightChange}
-                                displayEmpty
-                                sx={{
-                                    backgroundColor: 'rgba(255,255,255,0.1)',
-                                    color: 'white',
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255,255,255,0.3)',
-                                    },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255,255,255,0.5)',
-                                    },
-                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255,255,255,0.7)',
-                                    },
-                                    '& .MuiSvgIcon-root': {
-                                        color: 'white',
-                                    },
-                                }}
-                            >
-                                <MenuItem value="1.5">Line height 1.5</MenuItem>
-                                <MenuItem value="2.0">Line height 2.0</MenuItem>
-                                <MenuItem value="4.0">Line height 4.0</MenuItem>
-                                <MenuItem value="unset">Unset line height</MenuItem>
-                            </Select>
-                        </FormControl>
-                    </Tooltip>
-                    <Tooltip title={versioningEnabled ? 'Disable Auto Version' : 'Enable Auto Version'}>
-                        <FormControlLabel
-                            control={
-                                <Switch
-                                    checked={versioningEnabled}
-                                    onChange={handleSwitchChange}
-                                    size="medium"
-                                    color="primary"
-                                />
-                            }
-                            label="Enable"
-                        />
-                    </Tooltip>
-                    <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} />
                     {/* Bullet List */}
                     <Tooltip title="Bullet List">
                         <IconButton
@@ -907,16 +927,6 @@ const EditorToolbar = ({
                             <FormatListNumberedIcon />
                         </IconButton>
                     </Tooltip>
-
-                    {/* <button onClick={() => editor.commands.toggleSuggest()}>
-                        Toggle Suggestions
-                    </button>
-                    <button onClick={() => editor.commands.applyAllSuggestions()}>
-                        Apply All Suggestions
-                    </button>
-                    <button onClick={() => editor.commands.revertAllSuggestions()}>
-                        Revert All Suggestions
-                    </button> */}
                 </Toolbar>
 
             )}

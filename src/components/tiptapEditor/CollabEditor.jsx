@@ -1,51 +1,25 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router";
-import { RulesModal } from "./RulesModal";
-import { SuggestionTooltip } from "./SuggestionTooltip";
-import { initialRules } from "../constants/initial-rules";
+import { RulesModal } from "../RulesModal";
+import { SuggestionTooltip } from "../SuggestionTooltip";
+import { initialRules } from "../../constants/initial-rules";
 import { Decoration } from "@tiptap/pm/view";
 import StarterKit from "@tiptap/starter-kit";
-import Underline from '@tiptap/extension-underline'
-import Strike from '@tiptap/extension-strike'
-import Highlight from '@tiptap/extension-highlight'
-import TextAlign from '@tiptap/extension-text-align'
-import Link from '@tiptap/extension-link'
-import History from '@tiptap/extension-history'
-import Image from "@tiptap/extension-image";
 import AiSuggestion from "@tiptap-pro/extension-ai-suggestion";
-import { useUser } from './hooks/useUser'
-import { FontSize, TextStyle } from '@tiptap/extension-text-style'
-import PageBreak from './extensions/PageBreak';
+import { useUser } from '../hooks/useUser'
 import Collaboration from "@tiptap/extension-collaboration";
-// import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
 
-import "../styles/collab-cursor.css";
-import "../styles/tiptap.css";
+import "../../styles/collab-cursor.css";
+import "../../styles/tiptap.css";
 import { Button, CircularProgress } from "@mui/material";
-import { CustomHighlight } from "./CustomHighlight";
-import { AISuggestionsSidebar } from "./EditorSidebar";
+import { AISuggestionsSidebar } from "../EditorSidebar";
 import { CheckCircleOutline } from "@mui/icons-material";
-import { InlineThread } from '@tiptap-pro/extension-comments'
-import { Heading } from "./tiptop_version/DiffHeading";
-import Paragraph from "@tiptap/extension-paragraph";
 import { getEditionById, updateEdition } from "redux/Slices/updateEditionSlice";
 import AlertService from "utils/AlertService";
-
-
-
-
-import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table'
-import { BulletList, OrderedList, ListItem, ListKeymap, TaskList, TaskItem } from '@tiptap/extension-list'
 import { useEditor, EditorContent } from '@tiptap/react'
-// import Text from '@tiptap/extension-text'
-import { TextStyleKit } from '@tiptap/extension-text-style'
-import { Focus, Placeholder, UndoRedo, Dropcursor, Gapcursor, CharacterCount } from '@tiptap/extensions'
 import CollaborationCaret from '@tiptap/extension-collaboration-caret'
-import Snapshot from '@tiptap-pro/extension-snapshot'
-import { BubbleMenu, FloatingMenu } from '@tiptap/react/menus'
-import { ImportDocx } from '@tiptap-pro/extension-import-docx'
-
+import { CommenTipTapExtensions } from "./tiptapExtensions";
 
 
 // const APP_ID = "7j9y6m10";//7j9y6m10
@@ -79,8 +53,7 @@ export default function CollabEditor({ ydoc, provider, room }) {
             StarterKit.configure({ history: false }),
             Collaboration.configure({ document: ydoc }),
             CollaborationCaret.configure({ provider }),
-            Image.configure({ inline: true, allowBase64: true }),
-            Table.configure({ resizable: true }),
+            ...CommenTipTapExtensions,
             AiSuggestion.configure({
                 rules,
                 appId: APP_ID,
@@ -98,23 +71,7 @@ export default function CollabEditor({ ydoc, provider, room }) {
                     }
                     return decorations;
                 },
-            }),
-            Heading,
-            CustomHighlight,
-            InlineThread,
-            TextStyle,
-            Highlight,
-            Image,
-            // History,
-            Underline,
-            Strike,
-            Link,
-            Paragraph,
-            TextAlign.configure({ types: ['heading', 'paragraph'] }),
-            TableRow,
-            TableCell,
-            TableHeader,
-            PageBreak,
+            })
         ],
     })
     const loadSuggestions = async () => {

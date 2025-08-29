@@ -4,7 +4,7 @@ import * as Y from 'yjs'
 import { useParams } from 'react-router';
 import { useSelector } from 'react-redux';
 import { useMemo } from 'react';
-import CollabEditor from './CollabEditor';
+import CollabEditor from './tiptapEditor/CollabEditor';
 
 const appId = '7j9y6m10';
 

@@ -49,7 +49,7 @@ const SaveVersionButton = ({ editor, hasChanges, setHasChanges }) => {
   return (
     <>
       <Box sx={{ display: 'flex', gap: 0.5, mx: 1 }}>
-        <Tooltip title="Save Version">
+        <Tooltip title={hasChanges ? "Save Version" : "No Changes to Save"}>
           <span>
             <IconButton
               disabled={!hasChanges}
@@ -59,8 +59,8 @@ const SaveVersionButton = ({ editor, hasChanges, setHasChanges }) => {
                 backgroundColor: 'rgba(255,255,255,0.1)',
                 color: 'white',
                 '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' }
-            }}
-             
+              }}
+
             >
               <SaveAsIcon />
             </IconButton>

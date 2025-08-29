@@ -96,10 +96,11 @@ const CustomHighlight = Mark.create({
     }
   },
 })
-export const CommenTipTapExtensions = [Document, Paragraph, CustomParagraph, Text, Underline, FontSize, TextStyle, FontFamily, LineHeight, BackgroundColor, Color, Highlight.configure({ multicolor: true }), CustomHighlight, TextStyleKit, Subscript, Superscript, InlineThread,
+export const CommenTipTapExtensions = [Document, Paragraph, CustomParagraph, Text, Underline, FontSize, TextStyle, FontFamily, LineHeight, BackgroundColor, Color, Highlight.configure({ multicolor: true }), CustomHighlight, Subscript, Superscript, InlineThread,
   Strike,
   Link,
   CharacterCount,
+  TextStyleKit.configure({ textStyle: { mergeNestedSpanStyles: true } }),
   Focus.configure({
     className: 'has-focus',
     mode: 'all',
@@ -134,11 +135,7 @@ export const CommenTipTapExtensions = [Document, Paragraph, CustomParagraph, Tex
       },
     },
   }),
-  TextAlign.configure({
-    types: ['heading', 'paragraph'],
-    alignments: ['left', 'center', 'right', 'justify'],
-    defaultAlignment: 'left'
-  }),
+  TextAlign.configure({ types: ['heading', 'paragraph'] }),
   FileHandler.configure({
     allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
     onDrop: (currentEditor, files, pos) => {

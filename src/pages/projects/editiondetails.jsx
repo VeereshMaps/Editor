@@ -16,7 +16,7 @@ import { uploadProjectFile } from "redux/Slices/uploadProjectInputFileSlice";
 import { getProjectDetailsById } from "redux/Slices/projectDetailsByIdSlice";
 import { getEditionsById } from "redux/Slices/editionByIdSlice";
 import Notification from "../../components/Notification";
-import CollabEditor from "components/CollabEditor";
+import CollabEditor from "components/tiptapEditor/CollabEditor";
 import { fetchContentAIToken, fetchTiptapToken } from "redux/Slices/tiptapTokenSlice";
 import TiptapEditor from "components/TiptabEditor";
 import ProofReaderEditorProvider from "components/ProofReader";

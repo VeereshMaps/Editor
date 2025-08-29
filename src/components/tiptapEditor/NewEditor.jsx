@@ -1,4 +1,6 @@
 import "../../styles/style.scss"
+import "../../styles/collab-cursor.css";
+import "../../styles/tiptap.css";
 import { EditorContent, EditorContext, useEditor } from '@tiptap/react'
 import React, { useCallback, useRef, useState, useEffect, useMemo } from 'react'
 import CommentsKit, { InlineThread } from "@tiptap-pro/extension-comments";
@@ -30,7 +32,6 @@ import { Placeholder } from "@tiptap/extensions";
 import { getEditionsById } from 'redux/Slices/editionByIdSlice';
 import { updateEdition } from 'redux/Slices/updateEditionSlice';
 import { suggestChanges } from "@handlewithcare/prosemirror-suggest-changes";
-import { SuggestChanges, SuggestChangesExtension, SuggestionMark } from "./Suggistion";
 const APP_ID = "6kpvqylk";
 
 
@@ -67,6 +68,7 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
     const stableUser = useMemo(() => user, [user?._id]);
     const VITE_SOCKET_URL = import.meta.env.VITE_SOCKET_URL;
     const [saveMode, setSaveMode] = useState(false);
+    const [getThreds, setThreads] = useState([]);
     const editor = useEditor({
         shouldRerenderOnTransaction: true,
         extensions: [
@@ -83,7 +85,8 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                 appId: APP_ID,
                 token: documentToken,
                 endpoint: "https://api.tiptap.dev/v1/convert",
-                experimentalDocxImport: true,
+                // experimentalDocxImport: true,
+                imageUploadCallbackUrl: 'https://api-demo.tiptap.dev/v2/convert/upload',
             }),
             CommentsKit.configure({
                 provider,
@@ -106,9 +109,6 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                     setCurrentVersion(data.currentVersion)
                 },
             }),
-            // SuggestChangesExtension
-            // SuggestionMark,
-            // SuggestChanges,
         ],
         autofocus: true,
         content: ` `,
@@ -121,7 +121,7 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
             checkTableActive();
             provider.on('synced', () => {
                 if (currentEditor.isEmpty) {
-                    currentEditor.commands.setContent(defaultContent);
+                    currentEditor.commands.setContent(``);
                 }
             });
 
@@ -134,7 +134,7 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                 content: updatedContent,
                 type: "doc"
             }
-            if (mode == false) {
+            if (saveMode == false) {
                 if (webIORef.current && webIORef.current.readyState === 1) {
                     webIORef.current.send(JSON.stringify({
                         type: "create-document", // or "update-document"
@@ -165,9 +165,17 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
     // Check if table is active
     const checkTableActive = useCallback(() => {
         if (!editor) return;
-        const tableActive = editor.isActive('table');
-        setIsTableActive(tableActive);
+
+        const shouldShow = editor.state.selection.empty;
+
+        if (shouldShow) {
+            const tableActive = editor.isActive('table');
+            setIsTableActive(tableActive);
+        } else {
+            setIsTableActive(false); 
+        }
     }, [editor]);
+
     useEffect(() => {
         if (editor && currentUser) {
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
@@ -348,25 +356,11 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
             importRef.current.value = "";
         }
         if (!file || !editor) return;
-
         setIsLoading(true);
 
         await new Promise((resolve) => {
             editor.chain().importDocx({
                 file,
-                // onImport: async (context) => {
-                //     if (context.error) {
-                //         console.error("Import error:", context.error);
-                //         setIsLoading(false);
-                //         return resolve();
-                //     }
-                //     console.log(context.content);
-
-                //     editor.commands.setContent(context.content);
-                //     AlertService.success('Document imported successfully!');
-                //     setIsLoading(false);
-                //     resolve();
-                // },
                 onImport: async (context) => {
                     if (context.error) {
                         console.error("Import error:", context.error);
@@ -377,7 +371,7 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                     editor.commands.setContent(context.content);
                     const updatedContent = context.content;
 
-                    if (mode === false) {
+                    if (saveMode === false) {
                         if (webIORef.current?.readyState === 1) {
                             webIORef.current.send(JSON.stringify({
                                 type: "create-document",
@@ -536,7 +530,6 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                     break;
                 case "get-suggestion":
                     console.log("📄 Got Suggisytion:", message.data);
-                    setTrackChangeDetails(message.data)
                     break;
             }
         };
@@ -617,7 +610,7 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
         const editorEl = editor.view.dom.getBoundingClientRect();
 
         setTooltipPosition({
-            top: start.top - editorEl.top + 25, // offset below selection
+            top: start.top - editorEl.top, // offset below selection
             left: start.left - editorEl.left,
         });
     }, [editor?.state.selection]);
@@ -738,11 +731,6 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
             />
             {(!editor?.state.selection.empty && (mode === "Editing" || mode === "Suggesting")) && (
                 <div className="capsule-comment" style={{ top: tooltipPosition?.top + "px" }}>
-                    <Tooltip title="Add Comment">
-                        <IconButton onClick={() => setShowInputBox(true)}>
-                            <CommentIcon />
-                        </IconButton>
-                    </Tooltip>
 
                     {showInputBox && (
                         <div className='comment-wrapper'>
@@ -766,13 +754,7 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                     )}
                 </div>
             )}
-            {(mode === "Editing" || mode === "Suggesting") &&
-                (
-                    <TableControls
-                        editor={editor}
-                        isTableActive={isTableActive}
-                    />
-                )}
+
             <Box sx={{
                 height: 'calc(100vh - 64px)',
                 overflow: 'auto',
@@ -844,9 +826,31 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                         }
                     }}
                 >
-                    <EditorContext.Provider value={{ editor }}>
+                    <EditorContext.Provider value={{ editor }} >
                         {(mode === "Editing" || mode === "View" || mode == "Suggesting") ? (
-                            <EditorContent editor={editor} style={{ height: '100%', paddingBottom: '20%' }} />
+                            <>
+                                <div style={{ height: 0 }}>
+
+
+                                    {(mode === "Editing" || mode === "Suggesting") &&
+                                        (
+                                            <TableControls
+                                                editor={editor}
+                                                isTableActive={isTableActive}
+                                            />
+                                        )}
+                                    {!editor?.state.selection.empty && (
+                                        <Tooltip title="Add Comment" className="capsule-comment" style={{ top: tooltipPosition?.top + "px" }}>
+                                            <IconButton onClick={() => setShowInputBox(true)}>
+                                                <CommentIcon />
+                                            </IconButton>
+                                        </Tooltip>
+                                    )}
+                                </div>
+                                <div >
+                                    <EditorContent editor={editor} style={{ height: '100%', paddingBottom: '20%' }} />
+                                </div>
+                            </>
                         ) : (
                             <VersioningModal
                                 versions={versions}

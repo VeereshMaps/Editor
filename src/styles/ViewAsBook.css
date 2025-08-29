@@ -1,6 +1,7 @@
 .book-container {
-    background: #eee;
-    padding: 1rem 0;
+    /* background: #eee; */
+    background-color: #ffffff;
+    padding: 1rem;
     display: flex;
     flex-direction: column;
     align-items: center;
