@@ -56,7 +56,6 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import TableInsertButton from './TableInsertButton';
 import SaveVersionButton from './SaveVersionButton';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import InsertLinkButtont from './InsertLinkButtont';
 const EditorToolbar = ({
     editor,
     fontSize,
@@ -166,68 +165,105 @@ const EditorToolbar = ({
             }}
 
         >
-            <Box sx={{ display: 'flex', alignItems: 'center', p: 1, gap: 1, height: '40px' }}>
-                {(mode === "Editing" || mode === "Suggesting") && isEditor && (
-                    <>
-                        <Tooltip title="Upload DOCX">
-                            <IconButton variant="outlined"
-                                onClick={handleImportClick}
-                                disabled={isLoading}
-                                size="small"
+            <Box sx={{ display: 'flex', alignItems: 'center', p: 1, gap: 2, height: '40px' }}>
+
+
+                <FormControl size="small" sx={{ minWidth: 120 }}>
+                    <Select
+                        value={mode}
+                        onChange={handleMenuSelect}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'white', height: '35px' }}
+                        disabled={!isEditor}
+
+                    >
+                        {modeOptions.map((option) => (
+                            <MenuItem
+                                key={option.label}
+                                value={option.label}
                                 sx={{
-                                    minWidth: 'auto',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
                                     px: 2,
-                                    backgroundColor: 'rgba(255,255,255,0.1)',
-                                    color: 'white',
-                                    borderColor: 'rgba(255,255,255,0.3)',
+                                    py: 1,
+                                    fontWeight: 500,
+                                    // color: '#fff',
+                                    backgroundColor:
+                                        mode === option.label ? '#f0f0f0' : 'transparent',
                                     '&:hover': {
-                                        backgroundColor: 'rgba(255,255,255,0.2)',
-                                        borderColor: 'rgba(255,255,255,0.5)'
+                                        backgroundColor: '#f5f5f5',
                                     },
-                                    '&:disabled': {
-                                        color: 'rgba(255,255,255,0.5)',
-                                        borderColor: 'rgba(255,255,255,0.2)'
-                                    }
-                                }}>
-                                <CloudUploadIcon />
-                            </IconButton>
-                        </Tooltip>
-                        <input
-                            type="file"
-                            ref={importRef}
-                            onChange={handleImportFilePick}
-                            accept=".docx,.doc"
-                            style={{ display: "none" }}
-                        />
-                        <Tooltip title="Insert Image">
-                            <IconButton
-                                onClick={() => document.getElementById("image-upload-input").click()}
-                                sx={{
-                                    backgroundColor: 'rgba(255,255,255,0.1)',
-                                    color: 'white',
-                                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' }
                                 }}
                             >
-                                <ImageIcon />
-                            </IconButton>
-                        </Tooltip>
-                        <input
-                            type="file"
-                            id="image-upload-input"
-                            accept="image/*"
-                            style={{ display: "none" }}
-                            onChange={handleImageUpload}
-                        />
-                        <InsertLinkButtont editor={editor}/>
-                    </>
-                )}
+                                {option.icon}
+                                {option.label}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+                {(() => {
+                    const role = loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase();
+                    const isAuthor = role === "author";
+                    const isEditor = !isAuthor;
 
+                    // ✅ Add mode condition here
+                    if (!(role === "author" || ((mode === "Editing" || mode === "Suggesting") && isEditor))) {
+                        return null;
+                    }
 
+                    const canApprove =
+                        suggestionLength === 0 &&
+                        (isAuthor
+                            ? editionsById?.editions?.isEditorApproved
+                            : true);
 
+                    const isApproved = isAuthor
+                        ? editionsById?.editions?.isAuthorApproved
+                        : editionsById?.editions?.isEditorApproved;
+
+                    const tooltipTitle = isAuthor ? "Approve as Author" : "Approve as Editor";
+                    const buttonColor = isApproved ? "success" : "default";
+
+                    return (
+                        <>
+                            {canApprove && (
+                                <Tooltip title={tooltipTitle}>
+                                    <span>
+                                        <IconButton
+                                            onClick={handleApprovalClick}
+                                            color={buttonColor}
+                                            sx={{
+                                                backgroundColor: 'rgba(255,255,255,0.1)',
+                                                color: 'white',
+                                                '&:hover': {
+                                                    backgroundColor: 'rgba(255,255,255,0.2)'
+                                                },
+                                                ...(isApproved && {
+                                                    pointerEvents: 'none'
+                                                })
+                                            }}
+                                        >
+                                            <CheckCircleIcon />
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
+                            )}
+                            {isEditor && (
+                                <SaveVersionButton
+                                    editor={editor}
+                                    setHasChanges={setHasChanges}
+                                    hasChanges={hasChanges}
+                                />
+                            )}
+
+                        </>
+                    );
+                })()}
                 {/* Font Family Dropdown */}
                 {(mode === "Editing" || mode === "Suggesting") && isEditor && (
                     <>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
+                            {/* <FontDownload sx={{ color: 'white' }} /> */}
                             <FormControl size="small" sx={{ minWidth: 140 }}>
                                 <Select
                                     value={currentFont}
@@ -286,7 +322,7 @@ const EditorToolbar = ({
                             </FormControl>
                         </Box>
 
-                        {/* <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} /> */}
+                        <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} />
 
                         {/* Heading Dropdown */}
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
@@ -368,10 +404,10 @@ const EditorToolbar = ({
                             </FormControl>
                         </Box>
 
-                        {/* <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} /> */}
+                        <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} />
                         {/* Text Alignment Dropdown */}
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
-                            <FormControl size="small" sx={{ minWidth: 40 }}>
+                            <FormControl size="small" sx={{ minWidth: 40}}>
                                 <Select
                                     value={currentAlignment}
                                     onChange={handleTextAlignmentChange}
@@ -424,7 +460,7 @@ const EditorToolbar = ({
                             </FormControl>
                         </Box>
 
-                        {/* <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} /> */}
+                        <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} />
                         <Tooltip title="Line height">
                             <FormControl size="small" sx={{ minWidth: 40 }}>
                                 <InputLabel id="line-height-select-label">
@@ -459,39 +495,7 @@ const EditorToolbar = ({
                                 </Select>
                             </FormControl>
                         </Tooltip>
-                        {/* <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} /> */}
-                        {/* Bullet List */}
-                        <Tooltip title="Bullet List">
-                            <IconButton
-                                onClick={() => editor.chain().focus().toggleBulletList().run()}
-                                // color={editor.isActive('bulletList') ? 'primary' : '#fff'}
-                                sx={{
-                                    backgroundColor: 'rgba(255,255,255,0.1)',
-                                    color: 'white',
-                                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' },
-                                    '&:disabled': { color: 'rgba(255,255,255,0.3)' }
-                                }}
-                            >
-                                <FormatListBulletedIcon />
-                            </IconButton>
-                        </Tooltip>
-
-                        {/* Numbered List */}
-                        <Tooltip title="Numbered List">
-                            <IconButton
-                                onClick={() => editor.chain().focus().toggleOrderedList().run()}
-                                // color={editor.isActive('orderedList') ? 'primary' : '#fff'}
-                                sx={{
-                                    backgroundColor: 'rgba(255,255,255,0.1)',
-                                    color: 'white',
-                                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' },
-                                    '&:disabled': { color: 'rgba(255,255,255,0.3)' }
-                                }}
-                            >
-                                <FormatListNumberedIcon />
-                            </IconButton>
-                        </Tooltip>
-                        {/* <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} /> */}
+                        <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} />
                         <Tooltip title={versioningEnabled ? 'Disable Auto Version' : 'Enable Auto Version'}>
                             <FormControlLabel
                                 control={
@@ -505,103 +509,9 @@ const EditorToolbar = ({
                                 label="Enable"
                             />
                         </Tooltip>
-
                     </>
                 )}
-                <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginLeft: 'auto' }}>
-                    {(() => {
-                        const role = loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase();
-                        const isAuthor = role === "author";
-                        const isEditor = !isAuthor;
 
-                        // ✅ Add mode condition here
-                        if (!(role === "author" || ((mode === "Editing" || mode === "Suggesting") && isEditor))) {
-                            return null;
-                        }
-
-                        const canApprove =
-                            suggestionLength === 0 &&
-                            (isAuthor
-                                ? editionsById?.editions?.isEditorApproved
-                                : true);
-
-                        const isApproved = isAuthor
-                            ? editionsById?.editions?.isAuthorApproved
-                            : editionsById?.editions?.isEditorApproved;
-
-                        const tooltipTitle = isAuthor ? "Approve as Author" : "Approve as Editor";
-                        const buttonColor = isApproved ? "success" : "default";
-
-                        return (
-                            <>
-                                {canApprove && (
-                                    <Tooltip title={tooltipTitle}>
-                                        <span>
-                                            <IconButton
-                                                onClick={handleApprovalClick}
-                                                color={buttonColor}
-                                                sx={{
-                                                    backgroundColor: 'rgba(255,255,255,0.1)',
-                                                    color: 'white',
-                                                    '&:hover': {
-                                                        backgroundColor: 'rgba(255,255,255,0.2)'
-                                                    },
-                                                    ...(isApproved && {
-                                                        pointerEvents: 'none'
-                                                    })
-                                                }}
-                                            >
-                                                <CheckCircleIcon />
-                                            </IconButton>
-                                        </span>
-                                    </Tooltip>
-                                )}
-                                {isEditor && (
-                                    <SaveVersionButton
-                                        editor={editor}
-                                        setHasChanges={setHasChanges}
-                                        hasChanges={hasChanges}
-                                    />
-                                )}
-
-                            </>
-                        );
-                    })()}
-
-                    <FormControl size="small" sx={{ minWidth: 120 }}>
-                        <Select
-                            value={mode}
-                            onChange={handleMenuSelect}
-                            style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'white', height: '35px' }}
-                            disabled={!isEditor}
-
-                        >
-                            {modeOptions.map((option) => (
-                                <MenuItem
-                                    key={option.label}
-                                    value={option.label}
-                                    sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 1,
-                                        px: 2,
-                                        py: 1,
-                                        fontWeight: 500,
-                                        // color: '#fff',
-                                        backgroundColor:
-                                            mode === option.label ? '#f0f0f0' : 'transparent',
-                                        '&:hover': {
-                                            backgroundColor: '#f5f5f5',
-                                        },
-                                    }}
-                                >
-                                    {option.icon}
-                                    {option.label}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                </Box>
             </Box>
             {(mode === "Editing" || mode === "Suggesting") && isEditor && (
                 <Toolbar
@@ -755,9 +665,8 @@ const EditorToolbar = ({
                         </Tooltip>
                     </Box>
 
-                    {/* <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} /> */}
-                    {/* Table Controls */}
-                    <TableInsertButton editor={editor} />
+                    <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} />
+
                     {/* Script Controls */}
                     <Box sx={{ display: 'flex', gap: 0.5, mx: 1 }}>
                         <Tooltip title="Subscript">
@@ -783,31 +692,6 @@ const EditorToolbar = ({
                                 }}
                             >
                                 <SuperscriptIcon />
-                            </IconButton>
-                        </Tooltip>
-                        {/* Utility Controls */}
-                        <Box sx={{ display: 'flex', gap: 0.5, mx: 1 }}>
-                            <Tooltip title="Clear Formatting">
-                                <IconButton
-                                    onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()}
-                                    sx={{
-                                        backgroundColor: 'rgba(255,255,255,0.1)',
-                                        color: 'white',
-                                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' }
-                                    }}
-                                >
-                                    <ClearAllIcon />
-                                </IconButton>
-                            </Tooltip>
-                        </Box>
-                        <Tooltip title="Insert Horizontal Rule">
-                            <IconButton
-                                onClick={() => editor.chain().focus().setHorizontalRule().run()}
-                                // color="white"
-                                style={{ color: 'white' }}
-                                size="large"
-                            >
-                                <HorizontalRuleIcon />
                             </IconButton>
                         </Tooltip>
                     </Box>
@@ -860,9 +744,10 @@ const EditorToolbar = ({
                     </Box>
                     <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} />
 
+                    {/* Table Controls */}
+                    <TableInsertButton editor={editor} />
 
-
-                    {/* <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} /> */}
+                    <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} />
 
                     {/* History Controls */}
                     <Box sx={{ display: 'flex', gap: 0.5, mx: 1 }}>
@@ -897,6 +782,132 @@ const EditorToolbar = ({
                         </Tooltip>
                     </Box>
 
+                    <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} />
+
+                    {/* Utility Controls */}
+                    <Box sx={{ display: 'flex', gap: 0.5, mx: 1 }}>
+                        <Tooltip title="Clear Formatting">
+                            <IconButton
+                                onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()}
+                                sx={{
+                                    backgroundColor: 'rgba(255,255,255,0.1)',
+                                    color: 'white',
+                                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' }
+                                }}
+                            >
+                                <ClearAllIcon />
+                            </IconButton>
+                        </Tooltip>
+
+                        <Tooltip title="Insert Image">
+                            <IconButton
+                                onClick={() => document.getElementById("image-upload-input").click()}
+                                sx={{
+                                    backgroundColor: 'rgba(255,255,255,0.1)',
+                                    color: 'white',
+                                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' }
+                                }}
+                            >
+                                <ImageIcon />
+                            </IconButton>
+                        </Tooltip>
+                        <input
+                            type="file"
+                            id="image-upload-input"
+                            accept="image/*"
+                            style={{ display: "none" }}
+                            onChange={handleImageUpload}
+                        />
+
+                        <Tooltip title="Insert Link">
+                            <IconButton
+                                onClick={() => {
+                                    const url = window.prompt("Enter the URL");
+                                    if (url) editor.chain().focus().setLink({ href: url }).run();
+                                }}
+                                sx={{
+                                    backgroundColor: editor.isActive('link') ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)',
+                                    color: 'white',
+                                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' }
+                                }}
+                            >
+                                <InsertLinkIcon />
+                            </IconButton>
+                        </Tooltip>
+
+                        <Tooltip title="Upload DOCX">
+                            <IconButton variant="outlined"
+                                onClick={handleImportClick}
+                                disabled={isLoading}
+                                size="small"
+                                sx={{
+                                    minWidth: 'auto',
+                                    px: 2,
+                                    backgroundColor: 'rgba(255,255,255,0.1)',
+                                    color: 'white',
+                                    borderColor: 'rgba(255,255,255,0.3)',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(255,255,255,0.2)',
+                                        borderColor: 'rgba(255,255,255,0.5)'
+                                    },
+                                    '&:disabled': {
+                                        color: 'rgba(255,255,255,0.5)',
+                                        borderColor: 'rgba(255,255,255,0.2)'
+                                    }
+                                }}>
+                                <CloudUploadIcon />
+                            </IconButton>
+                        </Tooltip>
+                        <input
+                            type="file"
+                            ref={importRef}
+                            onChange={handleImportFilePick}
+                            accept=".docx,.doc"
+                            style={{ display: "none" }}
+                        />
+                    </Box>
+                    <Tooltip title="Insert Horizontal Rule">
+                        <IconButton
+                            onClick={() => editor.chain().focus().setHorizontalRule().run()}
+                            // color="white"
+                            style={{ color: 'white' }}
+                            size="large"
+                        >
+                            <HorizontalRuleIcon />
+                        </IconButton>
+                    </Tooltip>
+                    <Divider orientation="vertical" flexItem sx={{ backgroundColor: 'rgba(255,255,255,0.3)' }} />
+                    {/* Bullet List */}
+                    <Tooltip title="Bullet List">
+                        <IconButton
+                            onClick={() => editor.chain().focus().toggleBulletList().run()}
+                            // color={editor.isActive('bulletList') ? 'primary' : '#fff'}
+                            sx={{
+                                backgroundColor: 'rgba(255,255,255,0.1)',
+                                color: 'white',
+                                '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' },
+                                '&:disabled': { color: 'rgba(255,255,255,0.3)' }
+                            }}
+                        >
+                            <FormatListBulletedIcon />
+                        </IconButton>
+                    </Tooltip>
+
+                    {/* Numbered List */}
+                    <Tooltip title="Numbered List">
+                        <IconButton
+                            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+                            // color={editor.isActive('orderedList') ? 'primary' : '#fff'}
+                            sx={{
+                                backgroundColor: 'rgba(255,255,255,0.1)',
+                                color: 'white',
+                                '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' },
+                                '&:disabled': { color: 'rgba(255,255,255,0.3)' }
+                            }}
+                        >
+                            <FormatListNumberedIcon />
+                        </IconButton>
+                    </Tooltip>
                 </Toolbar>
 
             )}

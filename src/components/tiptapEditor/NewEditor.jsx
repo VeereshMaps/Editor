@@ -1,7 +1,7 @@
 import "../../styles/style.scss"
 import "../../styles/collab-cursor.css";
 import "../../styles/tiptap.css";
-import { EditorContent, EditorContext, useEditor } from '@tiptap/react'
+import { Editor, EditorContent, EditorContext, useEditor } from '@tiptap/react'
 import React, { useCallback, useRef, useState, useEffect, useMemo } from 'react'
 import CommentsKit, { InlineThread } from "@tiptap-pro/extension-comments";
 import StarterKit from "@tiptap/starter-kit";
@@ -69,112 +69,137 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
     const VITE_SOCKET_URL = import.meta.env.VITE_SOCKET_URL;
     const [saveMode, setSaveMode] = useState(false);
     const [getThreds, setThreads] = useState([]);
-    const editor = useEditor({
-        shouldRerenderOnTransaction: true,
-        extensions: [
-            StarterKit.configure({
-                history: true,
-                paragraph: {
-                    HTMLAttributes: {
-                        class: 'tiptap-paragraph',
+    const [editor, setEditor] = useState(null);
+    //Main Editor Initialization
+    useEffect(() => {
+        const newEditor = new Editor({
+            shouldRerenderOnTransaction: true,
+            extensions: [
+                StarterKit.configure({
+                    history: true,
+                    paragraph: {
+                        HTMLAttributes: {
+                            class: 'tiptap-paragraph',
+                        },
+                    }
+                }),
+                ...CommenTipTapExtensions,
+                ImportDocx.configure({
+                    appId: APP_ID,
+                    token: documentToken,
+                    endpoint: "https://api.tiptap.dev/v1/convert",
+                    // experimentalDocxImport: true,
+                    imageUploadCallbackUrl: 'https://api-demo.tiptap.dev/v2/convert/upload',
+                }),
+                CommentsKit.configure({
+                    provider,
+                    useLegacyWrapping: false,
+                    deleteUnreferencedThreads: false,
+                }),
+                CollaborationCaret.configure({ provider }),
+                Collaboration.configure({ document: ydoc }),
+                Placeholder.configure({
+                    placeholder: 'Write something … It’ll be shared with everyone else looking at this example.',
+                }),
+                Snapshot.configure({
+                    provider,
+                    onUpdate: data => {
+                        console.log('@###Snapshot updated:', data);
+
+                        setVersions(data.versions)
+                        setIsAutoVersioning(data.versioningEnabled)
+                        setLatestVersion(data.version)
+                        setCurrentVersion(data.currentVersion)
                     },
-                }
-            }),
-            ...CommenTipTapExtensions,
-            ImportDocx.configure({
-                appId: APP_ID,
-                token: documentToken,
-                endpoint: "https://api.tiptap.dev/v1/convert",
-                // experimentalDocxImport: true,
-                imageUploadCallbackUrl: 'https://api-demo.tiptap.dev/v2/convert/upload',
-            }),
-            CommentsKit.configure({
-                provider,
-                useLegacyWrapping: false,
-                deleteUnreferencedThreads: false,
-            }),
-            CollaborationCaret.configure({ provider }),
-            Collaboration.configure({ document: ydoc }),
-            Placeholder.configure({
-                placeholder: 'Write something … It’ll be shared with everyone else looking at this example.',
-            }),
-            Snapshot.configure({
-                provider,
-                onUpdate: data => {
-                    console.log('@###Snapshot updated:', data);
+                }),
+            ],
+            autofocus: true,
+            content: ` `,
+            onSelectionUpdate: ({ editor }) => {
+                updateToolbarState();
+                checkTableActive();
+            },
+            onCreate: ({ editor: currentEditor }) => {
+                updateToolbarState();
+                checkTableActive();
+                provider.on('synced', () => {
+                    if (currentEditor.isEmpty) {
+                        currentEditor.commands.setContent(``);
+                    }
+                });
 
-                    setVersions(data.versions)
-                    setIsAutoVersioning(data.versioningEnabled)
-                    setLatestVersion(data.version)
-                    setCurrentVersion(data.currentVersion)
-                },
-            }),
-        ],
-        autofocus: true,
-        content: ` `,
-        onSelectionUpdate: ({ editor }) => {
-            updateToolbarState();
-            checkTableActive();
-        },
-        onCreate: ({ editor: currentEditor }) => {
-            updateToolbarState();
-            checkTableActive();
-            provider.on('synced', () => {
-                if (currentEditor.isEmpty) {
-                    currentEditor.commands.setContent(``);
+            },
+            onUpdate: ({ editor }) => {
+                const json = editor.getJSON();
+                const updatedContent = json.content;
+                // ✅ Safe WebSocket send
+                const payload = {
+                    content: updatedContent,
+                    type: "doc"
                 }
-            });
+                if (saveMode == false) {
+                    if (webIORef.current && webIORef.current.readyState === 1) {
+                        webIORef.current.send(JSON.stringify({
+                            type: "create-document", // or "update-document"
+                            userId: user._id,
+                            username: user.name,
+                            editionId: editionId,
+                            content: payload,
+                        }));
+                    }
+                } else {
+                    if (webIORef.current && webIORef.current.readyState === 1) {
+                        webIORef.current.send(JSON.stringify({
+                            type: "update-document",
+                            userId: user._id,
+                            username: user.name,
+                            editionId: editionId,
+                            content: payload,
+                        }));
+                    }
+                }
+            },
+            plugins: [
+                // ... your other plugins
+                suggestChanges(),
+            ],
+        });
 
-        },
-        onUpdate: ({ editor }) => {
-            const json = editor.getJSON();
-            const updatedContent = json.content;
-            // ✅ Safe WebSocket send
-            const payload = {
-                content: updatedContent,
-                type: "doc"
-            }
-            if (saveMode == false) {
-                if (webIORef.current && webIORef.current.readyState === 1) {
-                    webIORef.current.send(JSON.stringify({
-                        type: "create-document", // or "update-document"
-                        userId: user._id,
-                        username: user.name,
-                        editionId: editionId,
-                        content: payload,
-                    }));
-                }
-            } else {
-                if (webIORef.current && webIORef.current.readyState === 1) {
-                    webIORef.current.send(JSON.stringify({
-                        type: "update-document",
-                        userId: user._id,
-                        username: user.name,
-                        editionId: editionId,
-                        content: payload,
-                    }));
-                }
-            }
-        },
-        plugins: [
-            // ... your other plugins
-            suggestChanges(),
-        ],
-    });
+        setEditor(newEditor);
 
-    // Check if table is active
+        return () => newEditor.destroy(); // cleanup on action change
+    }, []);
+
     const checkTableActive = useCallback(() => {
         if (!editor) return;
-
-        const shouldShow = editor.state.selection.empty;
-
-        if (shouldShow) {
-            const tableActive = editor.isActive('table');
-            setIsTableActive(tableActive);
+      
+        const selection = editor.state.selection;
+      
+        // Tooltip positioning
+        if (selection.empty) {
+          setTooltipPosition(null);
         } else {
-            setIsTableActive(false); 
+          const { from } = selection;
+          const start = editor.view.coordsAtPos(from);
+          const editorEl = editor.view.dom.getBoundingClientRect();
+      
+          setTooltipPosition({
+            top: start.top - editorEl.top,
+            left: start.left - editorEl.left,
+          });
+      
+          console.log("@##tooltipPosition", {
+            top: start.top - editorEl.top,
+            left: start.left - editorEl.left
+          });
         }
-    }, [editor]);
+      
+        // Table active state
+        const isTableActive = selection.empty && editor.isActive('table');
+        setIsTableActive(isTableActive);
+      }, [editor]);
+      
+
 
     useEffect(() => {
         if (editor && currentUser) {
@@ -598,22 +623,7 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
     const [tooltipPosition, setTooltipPosition] = useState(null);
     const [showInputBox, setShowInputBox] = useState(false);
     const [commentText, setCommentText] = useState('');
-    useEffect(() => {
-        if (!editor || editor.state.selection.empty) {
-            setTooltipPosition(null);
-            return;
-        }
 
-        const { from } = editor.state.selection;
-        const start = editor.view.coordsAtPos(from); // get DOM coords
-
-        const editorEl = editor.view.dom.getBoundingClientRect();
-
-        setTooltipPosition({
-            top: start.top - editorEl.top, // offset below selection
-            left: start.left - editorEl.left,
-        });
-    }, [editor?.state.selection]);
     const handleSubmit = () => {
         if (!commentText || !editor || !user) return;
 

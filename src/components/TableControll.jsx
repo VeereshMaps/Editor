@@ -25,15 +25,15 @@ import {
 
 const TableControls = ({ editor, isTableActive }) => {
     console.log("isTableActive:", isTableActive);
-    console.log("editor:", editor.state.selection.empty);
+    console.log("editor:", editor?.state?.selection.empty);
     const [tooltipPosition, setTooltipPosition] = useState(null);
     useEffect(() => {
-        if (!editor || !editor.state.selection.empty && !isTableActive) {
+        if (!editor || !editor.state?.selection.empty && !isTableActive) {
             setTooltipPosition(null);
             return;
         }
 
-        const { from } = editor.state.selection;
+        const { from } = editor?.state?.selection;
         const start = editor.view.coordsAtPos(from); // get DOM coords
 
         const editorEl = editor.view.dom.getBoundingClientRect();
