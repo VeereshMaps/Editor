@@ -3,7 +3,7 @@ import "../../styles/collab-cursor.css";
 import "../../styles/tiptap.css";
 import { Editor, EditorContent, EditorContext, useEditor } from '@tiptap/react'
 import React, { useCallback, useRef, useState, useEffect, useMemo } from 'react'
-import CommentsKit, { InlineThread } from "@tiptap-pro/extension-comments";
+import CommentsKit, { hoverOffThread, hoverThread, InlineThread } from "@tiptap-pro/extension-comments";
 import StarterKit from "@tiptap/starter-kit";
 import ImportDocx from "@tiptap-pro/extension-import-docx";
 
@@ -32,6 +32,9 @@ import { Placeholder } from "@tiptap/extensions";
 import { getEditionsById } from 'redux/Slices/editionByIdSlice';
 import { updateEdition } from 'redux/Slices/updateEditionSlice';
 import { suggestChanges } from "@handlewithcare/prosemirror-suggest-changes";
+import { useThreads } from "components/hooks/useThreads";
+import { ThreadsList } from "components/ThreadsList";
+import { ThreadsProvider } from "components/Context";
 const APP_ID = "6kpvqylk";
 
 
@@ -70,7 +73,23 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
     const [saveMode, setSaveMode] = useState(false);
     const [getThreds, setThreads] = useState([]);
     const [editor, setEditor] = useState(null);
-    //Main Editor Initialization
+
+    const [isEditor, setIsEditor] = useState(false);
+    const editionsById = useSelector((state) => state.editionsById);
+
+
+    const [isAutoVersioning, setIsAutoVersioning] = React.useState(false);
+    const [latestVersion, setLatestVersion] = React.useState(null);
+    const [currentVersion, setCurrentVersion] = React.useState(null);
+    const [versions, setVersions] = React.useState([]);
+    const [versioningModalOpen, setVersioningModalOpen] = React.useState(false)
+    const [hasChanges, setHasChanges] = React.useState(false)
+    const [tooltipPosition, setTooltipPosition] = useState(null);
+    const [showInputBox, setShowInputBox] = useState(false);
+    const [commentText, setCommentText] = useState('');
+    const threadsRef = useRef([])
+    const [selectedThread, setSelectedThread] = useState(null)
+
     useEffect(() => {
         const newEditor = new Editor({
             shouldRerenderOnTransaction: true,
@@ -99,7 +118,7 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                 CollaborationCaret.configure({ provider }),
                 Collaboration.configure({ document: ydoc }),
                 Placeholder.configure({
-                    placeholder: 'Write something … It’ll be shared with everyone else looking at this example.',
+                    placeholder: 'Write something …',
                 }),
                 Snapshot.configure({
                     provider,
@@ -169,42 +188,31 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
 
         return () => newEditor.destroy(); // cleanup on action change
     }, []);
-
     const checkTableActive = useCallback(() => {
         if (!editor) return;
-      
-        const selection = editor.state.selection;
-      
-        // Tooltip positioning
-        if (selection.empty) {
-          setTooltipPosition(null);
+        const shouldShow = editor.state.selection.empty;
+        setShowInputBox(false)
+        if (shouldShow) {
+            const tableActive = editor.isActive('table');
+            setIsTableActive(tableActive);
         } else {
-          const { from } = selection;
-          const start = editor.view.coordsAtPos(from);
-          const editorEl = editor.view.dom.getBoundingClientRect();
-      
-          setTooltipPosition({
-            top: start.top - editorEl.top,
-            left: start.left - editorEl.left,
-          });
-      
-          console.log("@##tooltipPosition", {
-            top: start.top - editorEl.top,
-            left: start.left - editorEl.left
-          });
+            setIsTableActive(false);
         }
-      
-        // Table active state
-        const isTableActive = selection.empty && editor.isActive('table');
-        setIsTableActive(isTableActive);
-      }, [editor]);
-      
+        const { from } = editor.state.selection;
+        const start = editor.view.coordsAtPos(from); // get DOM coords
 
+        const editorEl = editor.view.dom.getBoundingClientRect();
+
+        setTooltipPosition({
+            top: start.top - editorEl.top, // offset below selection
+            left: start.left - editorEl.left,
+        });
+    }, [editor]);
 
     useEffect(() => {
         if (editor && currentUser) {
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            editor.chain().focus().updateUser(currentUser).run();
+            editor && editor?.chain()?.focus().updateUser(currentUser).run();
         }
     }, [editor, currentUser]);
     useEffect(() => {
@@ -466,8 +474,6 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                 break;
         }
     };
-    const [isEditor, setIsEditor] = useState(false);
-    const editionsById = useSelector((state) => state.editionsById);
 
     useEffect(() => {
         console.log("fnfnfn_", editionsById?.editions);
@@ -578,12 +584,6 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
         if (!editor) return false;
         return isAutoVersioning;
     };
-    const [isAutoVersioning, setIsAutoVersioning] = React.useState(false);
-    const [latestVersion, setLatestVersion] = React.useState(null);
-    const [currentVersion, setCurrentVersion] = React.useState(null);
-    const [versions, setVersions] = React.useState([]);
-    const [versioningModalOpen, setVersioningModalOpen] = React.useState(false)
-    const [hasChanges, setHasChanges] = React.useState(false)
 
     const handleSwitchChange = () => {
         editor.commands.toggleVersioning();
@@ -620,10 +620,29 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
     /* version changes ends */
 
     /* comments logic starts */
-    const [tooltipPosition, setTooltipPosition] = useState(null);
-    const [showInputBox, setShowInputBox] = useState(false);
-    const [commentText, setCommentText] = useState('');
+    const { threads, createThread } = useThreads(provider, editor, user, webIORef, getThreds || []);
+    const filteredThreads = Array.isArray(threads)
+        ? threads
+        : [];
 
+    threadsRef.current = threads;
+    useEffect(() => {
+
+        if (!editor || editor.state.selection.empty) {
+            setTooltipPosition(null);
+            return;
+        }
+
+        const { from } = editor.state.selection;
+        const start = editor.view.coordsAtPos(from); // get DOM coords
+
+        const editorEl = editor.view.dom.getBoundingClientRect();
+
+        setTooltipPosition({
+            top: start.top - editorEl.top, // offset below selection
+            left: start.left - editorEl.left,
+        });
+    }, [editor?.state?.selection]);
     const handleSubmit = () => {
         if (!commentText || !editor || !user) return;
 
@@ -667,6 +686,31 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
         setCommentText('');
         setShowInputBox(false);
     };
+    const selectThreadInEditor = useCallback(threadId => {
+        editor.chain().selectThread({ id: threadId }).run();
+    }, [editor]);
+    const deleteThread = useCallback(threadId => {
+        provider.deleteThread(threadId)
+        editor.commands.removeThread({ id: threadId })
+    }, [editor]);
+    const onHoverThread = useCallback(threadId => {
+        hoverThread(editor, [threadId]);
+    }, [editor]);
+    const onLeaveThread = useCallback(() => {
+        hoverOffThread(editor)
+    }, [editor]);
+    const resolveThread = useCallback(threadId => {
+        editor.commands.resolveThread({ id: threadId })
+    }, [editor]);
+
+    const unresolveThread = useCallback(threadId => {
+        editor.commands.unresolveThread({ id: threadId })
+    }, [editor]);
+    const updateComment = useCallback((threadId, commentId, content, metaData) => {
+        editor.commands.updateComment({
+            threadId, id: commentId, content, data: metaData,
+        })
+    }, [editor]);
     /* comments logic ends */
 
     const handleApprovalClick = async () => {
@@ -700,7 +744,15 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
             console.error("❌ Error updating edition:", error);
         }
     };
-    ;
+    const showCommentBox = async (event) => {
+        console.log("@#$event ", event);
+        setShowInputBox(true);
+    }
+    useEffect(() => {
+        console.log("showInputBox", showInputBox);
+
+    }, [showInputBox])
+
     return (
         <Box sx={{ width: '100%', height: '100vh', overflow: 'hidden', backgroundColor: '#f5f5f5', position: 'relative' }}>
             <EditorToolbar
@@ -739,31 +791,6 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                 hasChanges={hasChanges}
                 setHasChanges={setHasChanges}
             />
-            {(!editor?.state.selection.empty && (mode === "Editing" || mode === "Suggesting")) && (
-                <div className="capsule-comment" style={{ top: tooltipPosition?.top + "px" }}>
-
-                    {showInputBox && (
-                        <div className='comment-wrapper'>
-                            <div className="comment-input-box">
-                                <div style={{ fontSize: '0.8rem', marginBottom: 4 }}>
-                                    {/* <Avatar src={user.avatarUrl} alt={user.name} /> */}
-                                    {user?.name}</div>
-                                <textarea
-                                    value={commentText}
-
-                                    onChange={(e) => setCommentText(e.target.value)}
-                                    placeholder="Write your comment..."
-                                    style={{ width: '100%', height: 60, resize: 'none' }}
-                                />
-                                <div style={{ marginTop: 8, textAlign: 'center', display: 'flex', justifyContent: 'space-around' }}>
-                                    <Button disabled={!commentText} variant='contained' onClick={handleSubmit} style={{ height: '25px' }}>Submit</Button>
-                                    <Button onClick={() => setShowInputBox(false)} variant='outlined' style={{ height: '25px' }}>Cancel</Button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
 
             <Box sx={{
                 height: 'calc(100vh - 64px)',
@@ -774,8 +801,8 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                 <Paper
                     elevation={3}
                     sx={{
-                        p: 3,
-                        backgroundColor: '#ffffff',
+                        // p: 3,
+                        // backgroundColor: '#ffffff',
                         minHeight: 'calc(100vh - 140px)',
                         '& .ProseMirror': {
                             outline: 'none',
@@ -836,6 +863,7 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                         }
                     }}
                 >
+
                     <EditorContext.Provider value={{ editor }} >
                         {(mode === "Editing" || mode === "View" || mode == "Suggesting") ? (
                             <>
@@ -851,14 +879,65 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                                         )}
                                     {!editor?.state.selection.empty && (
                                         <Tooltip title="Add Comment" className="capsule-comment" style={{ top: tooltipPosition?.top + "px" }}>
-                                            <IconButton onClick={() => setShowInputBox(true)}>
+                                            <IconButton onClick={() => showCommentBox(true)}>
                                                 <CommentIcon />
                                             </IconButton>
                                         </Tooltip>
                                     )}
                                 </div>
-                                <div >
-                                    <EditorContent editor={editor} style={{ height: '100%', paddingBottom: '20%' }} />
+
+                                <div style={{ display: 'flex', flexDirection: 'row', gap: 1, width: '100%' }}>
+                                    <EditorContent editor={editor} style={{ height: '100%', width: '100%', paddingBottom: '20%', backgroundColor: '#ffffff', }} />
+                                    <Box sx={{ width: '300px', background: '#f9fbfd' }}>
+
+                                        <ThreadsProvider
+                                            onClickThread={selectThreadInEditor}
+                                            onDeleteThread={deleteThread}
+                                            onHoverThread={onHoverThread}
+                                            onLeaveThread={onLeaveThread}
+                                            onResolveThread={resolveThread}
+                                            onUnresolveThread={unresolveThread}
+                                            onUpdateComment={updateComment}
+                                            selectedThreads={editor?.storage?.comments?.focusedThreads || []}
+                                            selectedThread={selectedThread}
+                                            setSelectedThread={setSelectedThread}
+                                            threads={threads}
+                                        >
+
+                                            <div className="sidebar-options sidebar" style={{ background: '#fdfdfd', width: '100%', padding: '10px' }}>
+                                                <div className="option-group">
+                                                    <div className="label-large">Comments</div>
+                                                  
+                                                </div>
+                                                {(!editor?.state.selection.empty && (mode === "Editing" || mode === "Suggesting")) && (
+                                                    <div style={{ position: 'relative', top: tooltipPosition?.top + "px", width: '100%' }}>
+
+                                                        {showInputBox && (
+                                                            <div className='comment-wrapper'>
+                                                                <div className="comment-input-box">
+                                                                    <div style={{ fontSize: '0.8rem', marginBottom: 4 }}>
+                                                                        {/* <Avatar src={user.avatarUrl} alt={user.name} /> */}
+                                                                        {user?.name}</div>
+                                                                    <textarea
+                                                                        value={commentText}
+
+                                                                        onChange={(e) => setCommentText(e.target.value)}
+                                                                        placeholder="Write your comment..."
+                                                                        style={{ width: '100%', height: 60, resize: 'none' }}
+                                                                    />
+                                                                    <div style={{ marginTop: 8, textAlign: 'center', display: 'flex', justifyContent: 'space-around' }}>
+                                                                        <Button disabled={!commentText} variant='contained' onClick={handleSubmit} style={{ height: '25px' }}>Submit</Button>
+                                                                        <Button onClick={() => setShowInputBox(false)} variant='outlined' style={{ height: '25px' }}>Cancel</Button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                <ThreadsList className="tiptap" provider={provider} threads={filteredThreads} WebSocket={webIORef} />
+                                            </div>
+                                        </ThreadsProvider>
+                                    </Box>
                                 </div>
                             </>
                         ) : (
