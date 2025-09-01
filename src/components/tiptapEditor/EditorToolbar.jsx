@@ -160,6 +160,7 @@ const EditorToolbar = ({
             position="sticky"
             sx={{
                 top: 0,
+                paddingTop:1,
                 zIndex: 1200,
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 boxShadow: '0 2px 10px rgba(0,0,0,0.1)'

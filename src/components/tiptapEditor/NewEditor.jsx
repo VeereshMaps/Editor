@@ -34,7 +34,8 @@ import { updateEdition } from 'redux/Slices/updateEditionSlice';
 import { suggestChanges } from "@handlewithcare/prosemirror-suggest-changes";
 import { useThreads } from "components/hooks/useThreads";
 import { ThreadsList } from "components/ThreadsList";
-import { ThreadsProvider } from "components/Context";
+import { ThreadsProvider, useThreadsState } from "components/Context";
+import { ThreadsListItem } from "components/ThreadsListItem";
 const APP_ID = "6kpvqylk";
 
 
@@ -210,11 +211,18 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
     }, [editor]);
 
     useEffect(() => {
-        if (editor && currentUser) {
+        if (
+            editor &&
+            editor.view &&
+            typeof editor.view.dom !== 'undefined' &&
+            currentUser
+        ) {
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            editor && editor?.chain()?.focus().updateUser(currentUser).run();
+
+            editor.chain().focus().updateUser(currentUser).run();
         }
     }, [editor, currentUser]);
+
     useEffect(() => {
         currentUserRef.current = currentUser;
 
@@ -752,7 +760,10 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
         console.log("showInputBox", showInputBox);
 
     }, [showInputBox])
-
+    const editorWrapperRef = useRef(null);
+    const [showUnresolved, setShowUnresolved] = useState(true);
+    const [status, setStatus] = useState('connecting');
+    const { selectedThreads, CurrentSelectedThread } = useThreadsState();
     return (
         <Box sx={{ width: '100%', height: '100vh', overflow: 'hidden', backgroundColor: '#f5f5f5', position: 'relative' }}>
             <EditorToolbar
@@ -887,9 +898,13 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                                 </div>
 
                                 <div style={{ display: 'flex', flexDirection: 'row', gap: 1, width: '100%' }}>
-                                    <EditorContent editor={editor} style={{ height: '100%', width: '100%', paddingBottom: '20%', backgroundColor: '#ffffff', }} />
-                                    <Box sx={{ width: '300px', background: '#f9fbfd' }}>
-
+                                    <div ref={editorWrapperRef} data-viewmode={showUnresolved ? 'open' : 'resolved'}>
+                                        <EditorContent editor={editor} style={{ height: '100%', width: '100%', paddingBottom: '20%', backgroundColor: '#ffffff', }} />
+                                        <div className="collab-status-group" sx={{ width: '300px', background: '#f9fbfd', ml: 'auto' }}
+                                            data-state={status === 'connected' ? 'online' : 'offline'}>
+                                        </div>
+                                    </div>
+                                    <Box sx={{ width: '300px', background: '#f9fbfd', ml: 'auto' }}>
                                         <ThreadsProvider
                                             onClickThread={selectThreadInEditor}
                                             onDeleteThread={deleteThread}
@@ -903,11 +918,10 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                                             setSelectedThread={setSelectedThread}
                                             threads={threads}
                                         >
-
-                                            <div className="sidebar-options sidebar" style={{ background: '#fdfdfd', width: '100%', padding: '10px' }}>
+                                            <div className="sidebar-options sidebar" style={{ background: '#fdfdfd', width: '300px', padding: '10px' }}>
                                                 <div className="option-group">
                                                     <div className="label-large">Comments</div>
-                                                  
+
                                                 </div>
                                                 {(!editor?.state.selection.empty && (mode === "Editing" || mode === "Suggesting")) && (
                                                     <div style={{ position: 'relative', top: tooltipPosition?.top + "px", width: '100%' }}>
@@ -934,7 +948,29 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                                                         )}
                                                     </div>
                                                 )}
-                                                <ThreadsList className="tiptap" provider={provider} threads={filteredThreads} WebSocket={webIORef} />
+
+                                                {/* <ThreadsList className="tiptap" provider={provider} threads={filteredThreads} WebSocket={webIORef} /> */}
+                                                <div
+                                                    className="threads-group"
+                                                    style={{
+                                                        height: '45vh',
+                                                        overflowY: 'auto',
+                                                        padding: '10px',
+                                                    }}
+                                                >
+                                                    {filteredThreads.map((thread) => (
+                                                        <ThreadsListItem
+                                                            key={thread.id}
+                                                            thread={thread}
+                                                            active={
+                                                                selectedThreads.includes(thread.id) || selectedThread === thread.id
+                                                            }
+                                                            open={selectedThread === thread.id}
+                                                            provider={provider}
+                                                            WebSocket={webIORef}
+                                                        />
+                                                    ))}
+                                                </div>
                                             </div>
                                         </ThreadsProvider>
                                     </Box>
