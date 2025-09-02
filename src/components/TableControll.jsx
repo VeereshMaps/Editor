@@ -24,8 +24,8 @@ import {
 } from '@mui/icons-material';
 
 const TableControls = ({ editor, isTableActive }) => {
-    console.log("isTableActive:", isTableActive);
-    console.log("editor:", editor?.state?.selection.empty);
+    // console.log("isTableActive:", isTableActive);
+    // console.log("editor:", editor?.state?.selection.empty);
     const [tooltipPosition, setTooltipPosition] = useState(null);
     useEffect(() => {
         if (!editor || !editor.state?.selection.empty && !isTableActive) {
@@ -42,7 +42,7 @@ const TableControls = ({ editor, isTableActive }) => {
             top: start.top - editorEl.top +50, // offset below selection
             left: start.left - editorEl.left,
         });
-        console.log("!@##tooltipPosition ",tooltipPosition);
+        // console.log("!@##tooltipPosition ",tooltipPosition);
         
     }, [editor?.state.selection, isTableActive]);
 

@@ -124,7 +124,7 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                 Snapshot.configure({
                     provider,
                     onUpdate: data => {
-                        console.log('@###Snapshot updated:', data);
+                        // console.log('@###Snapshot updated:', data);
 
                         setVersions(data.versions)
                         setIsAutoVersioning(data.versioningEnabled)
@@ -484,7 +484,6 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
     };
 
     useEffect(() => {
-        console.log("fnfnfn_", editionsById?.editions);
 
         if (roleName === "author" && editionsById?.editions?.isAuthorApproved === false) {
             setIsEditor(true);
@@ -758,12 +757,91 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
     }
     useEffect(() => {
         console.log("showInputBox", showInputBox);
+        console.log("@#HNNprovider ", provider);
+        console.log("@#HNNeditor ", editor);
 
+        // const { from } = editor.state.selection;
+        // const start = editor.view.coordsAtPos(from); // get DOM coords
+
+        // const editorEl = editor.view.dom.getBoundingClientRect();
+
+        const elements = document.querySelectorAll('[data-type="inline"]');
+        const firstThread = document.querySelectorAll('[data-thread-id="4580df28-c044-4822-86cb-df5bda237605"]');
+
+        firstThread.forEach((el, index) => {
+            const rect = el.getBoundingClientRect();
+            console.log(`Thread #${index + 1}:`);
+            console.log("Top:", rect.top);
+            console.log("Left:", rect.left);
+            console.log("Width:", rect.width);
+            console.log("Height:", rect.height);
+        });
+
+
+        // elements.forEach((element, index) => {
+        //     const rect = element.getBoundingClientRect();
+        //     console.log("@#$$rect ", rect);
+
+        //     console.log(`🔹 Inline Element #${index + 1}`);
+        //     console.log("   Top:", rect.top);
+        //     console.log("   Left:", rect.left);
+        //     console.log("   Width:", rect.width);
+        //     console.log("   Height:", rect.height);
+        // });
     }, [showInputBox])
     const editorWrapperRef = useRef(null);
     const [showUnresolved, setShowUnresolved] = useState(true);
     const [status, setStatus] = useState('connecting');
     const { selectedThreads, CurrentSelectedThread } = useThreadsState();
+    const [positions, setPositions] = useState({});
+  
+    useEffect(() => {
+        if (!editor) return;
+    
+        const updatePositions = () => {
+            console.log("🔍 Running updatePositions...");
+            const elements = document.querySelectorAll('[data-thread-id]');
+            console.log("🔍 # Found elements:", elements.length);
+    
+            const rawPositions = {};
+            const topMap = {};
+    
+            elements.forEach((el) => {
+                const threadId = el.getAttribute('data-thread-id');
+                const rect = el.getBoundingClientRect();
+    
+                let top = Math.round(rect.top + window.scrollY);
+                let left = Math.round(rect.left + window.scrollX);
+    
+                // 👇 Fix: Always count all entries
+                topMap[top] = (topMap[top] || 0) + 1;
+                const offset = (topMap[top] - 1) * 120; // Only offset duplicates
+    
+                rawPositions[threadId] = {
+                    top: top + offset,
+                    left,
+                    width: rect.width,
+                    height: rect.height,
+                };
+            });
+    
+            console.log("📍 Calculated positions:", rawPositions);
+            setPositions(rawPositions);
+        };
+    
+        const timeout = setTimeout(updatePositions, 300);
+    
+        window.addEventListener("resize", updatePositions);
+        window.addEventListener("scroll", updatePositions);
+    
+        return () => {
+            clearTimeout(timeout);
+            window.removeEventListener("resize", updatePositions);
+            window.removeEventListener("scroll", updatePositions);
+        };
+    }, [editor, filteredThreads, provider?.isSynced]);
+    
+
     return (
         <Box sx={{ width: '100%', height: '100vh', overflow: 'hidden', backgroundColor: '#f5f5f5', position: 'relative' }}>
             <EditorToolbar
@@ -918,58 +996,77 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                                             setSelectedThread={setSelectedThread}
                                             threads={threads}
                                         >
-                                            <div className="sidebar-options sidebar" style={{ background: '#fdfdfd', width: '300px', padding: '10px' }}>
+                                            <div className="sidebar-options sidebar" style={{ background: 'rgb(249, 251, 253)', width: '300px', padding: '10px' }}>
                                                 <div className="option-group">
                                                     <div className="label-large">Comments</div>
 
                                                 </div>
-                                                {(!editor?.state.selection.empty && (mode === "Editing" || mode === "Suggesting")) && (
-                                                    <div style={{ position: 'relative', top: tooltipPosition?.top + "px", width: '100%' }}>
+                                                    {(!editor?.state.selection.empty && (mode === "Editing" || mode === "Suggesting")) && (
+                                                        <div style={{ position: 'relative', top: tooltipPosition?.top + "px", width: '100%' }}>
 
-                                                        {showInputBox && (
-                                                            <div className='comment-wrapper'>
-                                                                <div className="comment-input-box">
-                                                                    <div style={{ fontSize: '0.8rem', marginBottom: 4 }}>
-                                                                        {/* <Avatar src={user.avatarUrl} alt={user.name} /> */}
-                                                                        {user?.name}</div>
-                                                                    <textarea
-                                                                        value={commentText}
+                                                            {showInputBox && (
+                                                                <div className='comment-wrapper' style={{zIndex:1}}>
+                                                                    <div className="comment-input-box">
+                                                                        <div style={{ fontSize: '0.8rem', marginBottom: 4 }}>
+                                                                            {/* <Avatar src={user.avatarUrl} alt={user.name} /> */}
+                                                                            {user?.name}</div>
+                                                                        <textarea
+                                                                            value={commentText}
 
-                                                                        onChange={(e) => setCommentText(e.target.value)}
-                                                                        placeholder="Write your comment..."
-                                                                        style={{ width: '100%', height: 60, resize: 'none' }}
-                                                                    />
-                                                                    <div style={{ marginTop: 8, textAlign: 'center', display: 'flex', justifyContent: 'space-around' }}>
-                                                                        <Button disabled={!commentText} variant='contained' onClick={handleSubmit} style={{ height: '25px' }}>Submit</Button>
-                                                                        <Button onClick={() => setShowInputBox(false)} variant='outlined' style={{ height: '25px' }}>Cancel</Button>
+                                                                            onChange={(e) => setCommentText(e.target.value)}
+                                                                            placeholder="Write your comment..."
+                                                                            style={{ width: '100%', height: 60, resize: 'none' }}
+                                                                        />
+                                                                        <div style={{ marginTop: 8, textAlign: 'center', display: 'flex', justifyContent: 'space-around' }}>
+                                                                            <Button disabled={!commentText} variant='contained' onClick={handleSubmit} style={{ height: '25px' }}>Submit</Button>
+                                                                            <Button onClick={() => setShowInputBox(false)} variant='outlined' style={{ height: '25px' }}>Cancel</Button>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
+                                                            )}
+                                                        </div>
+                                                    )}
 
                                                 {/* <ThreadsList className="tiptap" provider={provider} threads={filteredThreads} WebSocket={webIORef} /> */}
                                                 <div
                                                     className="threads-group"
                                                     style={{
-                                                        height: '45vh',
-                                                        overflowY: 'auto',
+                                                        position: 'relative',
+                                                        height:'100%',
                                                         padding: '10px',
+                                                        alignItems:'center'
                                                     }}
                                                 >
-                                                    {filteredThreads.map((thread) => (
-                                                        <ThreadsListItem
-                                                            key={thread.id}
-                                                            thread={thread}
-                                                            active={
-                                                                selectedThreads.includes(thread.id) || selectedThread === thread.id
-                                                            }
-                                                            open={selectedThread === thread.id}
-                                                            provider={provider}
-                                                            WebSocket={webIORef}
-                                                        />
-                                                    ))}
+
+                                                    {provider?.isSynced &&
+                                                        filteredThreads.map((thread) => {
+                                                            const pos = positions[thread.id];
+                                                            // console.log('Thread ID:', thread.id, 'Position:', pos);
+
+                                                            if (!pos) return null;
+
+                                                            return (
+                                                                <div
+                                                                    key={thread.id}
+                                                                    style={{
+                                                                        position: 'absolute',
+                                                                        top: pos.top-400,
+                                                                        zIndex: 1000,
+                                                                        width:'100%',
+                                                                        padding:'20px'
+                                                                    }}
+                                                                >
+                                                                    <ThreadsListItem
+                                                                        id={thread.id}
+                                                                        active={selectedThreads.includes(thread.id)}
+                                                                        open={selectedThread === thread.id}
+                                                                        thread={thread}
+                                                                        provider={provider}
+                                                                        WebSocket={webIORef}
+                                                                    />
+                                                                </div>
+                                                            );
+                                                        })}
                                                 </div>
                                             </div>
                                         </ThreadsProvider>

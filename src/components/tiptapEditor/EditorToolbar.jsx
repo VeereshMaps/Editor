@@ -94,7 +94,7 @@ const EditorToolbar = ({
     setHasChanges
 }) => {
     if (!editor) return null;
-    console.log("isEditor", isEditor);
+    // console.log("isEditor", isEditor);
     const loginDetails = useSelector((state) => state.auth);
     const roleName = loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase();
     const editionsById = useSelector((state) => state.editionsById);
@@ -105,7 +105,7 @@ const EditorToolbar = ({
     const currentAlignment = textAlignment;
     const lineHeight = getCorrentLineHeaght();
     const versioningEnabled = getCorrentVersionStatus();
-    console.log("versioningEnabled", versioningEnabled);
+    // console.log("versioningEnabled", versioningEnabled);
     // Available font families
     const baseModeOptions = [
         {
