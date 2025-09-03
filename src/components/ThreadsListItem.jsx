@@ -1,30 +1,147 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useParams } from 'react-router';
+import {
+    Box,
+    Paper,
+    Button,
+    TextField,
+    Typography,
+    Divider,
+    Card,
+    CardContent,
+    IconButton,
+    Chip,
+    Stack,
+    Tooltip
+} from '@mui/material';
+import {
+    Check as CheckIcon,
+    Refresh as RefreshIcon,
+    Close as CloseIcon,
+    Send as SendIcon
+} from '@mui/icons-material';
 import { useThreadsState } from './Context';
 import { CommentCard } from './CommentCard';
 import { ThreadCard } from './ThreadCard';
-import { ThreadComposer } from './ThreadComposer';
 import '../styles/tiptap.css';
+import { useUser } from './hooks/useUser';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete'
+// Enhanced Comment Item Component
+const CommentItem = ({
+    comment,
+    showActions = true,
+    onEdit,
+    onDelete
+}) => {
+    const [isComposing, setIsComposing] = useState(false);
+    const [composeValue, setComposeValue] = useState(comment.content || '');
 
-const buttonStyle = {
-    padding: '4px',
-    marginRight: '8px',
-    borderRadius: '6px',
-    border: '1px solid #ccc',
-    backgroundColor: '#ffffff',
-    // backgroundColor: '#f1f1f1',
-    cursor: 'pointer',
-    fontSize: '0.7rem',
+    const handleEditSubmit = useCallback((e) => {
+        e.preventDefault();
+        if (composeValue.trim() && composeValue !== comment.content) {
+            onEdit?.(comment.id, composeValue);
+            setIsComposing(false);
+        }
+    }, [composeValue, comment.id, comment.content, onEdit]);
+
+    const handleEditCancel = () => {
+        setComposeValue(comment.content || '');
+        setIsComposing(false);
+    };
+
+    return (
+        <Card
+            variant="outlined"
+            sx={{
+                mt: 1,
+                opacity: comment.deletedAt ? 0.6 : 1,
+                backgroundColor: comment.deletedAt ? 'grey.50' : 'background.paper'
+            }}
+        >
+            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                    <Typography variant="subtitle2" fontWeight="bold">
+                        {comment.data?.userName || 'Anonymous'}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                        {new Date(comment.createdAt).toLocaleTimeString()}
+                    </Typography>
+                </Box>
+
+                {comment.deletedAt ? (
+                    <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
+                        Comment was deleted
+                    </Typography>
+                ) : !isComposing ? (
+                    <>
+                        <Typography variant="body2" sx={{ mb: showActions ? 1 : 0 }}>
+                            {comment.content}
+                        </Typography>
+                        {showActions && (
+                            <Stack direction="row" spacing={1}>
+
+                                <Tooltip title="Edit">
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => setIsComposing(true)}
+                                    // color="primary"
+                                    >
+                                        <EditIcon />
+                                    </IconButton>
+                                </Tooltip>
+
+                                <Tooltip title="Delete">
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => onDelete?.(comment.id)}
+                                    // color="error"
+                                    >
+                                        <DeleteIcon />
+                                    </IconButton>
+                                </Tooltip>
+                            </Stack>
+                        )}
+                    </>
+                ) : (
+                    <Box component="form" onSubmit={handleEditSubmit}>
+                        <TextField
+                            fullWidth
+                            multiline
+                            rows={2}
+                            value={composeValue}
+                            onChange={(e) => setComposeValue(e.target.value)}
+                            variant="outlined"
+                            size="small"
+                            sx={{ mb: 1 }}
+                        />
+                        <Stack direction="row" spacing={1}>
+                            <Button
+                                type="button"
+                                size="small"
+                                variant="outlined"
+                                onClick={handleEditCancel}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="submit"
+                                size="small"
+                                variant="contained"
+                                disabled={!composeValue.trim() || composeValue === comment.content}
+                            >
+                                Save
+                            </Button>
+                        </Stack>
+                    </Box>
+                )}
+            </CardContent>
+        </Card>
+    );
 };
 
-
-const cancelButtonStyle = {
-    ...buttonStyle,
-    // backgroundColor: '#e0e0e0',
-    color: '#333',
-};
-
-export const ThreadsListItem = ({ thread, provider, active, open, WebSocket }) => {
+// Main ThreadsListItem Component
+const ThreadsListItem = ({ thread, provider, active, open, WebSocket }) => {
     const {
         onClickThread,
         deleteThread,
@@ -34,20 +151,16 @@ export const ThreadsListItem = ({ thread, provider, active, open, WebSocket }) =
         unresolveThread,
     } = useThreadsState();
 
-    const classNames = ['threadsList--item'];
-    // console.log(active + "   uu " + open);
-    (active, open)
-    if (active || open) classNames.push('threadsList--item--active');
-
     const { editionId } = useParams();
+    const user = useUser();
 
     const comments = useMemo(() => {
         const result = thread.comments || provider.getThreadComments?.(thread.id, true) || [];
         return result;
     }, [provider, thread]);
-    // const comments = useMemo(() => provider.getThreadComments(thread.id, true), [provider, thread])
 
     const firstComment = comments?.[0];
+    const [comment, setComment] = useState('');
 
     const handleDeleteClick = useCallback(() => {
         deleteThread(thread.id);
@@ -63,7 +176,6 @@ export const ThreadsListItem = ({ thread, provider, active, open, WebSocket }) =
     }, [thread.id, deleteThread, WebSocket, editionId]);
 
     const handleResolveClick = useCallback(() => {
-        // alert("@## ",WebSocket.current?.readyState)
         resolveThread(thread.id);
         if (WebSocket.current?.readyState === 1) {
             WebSocket.current.send(
@@ -75,11 +187,10 @@ export const ThreadsListItem = ({ thread, provider, active, open, WebSocket }) =
                 })
             );
         }
-    }, [thread.id, resolveThread]);
+    }, [thread.id, resolveThread, WebSocket, editionId]);
 
     const handleUnresolveClick = useCallback(() => {
         unresolveThread(thread.id);
-        // alert("fbfj"+WebSocket.current?.readyState)
         if (WebSocket.current?.readyState === 1) {
             WebSocket.current.send(
                 JSON.stringify({
@@ -90,7 +201,7 @@ export const ThreadsListItem = ({ thread, provider, active, open, WebSocket }) =
                 })
             );
         }
-    }, [thread.id, unresolveThread]);
+    }, [thread.id, unresolveThread, WebSocket, editionId]);
 
     const editComment = useCallback(
         (commentId, val) => {
@@ -113,7 +224,6 @@ export const ThreadsListItem = ({ thread, provider, active, open, WebSocket }) =
     const deleteComment = useCallback(
         (commentId) => {
             console.log("delete comment", thread.id, commentId);
-            // provider.deleteComment(thread.id, commentId, { deleteContent: true });
             if (WebSocket.current?.readyState === 1) {
                 WebSocket.current.send(
                     JSON.stringify({
@@ -125,25 +235,66 @@ export const ThreadsListItem = ({ thread, provider, active, open, WebSocket }) =
                 );
             }
         },
-        [provider, thread.id, WebSocket, editionId]
+        [thread.id, WebSocket, editionId]
+    );
+
+    const handleSubmit = useCallback(
+        (e) => {
+            e.preventDefault();
+            if (!comment.trim()) return;
+
+            if (provider) {
+                provider.addComment(thread.id, {
+                    content: comment,
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                    data: { userName: user.name },
+                });
+
+                const commentData = {
+                    content: comment,
+                    data: {
+                        userName: user.name,
+                        userId: user._id,
+                        color: user.color,
+                    },
+                };
+
+                if (WebSocket.current && WebSocket.current.readyState === 1) {
+                    WebSocket.current.send(
+                        JSON.stringify({
+                            type: 'create-comment',
+                            editionId,
+                            commentListId: thread.id,
+                            content: commentData,
+                        })
+                    );
+                }
+
+                setComment('');
+            }
+        },
+        [comment, provider, thread.id, editionId, user, WebSocket]
     );
 
     return (
-        <div
-            onMouseEnter={() => {
-                onHoverThread(thread.id);
-            }}
+        <Paper
+            elevation={active ? 3 : 1}
+            onMouseEnter={() => onHoverThread(thread.id)}
             onMouseLeave={onLeaveThread}
-            style={{
-                marginBottom: '10px',
-                borderRadius: '8px',
-                border: active ? '2px solid #5c9ded' : '1px solid #edf2fa',
-                padding: '10px',
-                backgroundColor: open ? '#edf2fa' : '#f8f9fa',
-                boxShadow: active ? '0 2px 5px rgba(0,0,0,0.1)' : 'none',
+            sx={{
+                mb: 1.25,
+                borderRadius: 2.5,
+                border: active ? 2 : 1,
+                borderColor: active ? 'primary.main' : 'grey.300',
+                p: 1.25,
+                backgroundColor: open ? 'background.paper' : 'grey.50',
                 transition: 'all 0.3s ease',
-                cursor: 'pointer'
-
+                cursor: 'pointer',
+                '&:hover': {
+                    elevation: 2,
+                    borderColor: active ? 'primary.main' : 'grey.400'
+                }
             }}
         >
             <ThreadCard
@@ -152,80 +303,105 @@ export const ThreadsListItem = ({ thread, provider, active, open, WebSocket }) =
                 open={open}
                 onClick={() => {
                     if (!open) onClickThread(thread.id);
-                }}            >
+                }}
+            >
                 {open && (
                     <>
-                        <div
-                            style={{
-                                display: 'flex',
-                                justifyContent: 'flex-end',
-                                marginBottom: '8px',
-                            }}
-                        >
+                        {/* Action buttons */}
+                        <Box display="flex" justifyContent="flex-end" mb={1} gap={1}>
+                            <Button onClick={() => {
+                                onClickThread(thread.id);
+                            }}>Close</Button>
+                            <Tooltip title="Resolve">
+                                <IconButton
+                                    size="small"
+                                    // color="success"
+                                    onClick={handleResolveClick}
+                                >
+                                    <CheckIcon />
+                                </IconButton>
+                            </Tooltip>
 
-                            {!thread.resolvedAt ? (
-                                <button onClick={handleResolveClick} style={cancelButtonStyle}>
-                                    ✓ Resolve
-                                </button>
-                            ) : (
-                                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                    <div style={{ fontSize: '0.8em', color: '#1677ffa8' }}>
-                                        Resolved at {new Date(thread.resolvedAt).toLocaleString()}
-                                    </div>
-                                    <button onClick={handleUnresolveClick} style={cancelButtonStyle}>
-                                        ⟲ Unresolve
-                                    </button>
-                                </div>
-                            )}
-                            <button onClick={handleDeleteClick} style={cancelButtonStyle}>
-                                × Delete
-                            </button>
-                        </div>
+                            <Tooltip title="Delete">
+                                <IconButton
+                                    size="small"
+                                    // color="error"
+                                    onClick={handleDeleteClick}
+                                >
+                                    <CloseIcon />
+                                </IconButton>
+                            </Tooltip>
+                        </Box>
 
+                        <Divider sx={{ mb: 1.5 }} />
 
-
-                        <div style={{ marginTop: '12px' }}>
-                            {comments.map((comment) => (
-                                <CommentCard
-                                    key={comment.id}
-                                    name={comment.data?.userName}
-                                    content={comment.deletedAt ? null : comment.content}
-                                    createdAt={comment.createdAt}
-                                    deleted={comment.deletedAt}
-                                    onEdit={(val) => val && editComment(comment.id, val)}
-                                    onDelete={() => deleteComment(comment.id)}
-                                    showActions
+                        {/* Comments */}
+                        <Box>
+                            {comments.map((commentItem) => (
+                                <CommentItem
+                                    key={commentItem.id}
+                                    comment={commentItem}
+                                    showActions={true}
+                                    onEdit={editComment}
+                                    onDelete={deleteComment}
                                 />
                             ))}
-                        </div>
+                        </Box>
 
-                        <div style={{ marginTop: '16px' }}>
-                            <ThreadComposer
-                                threadId={thread.id}
-                                provider={provider}
-                                WebSocket={WebSocket}
-                            />
-                        </div>
+                        {/* Add new comment */}
+                        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+                            <Stack direction="row" spacing={1} alignItems="flex-end">
+                                <TextField
+                                    fullWidth
+                                    placeholder="Write a comment…"
+                                    value={comment}
+                                    onChange={(e) => setComment(e.target.value)}
+                                    variant="outlined"
+                                    size="small"
+                                    multiline
+                                    maxRows={3}
+                                />
+                                <IconButton
+                                    type="submit"
+                                    disabled={!comment.trim()}
+                                    color="primary"
+                                    sx={{
+                                        backgroundColor: comment.trim() ? 'primary.main' : 'grey.300',
+                                        color: 'white',
+                                        '&:hover': {
+                                            backgroundColor: comment.trim() ? 'primary.dark' : 'grey.300',
+                                        },
+                                        '&:disabled': {
+                                            backgroundColor: 'grey.300',
+                                            color: 'grey.500'
+                                        }
+                                    }}
+                                >
+                                    <SendIcon />
+                                </IconButton>
+                            </Stack>
+                        </Box>
                     </>
                 )}
 
+                {/* Collapsed view */}
                 {!open && firstComment?.data && (
-                    <div>
-                        <CommentCard
-                            key={firstComment.id}
-                            name={firstComment.data.userName}
-                            content={firstComment.content}
-                            createdAt={firstComment.createdAt}
-                            deleted={firstComment.deletedAt}
-                            onEdit={(val) => val && editComment(firstComment.id, val)}
+                    <Box>
+                        <CommentItem
+                            comment={firstComment}
+                            showActions={false}
+                            onEdit={editComment}
+                            onDelete={deleteComment}
                         />
-                        <div style={{ marginTop: '4px', fontSize: '0.85em', color: '#888' }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
                             {Math.max(0, comments.length - 1)}{' '}
-                            {(comments.length - 1 || 0) === 1 ? 'reply' : 'replies'}
-                        </div>
-                    </div>
+                            {(comments.length - 1) === 1 ? 'reply' : 'replies'}
+                        </Typography>
+                    </Box>
                 )}
             </ThreadCard>
-        </div>
+        </Paper>
     );
 };
+
+export default ThreadsListItem;

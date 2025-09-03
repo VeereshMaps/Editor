@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import { useUser } from './hooks/useUser';
 import { useParams } from 'react-router';
 import { useDispatch } from 'react-redux';
-import { createcoments } from 'redux/Slices/tiptapSlice';
 
 export const ThreadComposer = ({ threadId, provider, WebSocket }) => {
   const user = useUser();
@@ -52,54 +51,65 @@ export const ThreadComposer = ({ threadId, provider, WebSocket }) => {
   return (
     <form
       onSubmit={handleSubmit}
-      style={{
-        background: '#f9f9f9',
-        border: '1px solid #ddd',
-        borderRadius: '12px',
-        padding: '12px',
-        marginTop: '1rem',
-        boxShadow: '0 1px 4px rgba(0, 0, 0, 0.05)',
-      }}
+      // style={{
+      //   // background: '#f9f9f9',
+      //   border: '1px solid #ddd',
+      //   borderRadius: '12px',
+      //   // padding: '6px 12px',
+      //   // marginTop: '1rem',
+      //   boxShadow: '0 1px 4px rgba(0, 0, 0, 0.05)',
+      // }}
     >
-      <textarea
-        placeholder="Write a comment…"
-        onChange={(e) => setComment(e.currentTarget.value)}
-        value={comment}
-        rows={3}
+      <div
         style={{
-          width: '100%',
-          padding: '10px 14px',
-          fontSize: '1rem',
-          border: '1px solid #ccc',
-          borderRadius: '8px',
-          resize: 'vertical',
-          fontFamily: 'inherit',
-          outline: 'none',
-          transition: 'border 0.2s ease',
+          display: 'flex',
+          alignItems: 'center',
+          height: '40px',
+          gap:1
         }}
-        onFocus={(e) => (e.target.style.borderColor = '#5b9df9')}
-        onBlur={(e) => (e.target.style.borderColor = '#ccc')}
-      />
-      <div style={{ marginTop: '10px', textAlign: 'right' }}>
+      >
+        <textarea
+          placeholder="Write a comment…"
+          onChange={(e) => setComment(e.currentTarget.value)}
+          value={comment}
+          rows={1}
+          style={{
+            flex: 1,
+            padding: '8px 10px',
+            fontSize: '0.95rem',
+            border: '1px solid #ccc',
+            borderRadius: '6px',
+            resize: 'none',
+            fontFamily: 'inherit',
+            outline: 'none',
+            transition: 'border 0.2s ease',
+            height: '100%',
+          }}
+          onFocus={(e) => (e.target.style.borderColor = '#5b9df9')}
+          onBlur={(e) => (e.target.style.borderColor = '#ccc')}
+        />
         <button
           type="submit"
           disabled={!comment.length}
           style={{
+            marginLeft: 'auto',
+            marginRight: 0,
             backgroundColor: comment.length ? '#4a90e2' : '#ccc',
             color: 'white',
-            padding: '8px 20px',
-            fontSize: '0.95rem',
-            fontWeight: '500',
+            padding: '6px 16px',
+            fontSize: '0.9rem',
+            fontWeight: 500,
             border: 'none',
             borderRadius: '6px',
             cursor: comment.length ? 'pointer' : 'not-allowed',
             opacity: comment.length ? 1 : 0.7,
-            transition: 'background-color 0.2s ease',
+            height: '100%',
           }}
         >
-          Send
+          Replay
         </button>
       </div>
     </form>
+
   );
 };
