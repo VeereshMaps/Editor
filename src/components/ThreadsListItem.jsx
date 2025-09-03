@@ -32,8 +32,12 @@ const CommentItem = ({
     comment,
     showActions = true,
     onEdit,
-    onDelete
+    onDelete,
+    index,
 }) => {
+    const storedUser = JSON.parse(localStorage.getItem("user"));
+    const userId = storedUser._id
+
     const [isComposing, setIsComposing] = useState(false);
     const [composeValue, setComposeValue] = useState(comment.content || '');
 
@@ -49,6 +53,9 @@ const CommentItem = ({
         setComposeValue(comment.content || '');
         setIsComposing(false);
     };
+    console.log(comment);
+    console.log(userId);
+
 
     return (
         <Card
@@ -78,7 +85,7 @@ const CommentItem = ({
                         <Typography variant="body2" sx={{ mb: showActions ? 1 : 0 }}>
                             {comment.content}
                         </Typography>
-                        {showActions && (
+                        {showActions && (userId==comment.data.userId) && (index !== 0) && (
                             <Stack direction="row" spacing={1}>
 
                                 <Tooltip title="Edit">
@@ -309,9 +316,15 @@ const ThreadsListItem = ({ thread, provider, active, open, WebSocket }) => {
                     <>
                         {/* Action buttons */}
                         <Box display="flex" justifyContent="flex-end" mb={1} gap={1}>
-                            <Button onClick={() => {
-                                onClickThread(thread.id);
-                            }}>Close</Button>
+                            <Tooltip title="Close">
+                                <IconButton
+                                    size="small"
+                                    // color="error"
+                                    onClick={() => { onClickThread(thread.id); }}
+                                >
+                                    <CloseIcon />
+                                </IconButton>
+                            </Tooltip>
                             <Tooltip title="Resolve">
                                 <IconButton
                                     size="small"
@@ -321,14 +334,12 @@ const ThreadsListItem = ({ thread, provider, active, open, WebSocket }) => {
                                     <CheckIcon />
                                 </IconButton>
                             </Tooltip>
-
                             <Tooltip title="Delete">
                                 <IconButton
                                     size="small"
-                                    // color="error"
                                     onClick={handleDeleteClick}
                                 >
-                                    <CloseIcon />
+                                    <DeleteIcon />
                                 </IconButton>
                             </Tooltip>
                         </Box>
@@ -337,13 +348,15 @@ const ThreadsListItem = ({ thread, provider, active, open, WebSocket }) => {
 
                         {/* Comments */}
                         <Box>
-                            {comments.map((commentItem) => (
+                            {comments.map((commentItem, index) => (
                                 <CommentItem
                                     key={commentItem.id}
                                     comment={commentItem}
                                     showActions={true}
                                     onEdit={editComment}
                                     onDelete={deleteComment}
+                                    index={index}
+                                    user={user}
                                 />
                             ))}
                         </Box>
