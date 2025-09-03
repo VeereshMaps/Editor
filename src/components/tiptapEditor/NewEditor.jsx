@@ -493,16 +493,17 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
     };
 
     useEffect(() => {
-
         if (roleName === "author" && editionsById?.editions?.isAuthorApproved === false) {
             setIsEditor(true);
             editor?.setEditable(false);
             setMode("View");
         } else if (roleName === "editor") {
+            console.log("@###",roleName,editionsById?.editions?.isEditorApproved);
+            
             if (editionsById?.editions?.isEditorApproved === true) {
+                setMode("View");
                 setIsEditor(false);
                 editor?.setEditable(false);
-                setMode("View");
             } else {
                 setIsEditor(true);
                 editor?.setEditable(true);
@@ -517,7 +518,7 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
             editor?.setEditable(false);
             setMode("View");
         }
-    }, [roleName, editionsById])
+    }, [roleName, editionsById,editor])
 
     useEffect(() => {
         if (!editionId || !stableUser) return;
