@@ -230,6 +230,42 @@ const EditorToolbar = ({
                                     value={pageSize}
                                     label="Page Size"
                                     onChange={(e) => setPageSize(e.target.value)}
+                                    sx={{
+                                        backgroundColor: 'rgba(255,255,255,0.1)',
+                                        color: 'white',
+                                        '& .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: 'rgba(255,255,255,0.3)',
+                                        },
+                                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: 'rgba(255,255,255,0.5)',
+                                        },
+                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: 'rgba(255,255,255,0.7)',
+                                        },
+                                        '& .MuiSvgIcon-root': {
+                                            color: 'white',
+                                        },
+                                    }}
+                                    MenuProps={{
+                                        PaperProps: {
+                                            sx: {
+                                                backgroundColor: '#424242',
+                                                maxHeight: 300,
+                                                '& .MuiMenuItem-root': {
+                                                    color: 'white',
+                                                    '&:hover': {
+                                                        backgroundColor: 'rgba(255,255,255,0.1)',
+                                                    },
+                                                    '&.Mui-selected': {
+                                                        backgroundColor: 'rgba(103, 126, 234, 0.3)',
+                                                        '&:hover': {
+                                                            backgroundColor: 'rgba(103, 126, 234, 0.4)',
+                                                        },
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    }}
                                 >
                                     <MenuItem value="A4">A4</MenuItem>
                                     <MenuItem value="A5">A5</MenuItem>
