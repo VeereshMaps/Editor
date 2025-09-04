@@ -91,7 +91,9 @@ const EditorToolbar = ({
     suggestionLength,
     isEditor,
     hasChanges,
-    setHasChanges
+    setHasChanges,
+    pageSize,
+    setPageSize,
 }) => {
     if (!editor) return null;
     // console.log("isEditor", isEditor);
@@ -116,10 +118,10 @@ const EditorToolbar = ({
             label: 'History',
             icon: <HistoryIcon fontSize="small" sx={{ mr: 1 }} />,
         },
-        {
-            label: 'Suggesting',
-            icon: <EditIcon fontSize="small" />,
-        },
+        // {
+        //     label: 'Suggesting',
+        //     icon: <EditIcon fontSize="small" />,
+        // },
         {
             label: 'View',
             icon: <VisibilityIcon fontSize="small" />,
@@ -160,7 +162,7 @@ const EditorToolbar = ({
             position="sticky"
             sx={{
                 top: 0,
-                paddingTop:1,
+                paddingTop: 1,
                 zIndex: 1200,
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
@@ -219,7 +221,22 @@ const EditorToolbar = ({
                             style={{ display: "none" }}
                             onChange={handleImageUpload}
                         />
-                        <InsertLinkButtont editor={editor}/>
+                        <InsertLinkButtont editor={editor} />
+                        <Tooltip title="Choose page size">
+                            <FormControl size="small" sx={{ minWidth: 120 }}>
+                                <InputLabel id="page-size-label">Page Size</InputLabel>
+                                <Select
+                                    labelId="page-size-label"
+                                    value={pageSize}
+                                    label="Page Size"
+                                    onChange={(e) => setPageSize(e.target.value)}
+                                >
+                                    <MenuItem value="A4">A4</MenuItem>
+                                    <MenuItem value="A5">A5</MenuItem>
+                                    <MenuItem value="Letter">Letter</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Tooltip>
                     </>
                 )}
 

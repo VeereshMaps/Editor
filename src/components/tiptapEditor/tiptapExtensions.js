@@ -20,181 +20,215 @@ import { TableKit } from '@tiptap/extension-table'
 import TextAlign from '@tiptap/extension-text-align'
 import FileHandler from '@tiptap/extension-file-handler'
 import DragHandle from '@tiptap/extension-drag-handle'
+import {
+    PaginationPlus,
+} from 'tiptap-pagination-plus'
+
+export const PAGE_SIZES = {
+    A4: { width: 595, height: 842 },
+    A5: { width: 420, height: 595 },
+    Letter: { width: 612, height: 792 },
+};
+
+
 const CustomParagraph = Paragraph.extend({
-  addAttributes() {
-    return {
-      ...this.parent?.(),
-      role: {
-        default: null,
-        parseHTML: element => element.getAttribute('data-role'),
-        renderHTML: attributes => {
-          if (!attributes.role) {
-            return {};
-          }
-          return {
-            'data-role': attributes.role,
-          };
-        },
-      },
-    };
-  },
+    addAttributes() {
+        return {
+            ...this.parent?.(),
+            role: {
+                default: null,
+                parseHTML: element => element.getAttribute('data-role'),
+                renderHTML: attributes => {
+                    if (!attributes.role) {
+                        return {};
+                    }
+                    return {
+                        'data-role': attributes.role,
+                    };
+                },
+            },
+        };
+    },
 });
 
 const CustomHighlight = Mark.create({
-  name: 'highlight',
+    name: 'highlight',
 
-  addOptions() {
-    return {
-      HTMLAttributes: {},
-    }
-  },
-
-  addAttributes() {
-    return {
-      color: {
-        default: null,
-        parseHTML: element => element.style.backgroundColor || null,
-        renderHTML: attributes => {
-          if (!attributes.color) {
-            return {}
-          }
-
-          return {
-            style: `background-color: ${attributes.color}`,
-          }
-        },
-      },
-    }
-  },
-
-  parseHTML() {
-    return [
-      {
-        tag: 'mark',
-      },
-      {
-        style: 'background-color',
-      },
-    ]
-  },
-
-  renderHTML({ HTMLAttributes }) {
-    return ['mark', this.options.HTMLAttributes, HTMLAttributes, 0]
-  },
-
-  addCommands() {
-    return {
-      setHighlight: color => ({ commands }) => {
-        return commands.setMark(this.name, { color })
-      },
-      toggleHighlight: color => ({ commands }) => {
-        return commands.toggleMark(this.name, { color })
-      },
-      unsetHighlight: () => ({ commands }) => {
-        return commands.unsetMark(this.name)
-      },
-    }
-  },
-})
-export const CommenTipTapExtensions = [Document, Paragraph, CustomParagraph, Text, Underline, FontSize, TextStyle, FontFamily, LineHeight, BackgroundColor, Color, Highlight.configure({ multicolor: true }), CustomHighlight, Subscript, Superscript, InlineThread,
-  Strike,
-  Link,
-  CharacterCount,
-  TextStyleKit.configure({ textStyle: { mergeNestedSpanStyles: true } }),
-  Focus.configure({
-    className: 'has-focus',
-    mode: 'all',
-  }), ,
-  HorizontalRule.configure({
-    HTMLAttributes: {
-      class: 'my-custom-class',
-    },
-  }),
-  Image.configure({ inline: true, allowBase64: true }),
-  ListKit,
-  TableKit.configure({
-    table: {
-      resizable: true,
-      HTMLAttributes: {
-        style: 'border-collapse: collapse; width: 100%;',
-      },
-    },
-    tableRow: {
-      HTMLAttributes: {
-        style: 'border: 1px solid #ddd;',
-      },
-    },
-    tableCell: {
-      HTMLAttributes: {
-        style: 'border: 1px solid #ddd; padding: 8px; min-width: 50px;',
-      },
-    },
-    tableHeader: {
-      HTMLAttributes: {
-        style: 'border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5; font-weight: bold;',
-      },
-    },
-  }),
-  TextAlign.configure({ types: ['heading', 'paragraph'] }),
-  FileHandler.configure({
-    allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
-    onDrop: (currentEditor, files, pos) => {
-      files.forEach(file => {
-        const fileReader = new FileReader()
-
-        fileReader.readAsDataURL(file)
-        fileReader.onload = () => {
-          currentEditor
-            .chain()
-            .insertContentAt(pos, {
-              type: 'image',
-              attrs: {
-                src: fileReader.result,
-              },
-            })
-            .focus()
-            .run()
+    addOptions() {
+        return {
+            HTMLAttributes: {},
         }
-      })
     },
-    onPaste: (currentEditor, files, htmlContent) => {
-      files.forEach(file => {
-        if (htmlContent) {
-          // if there is htmlContent, stop manual insertion & let other extensions handle insertion via inputRule
-          // you could extract the pasted file from this url string and upload it to a server for example
-          console.log(htmlContent) // eslint-disable-line no-console
-          return false
+
+    addAttributes() {
+        return {
+            color: {
+                default: null,
+                parseHTML: element => element.style.backgroundColor || null,
+                renderHTML: attributes => {
+                    if (!attributes.color) {
+                        return {}
+                    }
+
+                    return {
+                        style: `background-color: ${attributes.color}`,
+                    }
+                },
+            },
         }
+    },
 
-        const fileReader = new FileReader()
+    parseHTML() {
+        return [
+            {
+                tag: 'mark',
+            },
+            {
+                style: 'background-color',
+            },
+        ]
+    },
 
-        fileReader.readAsDataURL(file)
-        fileReader.onload = () => {
-          currentEditor
-            .chain()
-            .insertContentAt(currentEditor.state.selection.anchor, {
-              type: 'image',
-              attrs: {
-                src: fileReader.result,
-              },
-            })
-            .focus()
-            .run()
+    renderHTML({ HTMLAttributes }) {
+        return ['mark', this.options.HTMLAttributes, HTMLAttributes, 0]
+    },
+
+    addCommands() {
+        return {
+            setHighlight: color => ({ commands }) => {
+                return commands.setMark(this.name, { color })
+            },
+            toggleHighlight: color => ({ commands }) => {
+                return commands.toggleMark(this.name, { color })
+            },
+            unsetHighlight: () => ({ commands }) => {
+                return commands.unsetMark(this.name)
+            },
         }
-      })
     },
-  }),
-  DragHandle.configure({
-    render: () => {
-      const element = document.createElement('div')
+});
 
-      // Use as a hook for CSS to insert an icon
-      element.classList.add('custom-drag-handle')
+export const CommenTipTapExtensions = (pageSizeKey = "A4",uploadedDocsTitle) => {
+    const { width, height } = PAGE_SIZES[pageSizeKey] || PAGE_SIZES.A4;
 
-      return element
-    },
-    tippyOptions: {
-      placement: 'left',
-    },
-  }),
-];
+    return [Document, Paragraph, CustomParagraph, Text, Underline, FontSize, TextStyle, FontFamily, LineHeight, BackgroundColor, Color, Highlight.configure({ multicolor: true }), CustomHighlight, Subscript, Superscript, InlineThread,
+        Strike,
+        Link,
+        CharacterCount,
+        TextStyleKit.configure({ textStyle: { mergeNestedSpanStyles: true } }),
+        Focus.configure({
+            className: 'has-focus',
+            mode: 'all',
+        }), ,
+        HorizontalRule.configure({
+            HTMLAttributes: {
+                class: 'my-custom-class',
+            },
+        }),
+        Image.configure({ inline: true, allowBase64: true }),
+        ListKit,
+        TableKit.configure({
+            table: {
+                resizable: true,
+                HTMLAttributes: {
+                    style: 'border-collapse: collapse; width: 100%;',
+                },
+            },
+            tableRow: {
+                HTMLAttributes: {
+                    style: 'border: 1px solid #ddd;',
+                },
+            },
+            tableCell: {
+                HTMLAttributes: {
+                    style: 'border: 1px solid #ddd; padding: 8px; min-width: 50px;',
+                },
+            },
+            tableHeader: {
+                HTMLAttributes: {
+                    style: 'border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5; font-weight: bold;',
+                },
+            },
+        }),
+        PaginationPlus.configure({
+            pageWidth: width,
+            pageHeight: height,
+            pageGap: 20,
+            pageBreakBackground: "#F7F7F8",
+            pageHeaderHeight: 25,
+            pageFooterHeight: 25,
+            footerRight: "Map Prepress Studio",
+            footerLeft: "Page {page}",
+            headerLeft: uploadedDocsTitle ? uploadedDocsTitle : "",
+            // headerRight: "Header Right",
+            marginTop: 30,
+            marginBottom: 50,
+            marginLeft: 70,
+            marginRight: 70,
+            contentMarginTop: 30,
+            contentMarginBottom: 30,
+        }),
+        TextAlign.configure({ types: ['heading', 'paragraph'] }),
+        FileHandler.configure({
+            allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
+            onDrop: (currentEditor, files, pos) => {
+                files.forEach(file => {
+                    const fileReader = new FileReader()
+
+                    fileReader.readAsDataURL(file)
+                    fileReader.onload = () => {
+                        currentEditor
+                            .chain()
+                            .insertContentAt(pos, {
+                                type: 'image',
+                                attrs: {
+                                    src: fileReader.result,
+                                },
+                            })
+                            .focus()
+                            .run()
+                    }
+                })
+            },
+            onPaste: (currentEditor, files, htmlContent) => {
+                files.forEach(file => {
+                    if (htmlContent) {
+                        // if there is htmlContent, stop manual insertion & let other extensions handle insertion via inputRule
+                        // you could extract the pasted file from this url string and upload it to a server for example
+                        console.log(htmlContent) // eslint-disable-line no-console
+                        return false
+                    }
+
+                    const fileReader = new FileReader()
+
+                    fileReader.readAsDataURL(file)
+                    fileReader.onload = () => {
+                        currentEditor
+                            .chain()
+                            .insertContentAt(currentEditor.state.selection.anchor, {
+                                type: 'image',
+                                attrs: {
+                                    src: fileReader.result,
+                                },
+                            })
+                            .focus()
+                            .run()
+                    }
+                })
+            },
+        }),
+        DragHandle.configure({
+            render: () => {
+                const element = document.createElement('div')
+
+                // Use as a hook for CSS to insert an icon
+                element.classList.add('custom-drag-handle')
+
+                return element
+            },
+            tippyOptions: {
+                placement: 'left',
+            },
+        }),
+    ];
+};

@@ -26,7 +26,7 @@ import CommentIcon from '@mui/icons-material/Comment';
 import { useUser } from "../hooks/useUser";
 import Snapshot from "@tiptap-pro/extension-snapshot";
 import { VersioningModal } from "./tiptop_version/VersioningModal"
-import { CommenTipTapExtensions } from "./tiptapExtensions";
+import { CommenTipTapExtensions, PAGE_SIZES } from "./tiptapExtensions";
 import { useDispatch, useSelector } from "react-redux";
 import { Placeholder } from "@tiptap/extensions";
 import { getEditionsById } from 'redux/Slices/editionByIdSlice';
@@ -35,6 +35,7 @@ import { suggestChanges } from "@handlewithcare/prosemirror-suggest-changes";
 import { useThreads } from "components/hooks/useThreads";
 import { ThreadsProvider, useThreadsState } from "components/Context";
 import SidebarWithComments from "./CommentBar";
+import { SuggestionExtension, SuggestionMark } from "./Suggestion";
 const APP_ID = "6kpvqylk";
 
 
@@ -66,13 +67,14 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
     const roleName = loginDetails?.user?.role?.replace(/\s+/g, "").toLowerCase();
     const dispatch = useDispatch();
     const [mode, setMode] = useState("Editing");
-
+    const modeRef = useRef("Editing");
     const webIORef = useRef(null);
     const stableUser = useMemo(() => user, [user?._id]);
     const VITE_SOCKET_URL = import.meta.env.VITE_SOCKET_URL;
     const [saveMode, setSaveMode] = useState(false);
     const [getThreds, setThreads] = useState([]);
     const [editor, setEditor] = useState(null);
+    const [pageSize, setPageSize] = useState("A4");
 
     const [isEditor, setIsEditor] = useState(false);
     const editionsById = useSelector((state) => state.editionsById);
@@ -88,7 +90,8 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
     const [showInputBox, setShowInputBox] = useState(false);
     const [commentText, setCommentText] = useState('');
     const threadsRef = useRef([])
-    const [selectedThread, setSelectedThread] = useState(null)
+    const [selectedThread, setSelectedThread] = useState(null);
+    const [uploadedDocsTitle, setUploadedDocsTitle] = useState("");
 
     useEffect(() => {
         const newEditor = new Editor({
@@ -103,7 +106,7 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                         },
                     }
                 }),
-                ...CommenTipTapExtensions,
+                ...CommenTipTapExtensions(pageSize,uploadedDocsTitle),
                 ImportDocx.configure({
                     appId: APP_ID,
                     token: documentToken,
@@ -118,6 +121,11 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                 }),
                 CollaborationCaret.configure({ provider }),
                 Collaboration.configure({ document: ydoc }),
+                // SuggestionMark,
+                // SuggestionExtension.configure({
+                //     getUser: () => ({ id: currentUserRef.current.id, name: currentUserRef.current.name, color: currentUserRef.current.color }),
+                //     getMode: () => modeRef.current,
+                // }),
                 Placeholder.configure({
                     placeholder: 'Write something …',
                 }),
@@ -161,6 +169,22 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
             onUpdate: ({ editor }) => {
                 const json = editor.getJSON();
                 const updatedContent = json.content;
+
+
+                const headingNode = json.content?.find(node => node.type === 'heading');
+
+                if (headingNode && headingNode.content) {
+                    // 🧵 Extract plain text from heading's content array
+                    const text = headingNode.content
+                        .map(child => child.text || '')
+                        .join('');
+
+                    setUploadedDocsTitle(text);
+                } else {
+                    setUploadedDocsTitle(''); // fallback if no heading
+                }
+
+
                 // ✅ Safe WebSocket send
                 const payload = {
                     content: updatedContent,
@@ -197,7 +221,7 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
         setEditor(newEditor);
 
         return () => newEditor.destroy(); // cleanup on action change
-    }, []);
+    }, [pageSize]);
     const checkTableActive = useCallback(() => {
         if (!editor) return;
         const shouldShow = editor.state.selection.empty;
@@ -282,6 +306,10 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
             };
         }
     }, [editor, updateToolbarState, checkTableActive]);
+    useEffect(() => {
+        modeRef.current = mode;
+        console.log("modeRef.current", modeRef.current, mode);
+    }, [mode]);
 
     const handleFontSizeChange = (newSize) => {
         if (newSize >= 8 && newSize <= 72) {
@@ -498,8 +526,8 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
             editor?.setEditable(false);
             setMode("View");
         } else if (roleName === "editor") {
-            console.log("@###",roleName,editionsById?.editions?.isEditorApproved);
-            
+            console.log("@###", roleName, editionsById?.editions?.isEditorApproved);
+
             if (editionsById?.editions?.isEditorApproved === true) {
                 setMode("View");
                 setIsEditor(false);
@@ -518,7 +546,7 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
             editor?.setEditable(false);
             setMode("View");
         }
-    }, [roleName, editionsById,editor])
+    }, [roleName, editionsById, editor])
 
     useEffect(() => {
         if (!editionId || !stableUser) return;
@@ -808,6 +836,8 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                 isEditor={isEditor}
                 hasChanges={hasChanges}
                 setHasChanges={setHasChanges}
+                pageSize={pageSize}
+                setPageSize={setPageSize}
             />
 
             <Box sx={{
@@ -904,7 +934,7 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                                     )}
                                 </div>
 
-                                <div style={{ display: 'flex', flexDirection: 'row', gap: 1, width: '100%' }}>
+                                <div style={{ display: 'flex', flexDirection: 'row', gap: 1, width: '100%' }} data-viewmode={'open'}>
                                     <div ref={editorWrapperRef} data-viewmode={showUnresolved ? 'open' : 'resolved'}>
                                         <EditorContent editor={editor} style={{ height: '100%', width: '100%', paddingBottom: '20%', backgroundColor: '#ffffff', outline: '1px solid #c7c7c7' }} />
 
