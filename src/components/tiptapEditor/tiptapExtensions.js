@@ -8,7 +8,6 @@ import Highlight from '@tiptap/extension-highlight'
 import Subscript from "@tiptap/extension-subscript";
 import Superscript from "@tiptap/extension-superscript";
 import { BackgroundColor } from "@tiptap/extension-text-style";
-import { Mark } from '@tiptap/core'
 import { InlineThread } from '@tiptap-pro/extension-comments'
 import Strike from "@tiptap/extension-strike";
 import Link from "@tiptap/extension-link";
@@ -25,9 +24,13 @@ import {
 } from 'tiptap-pagination-plus'
 
 export const PAGE_SIZES = {
-    A4: { width: 595, height: 842 },
-    A5: { width: 420, height: 595 },
-    Letter: { width: 612, height: 792 },
+    // A3: { width: 842, height: 1191 },   // 297 × 420 mm
+    A4: { width: 595, height: 842 },    // 210 × 297 mm
+    A5: { width: 420, height: 595 },    // 148 × 210 mm
+    // A6: { width: 298, height: 420 },    // 105 × 148 mm
+    Letter: { width: 612, height: 792 }, // 8.5 × 11 in
+    // Legal: { width: 612, height: 1008 }, // 8.5 × 14 in
+    // Tabloid: { width: 792, height: 1224 } // 11 × 17 in
 };
 
 
@@ -50,68 +53,10 @@ const CustomParagraph = Paragraph.extend({
         };
     },
 });
-
-const CustomHighlight = Mark.create({
-    name: 'highlight',
-
-    addOptions() {
-        return {
-            HTMLAttributes: {},
-        }
-    },
-
-    addAttributes() {
-        return {
-            color: {
-                default: null,
-                parseHTML: element => element.style.backgroundColor || null,
-                renderHTML: attributes => {
-                    if (!attributes.color) {
-                        return {}
-                    }
-
-                    return {
-                        style: `background-color: ${attributes.color}`,
-                    }
-                },
-            },
-        }
-    },
-
-    parseHTML() {
-        return [
-            {
-                tag: 'mark',
-            },
-            {
-                style: 'background-color',
-            },
-        ]
-    },
-
-    renderHTML({ HTMLAttributes }) {
-        return ['mark', this.options.HTMLAttributes, HTMLAttributes, 0]
-    },
-
-    addCommands() {
-        return {
-            setHighlight: color => ({ commands }) => {
-                return commands.setMark(this.name, { color })
-            },
-            toggleHighlight: color => ({ commands }) => {
-                return commands.toggleMark(this.name, { color })
-            },
-            unsetHighlight: () => ({ commands }) => {
-                return commands.unsetMark(this.name)
-            },
-        }
-    },
-});
-
-export const CommenTipTapExtensions = (pageSizeKey = "A4",uploadedDocsTitle) => {
+export const CommenTipTapExtensions = (pageSizeKey = "A4", uploadedDocsTitle) => {
     const { width, height } = PAGE_SIZES[pageSizeKey] || PAGE_SIZES.A4;
 
-    return [Document, Paragraph, CustomParagraph, Text, Underline, FontSize, TextStyle, FontFamily, LineHeight, BackgroundColor, Color, Highlight.configure({ multicolor: true }), CustomHighlight, Subscript, Superscript, InlineThread,
+    return [Document, Paragraph, CustomParagraph, Text, Underline, FontSize, TextStyle, FontFamily, LineHeight, BackgroundColor, Color, Highlight.configure({ multicolor: true }), Subscript, Superscript, InlineThread,
         Strike,
         Link,
         CharacterCount,

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     Box,
     Toolbar,
@@ -57,6 +57,9 @@ import TableInsertButton from './TableInsertButton';
 import SaveVersionButton from './SaveVersionButton';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import InsertLinkButtont from './InsertLinkButtont';
+import { PAGE_SIZES } from './tiptapExtensions';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 const EditorToolbar = ({
     editor,
     fontSize,
@@ -94,6 +97,8 @@ const EditorToolbar = ({
     setHasChanges,
     pageSize,
     setPageSize,
+    handleEnterFullScreen,
+    handleExitFullScreen,
 }) => {
     if (!editor) return null;
     // console.log("isEditor", isEditor);
@@ -154,8 +159,6 @@ const EditorToolbar = ({
         { value: 'right', label: 'Right', icon: <FormatAlignRight /> },
         { value: 'justify', label: 'Justify', icon: <FormatAlignJustify /> }
     ];
-
-
 
     return (
         <AppBar
@@ -267,12 +270,15 @@ const EditorToolbar = ({
                                         },
                                     }}
                                 >
-                                    <MenuItem value="A4">A4</MenuItem>
-                                    <MenuItem value="A5">A5</MenuItem>
-                                    <MenuItem value="Letter">Letter</MenuItem>
+                                    {Object.keys(PAGE_SIZES).map((size) => (
+                                        <MenuItem key={size} value={size}>
+                                            {size}
+                                        </MenuItem>
+                                    ))}
                                 </Select>
                             </FormControl>
                         </Tooltip>
+
                     </>
                 )}
 
@@ -556,7 +562,7 @@ const EditorToolbar = ({
                                         color="primary"
                                     />
                                 }
-                                label="Enable"
+                                label={versioningEnabled ? "Disable" : "Enable"}
                             />
                         </Tooltip>
 
@@ -803,6 +809,7 @@ const EditorToolbar = ({
                                     color: 'white',
                                     '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' }
                                 }}
+                            // color={editor.isActive('highlight') ? 'primary' : 'default'}
                             >
                                 <HighlightIcon />
                             </IconButton>
@@ -950,7 +957,37 @@ const EditorToolbar = ({
                             </IconButton>
                         </Tooltip>
                     </Box>
+                    <Box sx={{ display: 'flex', gap: 0.5, ml: 'auto' }}>
+                        <IconButton
+                            onClick={handleEnterFullScreen}
+                            sx={{
+                                backgroundColor: 'rgba(255,255,255,0.1)',
+                                color: 'white',
+                                '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' },
+                                '&:disabled': { color: 'rgba(255,255,255,0.3)' }
+                            }}
+                            aria-label="maximize"
+                            size='small'
+                            disabled={!!document.fullscreenElement} // disable if already fullscreen
+                        >
+                            <FullscreenIcon />
+                        </IconButton>
 
+                        <IconButton
+                            onClick={handleExitFullScreen}
+                            sx={{
+                                backgroundColor: 'rgba(255,255,255,0.1)',
+                                color: 'white',
+                                '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' },
+                                '&:disabled': { color: 'rgba(255,255,255,0.3)' }
+                            }}
+                            aria-label="minimize"
+                            size='small'
+                            disabled={!document.fullscreenElement} // disable if not fullscreen
+                        >
+                            <FullscreenExitIcon />
+                        </IconButton>
+                    </Box>
                 </Toolbar>
 
             )}

@@ -74,7 +74,7 @@ export const VersioningModal = memo(({
     content: '',
     extensions: [
       StarterKit.configure({ history: false }),
-      ...CommenTipTapExtensions,
+      ...CommenTipTapExtensions(),
       SnapshotCompare.configure({
         provider,
         // Allows you to customize how the diffs are rendered as decorations within the editor

@@ -30,7 +30,6 @@ export default function CollabEditor({ ydoc, provider, room }) {
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const { editionId, projectId } = useParams();
-    const userDetails = useSelector((state) => state.auth);
     const { contentAIToken, documentToken } = useSelector((state) => state.tiptapToken);
     const proofreadState = useSelector((state) => state.proofread);
     const importRef = useRef(null);
@@ -53,7 +52,7 @@ export default function CollabEditor({ ydoc, provider, room }) {
             StarterKit.configure({ history: false }),
             Collaboration.configure({ document: ydoc }),
             CollaborationCaret.configure({ provider }),
-            ...CommenTipTapExtensions,
+            ...CommenTipTapExtensions(),
             AiSuggestion.configure({
                 rules,
                 appId: APP_ID,

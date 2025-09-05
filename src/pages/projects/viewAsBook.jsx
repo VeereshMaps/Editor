@@ -26,7 +26,7 @@ const ViewAsBook = () => {
         editable: false,
         extensions: [
             StarterKit.configure({ history: false }),
-            ...CommenTipTapExtensions,
+            ...CommenTipTapExtensions(),
             ExportDocx.configure({
                 onCompleteExport: result => {
                     setIsLoading(false)

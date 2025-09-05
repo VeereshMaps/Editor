@@ -46,9 +46,9 @@ const SidebarWithComments = ({
                 let top = Math.round(rect.top + window.scrollY);
                 let left = Math.round(rect.left + window.scrollX);
 
-                // Fix: Always count all entries
+                // Track overlaps by Y position
                 topMap[top] = (topMap[top] || 0) + 1;
-                const offset = (topMap[top] - 1) * 160; // Only offset duplicates
+                const offset = (topMap[top] - 1) * 160;
 
                 rawPositions[threadId] = {
                     top: top + offset,
@@ -58,21 +58,26 @@ const SidebarWithComments = ({
                 };
             });
 
-            console.log("📍 Calculated positions:", rawPositions);
             setPositions(rawPositions);
         };
 
-        const timeout = setTimeout(updatePositions, 300);
+        // Run immediately on mount & whenever threads change
+        updatePositions();
+
+        // Observe DOM changes (new threads, comments, etc.)
+        const observer = new MutationObserver(updatePositions);
+        observer.observe(document.body, { childList: true, subtree: true });
 
         window.addEventListener("resize", updatePositions);
         window.addEventListener("scroll", updatePositions);
 
         return () => {
-            clearTimeout(timeout);
+            observer.disconnect();
             window.removeEventListener("resize", updatePositions);
             window.removeEventListener("scroll", updatePositions);
         };
-    }, [editor, filteredThreads, provider?.isSynced]);
+    }, [filteredThreads, provider?.isSynced]);
+
 
     const handleCommentSubmit = useCallback(async (e) => {
         e.preventDefault();
@@ -217,7 +222,7 @@ const SidebarWithComments = ({
                             timeout={300}
                             style={{
                                 position: 'absolute',
-                                top: pos.top - 330,
+                                top: pos.top - 270,
                                 zIndex: 1000,
                                 width: '100%'
                             }}

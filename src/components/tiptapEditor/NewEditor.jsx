@@ -106,12 +106,14 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                         },
                     }
                 }),
-                ...CommenTipTapExtensions(pageSize,uploadedDocsTitle),
+                CollaborationCaret.configure({ provider }),
+                Collaboration.configure({ document: ydoc }),
+                ...CommenTipTapExtensions(pageSize, uploadedDocsTitle),
                 ImportDocx.configure({
                     appId: APP_ID,
                     token: documentToken,
                     endpoint: "https://api.tiptap.dev/v1/convert",
-                    // experimentalDocxImport: true,
+                    experimentalDocxImport: true,   
                     imageUploadCallbackUrl: 'https://api-demo.tiptap.dev/v2/convert/upload',
                 }),
                 CommentsKit.configure({
@@ -119,13 +121,7 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                     useLegacyWrapping: false,
                     deleteUnreferencedThreads: false,
                 }),
-                CollaborationCaret.configure({ provider }),
-                Collaboration.configure({ document: ydoc }),
-                // SuggestionMark,
-                // SuggestionExtension.configure({
-                //     getUser: () => ({ id: currentUserRef.current.id, name: currentUserRef.current.name, color: currentUserRef.current.color }),
-                //     getMode: () => modeRef.current,
-                // }),
+              
                 Placeholder.configure({
                     placeholder: 'Write something …',
                 }),
@@ -140,15 +136,6 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                         setCurrentVersion(data.currentVersion)
                     },
                 }),
-                // Pages.configure({
-                //     pageFormat: 'A4',
-                //     headerHeight: 60,
-                //     footerHeight: 60,
-                //     pageGap: 40,
-                //     header: 'My Project',
-                //     footer: 'Page {page} of {total}',
-                //     pageBreakBackground: '#f8f8f8',
-                //   }),
             ],
             autofocus: true,
             content: ` `,
@@ -242,6 +229,13 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
             left: start.left - editorEl.left,
         });
     }, [editor]);
+    useEffect(() => {
+        currentUserRef.current = currentUser;
+
+        if (editor) {
+            editor.chain().updateUser(currentUser).run();
+        }
+    }, [currentUser, editor]);
 
     useEffect(() => {
         if (
@@ -256,13 +250,7 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
         }
     }, [editor, currentUser]);
 
-    useEffect(() => {
-        currentUserRef.current = currentUser;
 
-        if (editor) {
-            editor.chain().updateUser(currentUser).run();
-        }
-    }, [currentUser, editor]);
 
     // Function to update toolbar state based on current selection
     const updateToolbarState = useCallback(() => {
@@ -631,7 +619,7 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
     };
 
     const handleSwitchChange = () => {
-        editor.commands.toggleVersioning();
+        const enabled = editor.commands.toggleVersioning();
         setIsAutoVersioning(enabled);
     };
 
@@ -797,10 +785,25 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
     const [showUnresolved, setShowUnresolved] = useState(true);
     const [status, setStatus] = useState('connecting');
     const { selectedThreads, CurrentSelectedThread } = useThreadsState();
+    /* full screen */
+    const containerRef = useRef(null);
 
+    const handleEnterFullScreen = () => {
+        if (containerRef.current && !document.fullscreenElement) {
+            containerRef.current.requestFullscreen();
+        }
+    };
+
+    const handleExitFullScreen = () => {
+        if (document.fullscreenElement) {
+            document.exitFullscreen();
+        }
+    };
+    /* full screen */
 
     return (
-        <Box sx={{ width: '100%', height: '100vh', overflow: 'hidden', backgroundColor: '#f5f5f5', position: 'relative' }}>
+
+        <Box sx={{ width: '100%', height: '100vh', overflow: 'hidden', backgroundColor: '#f5f5f5', position: 'relative' }} ref={containerRef}>
             <EditorToolbar
                 editor={editor}
                 fontSize={fontSize}
@@ -838,6 +841,8 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                 setHasChanges={setHasChanges}
                 pageSize={pageSize}
                 setPageSize={setPageSize}
+                handleExitFullScreen={handleExitFullScreen}
+                handleEnterFullScreen={handleEnterFullScreen}
             />
 
             <Box sx={{
@@ -925,7 +930,7 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
                                                 isTableActive={isTableActive}
                                             />
                                         )}
-                                    {!editor?.state.selection.empty && (
+                                    {!editor?.state.selection.empty && (mode === "Editing" || mode === "Suggesting") && (
                                         <Tooltip title="Add Comment" className="capsule-comment" style={{ top: tooltipPosition?.top + "px" }}>
                                             <IconButton onClick={() => showCommentBox(true)}>
                                                 <CommentIcon />
@@ -936,48 +941,50 @@ const NewEditorComponent = ({ ydoc, provider, room }) => {
 
                                 <div style={{ display: 'flex', flexDirection: 'row', gap: 1, width: '100%' }} data-viewmode={'open'}>
                                     <div ref={editorWrapperRef} data-viewmode={showUnresolved ? 'open' : 'resolved'}>
-                                        <EditorContent editor={editor} style={{ height: '100%', width: '100%', paddingBottom: '20%', backgroundColor: '#ffffff', outline: '1px solid #c7c7c7' }} />
+                                        <EditorContent editor={editor} style={{ height: '100%', minWidth: '55vw', width: '100%', paddingBottom: '20%', backgroundColor: '#ffffff', outline: '1px solid #c7c7c7' }} />
 
                                         <div className="collab-status-group" sx={{ width: '300px', background: '#f9fbfd', ml: 'auto' }}
                                             data-state={status === 'connected' ? 'online' : 'offline'}>
                                         </div>
 
                                     </div>
+                                    {(mode === "Editing" || mode === "Suggesting") && (
+                                        <Box sx={{ width: '300px', background: '#f9fbfd', ml: 'auto' }}>
+                                            <ThreadsProvider
+                                                onClickThread={selectThreadInEditor}
+                                                onDeleteThread={deleteThread}
+                                                onHoverThread={onHoverThread}
+                                                onLeaveThread={onLeaveThread}
+                                                onResolveThread={resolveThread}
+                                                onUnresolveThread={unresolveThread}
+                                                onUpdateComment={updateComment}
+                                                selectedThreads={editor?.storage?.comments?.focusedThreads || []}
+                                                selectedThread={selectedThread}
+                                                setSelectedThread={setSelectedThread}
+                                                threads={threads}
+                                            >
 
-                                    <Box sx={{ width: '300px', background: '#f9fbfd', ml: 'auto' }}>
-                                        <ThreadsProvider
-                                            onClickThread={selectThreadInEditor}
-                                            onDeleteThread={deleteThread}
-                                            onHoverThread={onHoverThread}
-                                            onLeaveThread={onLeaveThread}
-                                            onResolveThread={resolveThread}
-                                            onUnresolveThread={unresolveThread}
-                                            onUpdateComment={updateComment}
-                                            selectedThreads={editor?.storage?.comments?.focusedThreads || []}
-                                            selectedThread={selectedThread}
-                                            setSelectedThread={setSelectedThread}
-                                            threads={threads}
-                                        >
+                                                {provider?.isSynced && (
+                                                    <SidebarWithComments
+                                                        editor={editor}
+                                                        mode={mode}
+                                                        user={user}
+                                                        provider={provider}
+                                                        filteredThreads={filteredThreads}
+                                                        webIORef={webIORef}
+                                                        tooltipPosition={tooltipPosition}
+                                                        showInputBox={showInputBox}
+                                                        setShowInputBox={setShowInputBox}
+                                                        commentText={commentText}
+                                                        setCommentText={setCommentText}
+                                                        handleSubmit={handleSubmit}
+                                                    />
+                                                )}
 
-                                            {provider?.isSynced && (
-                                                <SidebarWithComments
-                                                    editor={editor}
-                                                    mode={mode}
-                                                    user={user}
-                                                    provider={provider}
-                                                    filteredThreads={filteredThreads}
-                                                    webIORef={webIORef}
-                                                    tooltipPosition={tooltipPosition}
-                                                    showInputBox={showInputBox}
-                                                    setShowInputBox={setShowInputBox}
-                                                    commentText={commentText}
-                                                    setCommentText={setCommentText}
-                                                    handleSubmit={handleSubmit}
-                                                />
-                                            )}
+                                            </ThreadsProvider>
+                                        </Box>
+                                    )}
 
-                                        </ThreadsProvider>
-                                    </Box>
                                 </div>
                             </>
                         ) : (
